@@ -34,10 +34,11 @@ func (mgr ConfigMgr) disconnectFromAllClients () bool {
 // This function would work as a classical constructor for the 
 // configMgr object
 //
-func NewConfigMgr ( params ConfigParams)  *ConfigMgr {
+func NewConfigMgr ( paramsFile string)  *ConfigMgr {
     mgr :=  new (ConfigMgr)
 	 var clientsList [] Client
-	 bytes, err := ioutil.ReadFile("./params/clients.json")
+	 //bytes, err := ioutil.ReadFile("./params/clients.json")
+	 bytes, err := ioutil.ReadFile(paramsFile)
 	 if err != nil {
 		  logger.Println("Error in reading configuration file")
 		  return nil
