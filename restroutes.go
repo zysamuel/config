@@ -1,11 +1,9 @@
 package main
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
 )
 
-/*
 type ApiRoute struct {
 	Name        string
 	Method      string
@@ -14,6 +12,7 @@ type ApiRoute struct {
 }
 
 type ApiRoutes []ApiRoute
+
 var routes = ApiRoutes{
 	ApiRoute{
 		"Index",
@@ -40,15 +39,4 @@ var routes = ApiRoutes{
 		BgpPeerCreate,
 	},
 }
-*/
 
-func createNewRestRouter() *mux.Router {
-
-	router := mux.NewRouter().StrictSlash(true)
-	for _, route := range routes {
-		var handler http.Handler
-		handler = Logger(route.HandlerFunc, route.Name)
-		router.Methods(route.Method).Path(route.Pattern).Name(route.Name).Handler(handler)
-	}
-	return router
-}

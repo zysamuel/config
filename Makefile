@@ -5,8 +5,8 @@ SRCS=apihandlers.go\
 	  clientmap.go\
 	  clientif.go\
 	  logger.go\
-	  params.go\
 	  apiroutes.go\
+	  restroutes.go\
 	  configmgr.go\
 	  main.go\
 	  remotebgppeer.go

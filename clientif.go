@@ -19,7 +19,9 @@ func ( clnt RibClient ) Initialize( name string, address string) {
 func ( clnt RibClient ) ConnectToServer () bool {
 
 	 gRibClient.Transport, gRibClient.PtrProtocolFactory = CreateIPCHandles(gRibClient.Address)
-	 gRibClient.ClientHdl =  ribd.NewRouteServiceClientFactory(gRibClient.Transport, gRibClient.PtrProtocolFactory)
+    if (gRibClient.Transport!= nil && gRibClient.PtrProtocolFactory  != nil) {
+		  gRibClient.ClientHdl =  ribd.NewRouteServiceClientFactory(gRibClient.Transport, gRibClient.PtrProtocolFactory)
+	 }
 	 //gRibClient.ClientHdl.CreateV4Route(0,0,0,0,0)
 	 return true
 }
