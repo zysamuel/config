@@ -10,6 +10,7 @@ func main() {
 	 configFile := "./params/clients.json"
     mgr := NewConfigMgr ( configFile)
     go mgr.ConnectToAllClients()
-    restRtr := createNewRestRouter()
+    //restRtr := createNewRestRouter()
+    restRtr := mgr.GetRestRtr()
     http.ListenAndServe(":8080", restRtr)
 }

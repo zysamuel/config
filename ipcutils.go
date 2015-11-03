@@ -1,6 +1,9 @@
 package  main
 import ( "git.apache.org/thrift.git/lib/go/thrift")
 
+//
+// This method gets Thrift related IPC handles.
+//
 func CreateIPCHandles(address string) (thrift.TTransport , *thrift.TBinaryProtocolFactory) {
 	 var transportFactory thrift.TTransportFactory
 	 var transport thrift.TTransport

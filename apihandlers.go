@@ -3,23 +3,11 @@ package main
 import  ("encoding/json"
 	"io"
 	"io/ioutil"
-	// "fmt"
-	// "html"
-         "net/http"
-         //"github.com/gorilla/mux"
+   "net/http"
+   //"net/url"
 	)
 
 func Index (w http.ResponseWriter, r *http.Request) {
-	//peers := BgpPeers {
-        //		BgpPeer{ PeerIp    : "10.0.1.1", 
-	//		PeerState : "Established",
-	//		LocalAs   : 500,
-	//		RemoteAs  : 500},
-	//	BgpPeer{ PeerIp    : "20.20.2.1",
-	//		PeerState : "Established",
-	//		LocalAs   : 200,
-	//		RemoteAs  : 300},
-	//		}
 	w.Header().Set("Content-type", "application/jsoni;charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(peers); err != nil {
@@ -27,17 +15,25 @@ func Index (w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func ShowConfigObject (w http.ResponseWriter, r *http.Request) {
+	 logger.Println("####  ShowConfigObject called")
+}
+
+func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
+	 logger.Println("#### ConfigObjectCreate called")
+	 resource := r.URL
+	 logger.Println("### Requested resource is ", resource)
+	 /*body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+	 if err != nil {
+	 	panic(err)
+	 }
+ 	 if err := r.Body.Close(); err != nil {
+		panic(err)
+	 }*/
+	 return 
+}
+	
 func ShowBgpPeer (w http.ResponseWriter, r *http.Request) {
-     //peers := BgpPeers {
-     //		BgpPeer{ PeerIp    : "10.0.1.1", 
-     //                    PeerState : "Established",
-     //			 LocalAs   : 500,	
-     //			 RemoteAs  : 500},
-     //         BgpPeer{ PeerIp    : "20.20.2.1",
-     //                    PeerState : "Established",
-     //			 LocalAs   : 200,
-     //			 RemoteAs  : 300},
-     //         }
      json.NewEncoder(w).Encode(peers)
 }
 
@@ -58,6 +54,7 @@ func BgpPeerCreate (w http.ResponseWriter, r *http.Request) {
 		    panic(err)
 		}
 	}
+	logger.Println("### Object Create is called")
 	p  := createPeer(peer.PeerIp, peer.LocalAs, peer.RemoteAs)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
