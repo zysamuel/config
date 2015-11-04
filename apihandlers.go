@@ -4,8 +4,13 @@ import  ("encoding/json"
 	"io"
 	"io/ioutil"
    "net/http"
+	"strings"
+	"models"
    //"net/url"
 	)
+func GetConfigObj(r *http.Request, obj models.ConfigObj) error {
+	     return obj.UnmarshalHTTP(r)
+}
 
 func Index (w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/jsoni;charset=UTF-8")
@@ -21,15 +26,10 @@ func ShowConfigObject (w http.ResponseWriter, r *http.Request) {
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	 logger.Println("#### ConfigObjectCreate called")
-	 resource := r.URL
-	 logger.Println("### Requested resource is ", resource)
-	 /*body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
-	 if err != nil {
-	 	panic(err)
+	 resource := strings.TrimPrefix(r.URL.String(), "/")
+	 if obj, ok := models.ConfigObjectMap[resource]; ok { 
+		  x := GetConfigObj(r,obj)
 	 }
- 	 if err := r.Body.Close(); err != nil {
-		panic(err)
-	 }*/
 	 return 
 }
 	
@@ -54,7 +54,6 @@ func BgpPeerCreate (w http.ResponseWriter, r *http.Request) {
 		    panic(err)
 		}
 	}
-	logger.Println("### Object Create is called")
 	p  := createPeer(peer.PeerIp, peer.LocalAs, peer.RemoteAs)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
