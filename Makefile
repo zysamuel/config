@@ -17,6 +17,9 @@ all: $(COMP_NAME)
 $(COMP_NAME): $(SRCS)
 	 go build -o $@ $(SRCS)
 
+fmt: $(SRCS)
+	 go fmt $(SRCS)
+
 guard:
 ifndef SR_CODE_BASE
 	 $(error SR_CODE_BASE is not set)
