@@ -5,7 +5,7 @@ import (
 	"ribd"
 )
 
-var gRibClient RibClient = RibClient{}
+//var gRibClient RibClient = RibClient{}
 
 type RibClient struct {
 	Address            string
@@ -15,22 +15,27 @@ type RibClient struct {
 	IsConnected        bool
 }
 
-func (clnt RibClient) Initialize(name string, address string) {
-	gRibClient.Address = address
+func (clnt *RibClient) Initialize(name string, address string) {
+	clnt.Address = address
 	return
 }
 
-func (clnt RibClient) ConnectToServer() bool {
+func (clnt *RibClient) ConnectToServer() bool {
 
-	gRibClient.Transport, gRibClient.PtrProtocolFactory = CreateIPCHandles(gRibClient.Address)
-	if gRibClient.Transport != nil && gRibClient.PtrProtocolFactory != nil {
-		gRibClient.ClientHdl = ribd.NewRouteServiceClientFactory(gRibClient.Transport, gRibClient.PtrProtocolFactory)
+	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}
-	//gRibClient.ClientHdl.CreateV4Route(0,0,0,0,0)
+	//clnt.ClientHdl.CreateV4Route(0, 0, 0, 0, 0)
 	return true
 }
 
-func (clnt RibClient) IsConnectedToServer() bool {
+func (clnt *RibClient) IsConnectedToServer() bool {
+	return true
+}
+
+func (clnt *RibClient) CreateObject() bool {
+	clnt.ClientHdl.CreateV4Route(0, 0, 0, 0, 0)
 	return true
 }
 
@@ -41,14 +46,18 @@ type AsicDClient struct {
 	IsConnected        bool
 }
 
-func (clnt AsicDClient) Initialize(name string, address string) {
+func (clnt *AsicDClient) Initialize(name string, address string) {
 	return
 }
 
-func (clnt AsicDClient) ConnectToServer() bool {
+func (clnt *AsicDClient) ConnectToServer() bool {
 	return true
 }
 
-func (clnt AsicDClient) IsConnectedToServer() bool {
+func (clnt *AsicDClient) IsConnectedToServer() bool {
+	return true
+}
+
+func (clnt *AsicDClient) CreateObject() bool {
 	return true
 }

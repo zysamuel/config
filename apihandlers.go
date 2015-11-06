@@ -10,8 +10,16 @@ import (
 	//"net/url"
 )
 
-func GetConfigObj(r *http.Request, obj models.ConfigObj) error {
-	return obj.UnmarshalHTTP(r)
+func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
+	var retObj models.ConfigObj
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+	if err != nil {
+		return retObj, err
+	}
+	if err := r.Body.Close(); err != nil {
+		return retObj, err
+	}
+	return obj.UnmarshalObject(body)
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +35,13 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
-	logger.Println("#### ConfigObjectCreate called")
 	resource := strings.TrimPrefix(r.URL.String(), "/")
+	logger.Println("####  CreateObject  called")
 	if obj, ok := models.ConfigObjectMap[resource]; ok {
-		x := GetConfigObj(r, obj)
+		x, _ := GetConfigObj(r, obj)
+		logger.Println("#### Resource Map Owner ", resource, gMgr)
+		gMgr.objHdlMap[resource].owner.CreateObject()
+		logger.Println("### Config Obj is ", x)
 	}
 	return
 }
