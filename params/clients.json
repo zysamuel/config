@@ -1,7 +1,10 @@
 [
-	 {"Name": "asicd",
+	{"Name": "asicd",
 	 "Port": 4000},
 
-	 {"Name":"ribd",  
-	  "Port":5000}
+	{"Name": "bgpd",
+	 "Port": 4050},
+
+	{"Name":"ribd",  
+	 "Port":5000}
 ]
