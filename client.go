@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"models"
 )
 
 type ClientIf interface {
 	Initialize(name string, address string)
 	ConnectToServer() bool
 	IsConnectedToServer() bool
-	CreateObject() bool
+	CreateObject(models.ConfigObj) bool
 }
 
 type ClientJson struct {
@@ -37,6 +38,7 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 	}
 
 	for _, client := range clientsList {
+		logger.Println("#### Client name is ", client.Name)
 		mgr.clients[client.Name] = ClientInterfaces[client.Name]
 		mgr.clients[client.Name].Initialize(client.Name, "localhost:9090")
 		mgr.clients[client.Name].ConnectToServer()
