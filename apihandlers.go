@@ -39,9 +39,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	logger.Println("####  CreateObject  called")
 	if obj, ok := models.ConfigObjectMap[resource]; ok {
 		x, _ := GetConfigObj(r, obj)
-		logger.Println("#### Resource Map Owner ", resource, gMgr)
-		gMgr.objHdlMap[resource].owner.CreateObject()
-		logger.Println("### Config Obj is ", x)
+		logger.Println("### Config Object is ", x)
+		gMgr.objHdlMap[resource].owner.CreateObject(x)
 	}
 	return
 }
