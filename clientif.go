@@ -109,14 +109,19 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj) bool {
 
 type BgpDClient struct {
 	IPCClientBase
-	ClientHdl *bgpd.BgpServerClient
+	ClientHdl *bgpd.BGPServerClient
 }
 
 func (clnt *BgpDClient) Initialize(name string, address string) {
+	clnt.Address = address
 	return
 }
 
 func (clnt *BgpDClient) ConnectToServer() bool {
+	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = bgpd.NewBGPServerClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	}
 	return true
 }
 
@@ -125,5 +130,28 @@ func (clnt *BgpDClient) IsConnectedToServer() bool {
 }
 
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
+	switch obj.(type) {
+	case models.BGPGlobalConfig:
+		bgpGlobalConf := obj.(models.BGPGlobalConfig)
+		gConf := bgpd.NewBGPGlobal()
+		gConf.AS = int32(bgpGlobalConf.AS)
+		gConf.RouterId = bgpGlobalConf.RouterId
+		_, err := clnt.ClientHdl.CreateBGPGlobal(gConf)
+		if err != nil {
+			return false
+		}
+
+	case models.BGPNeighborConfig:
+		bgpNeighborConf := obj.(models.BGPNeighborConfig)
+		nConf := bgpd.NewBGPNeighbor()
+		nConf.PeerAS = int32(bgpNeighborConf.PeerAS)
+		nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
+		nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
+		nConf.Description = bgpNeighborConf.Description
+		_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
+		if err != nil {
+			return false
+		}
+	}
 	return true
 }
