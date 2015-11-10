@@ -12,30 +12,3 @@ type ApiRoute struct {
 }
 
 type ApiRoutes []ApiRoute
-
-var routes = ApiRoutes{
-	ApiRoute{
-		"Index",
-		"GET",
-		"/",
-		Index,
-	},
-	//ApiRoute{
-	//    "BgpPeerCreate",
-	//    "GET",
-	//    "/bgppeers",
-	//    BgpPeerCreate,
-	//},
-	ApiRoute{
-		"BgpPeerShow",
-		"GET",
-		"/bgppeers/{peerId}",
-		ShowBgpPeer,
-	},
-	ApiRoute{
-		"BgpPeerCreate",
-		"POST",
-		"/bgppeers",
-		BgpPeerCreate,
-	},
-}
