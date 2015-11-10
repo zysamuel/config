@@ -67,10 +67,15 @@ type AsicDClient struct {
 }
 
 func (clnt *AsicDClient) Initialize(name string, address string) {
+	clnt.Address = address
 	return
 }
 
 func (clnt *AsicDClient) ConnectToServer() bool {
+	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	}
 	return true
 }
 
@@ -79,6 +84,26 @@ func (clnt *AsicDClient) IsConnectedToServer() bool {
 }
 
 func (clnt *AsicDClient) CreateObject(obj models.ConfigObj) bool {
+    switch obj.(type) {
+    case models.Vlan : //Vlan
+        vlanObj := obj.(models.Vlan)
+        _, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
+        if err != nil {
+            return false
+        }
+    case models.IPv4Intf : //IPv4Intf
+        v4Intf := obj.(models.IPv4Intf)
+        _, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
+        if err != nil {
+            return false
+        }
+    case models.IPv4Neighbor : //IPv4Neighbor
+        v4Nbr := obj.(models.IPv4Neighbor)
+        _, err := clnt.ClientHdl.CreateIPv4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
+        if err != nil {
+            return false
+        }
+    }
 	return true
 }
 
