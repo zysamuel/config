@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strconv"
 	"models"
 )
 
@@ -40,7 +41,7 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 	for _, client := range clientsList {
 		logger.Println("#### Client name is ", client.Name)
 		mgr.clients[client.Name] = ClientInterfaces[client.Name]
-		mgr.clients[client.Name].Initialize(client.Name, "localhost:9090")
+		mgr.clients[client.Name].Initialize(client.Name, "localhost:" + strconv.Itoa(client.Port))
 		mgr.clients[client.Name].ConnectToServer()
 		logger.Println("Initialization of Client: ", client.Name)
 	}
