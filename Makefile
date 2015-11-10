@@ -6,7 +6,6 @@ SRCS=apihandlers.go\
 	  clientif.go\
 	  objif.go\
 	  logger.go\
-	  apiroutes.go\
 	  restroutes.go\
 	  configmgr.go\
 	  main.go\
