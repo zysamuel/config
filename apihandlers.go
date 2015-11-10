@@ -37,10 +37,10 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	logger.Println("####  CreateObject  called")
-	if obj, ok := models.ConfigObjectMap[resource]; ok {
-		x, _ := GetConfigObj(r, obj)
-		logger.Println("### Config Object is ", x)
-		gMgr.objHdlMap[resource].owner.CreateObject(x)
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		obj, _ := GetConfigObj(r, objHdl)
+		logger.Println("### Config Object is ", obj)
+		gMgr.objHdlMap[resource].owner.CreateObject(obj)
 	}
 	return
 }

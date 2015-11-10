@@ -1,13 +1,13 @@
 package main
 
 import (
+	"asicdServices"
+	"bgpd"
 	"encoding/binary"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"models"
 	"net"
 	"ribd"
-	"asicdServices"
-	"bgpd"
 )
 
 type IPCClientBase struct {
@@ -19,7 +19,7 @@ type IPCClientBase struct {
 
 type RibClient struct {
 	IPCClientBase
-	ClientHdl          *ribd.RouteServiceClient
+	ClientHdl *ribd.RouteServiceClient
 }
 
 func (clnt *RibClient) Initialize(name string, address string) {
@@ -41,14 +41,22 @@ func (clnt *RibClient) IsConnectedToServer() bool {
 }
 
 func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
-	v4Route := obj.(models.IPV4Route)
-	clnt.ClientHdl.CreateV4Route(
-	    ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-		ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NetworkMask).To4())),
-		ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
-		0,
-		//v4Route.OutgoingInterface,
-		ribd.Int(v4Route.Cost))
+
+	switch obj.(type) {
+
+	case models.IPV4Route:
+		v4Route := obj.(models.IPV4Route)
+		clnt.ClientHdl.CreateV4Route(
+			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NetworkMask).To4())),
+			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+			0,
+			//v4Route.OutgoingInterface,
+			ribd.Int(v4Route.Cost))
+		break
+	default:
+		break
+	}
 
 	return true
 }
