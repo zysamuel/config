@@ -49,9 +49,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
 		v4Route := obj.(models.IPV4Route)
 		outIntf,_ :=strconv.Atoi(v4Route.OutgoingInterface)
 		proto,_ :=strconv.Atoi(v4Route.Protocol)
+		prefixLen, _ :=strconv.Atoi(v4Route.NetworkMask)
 		clnt.ClientHdl.CreateV4Route(
 			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NetworkMask).To4())),
+			ribd.Int(prefixLen),
 			ribd.Int(v4Route.Cost),
 			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
 			ribd.Int(outIntf),
