@@ -8,6 +8,7 @@ import (
 	"models"
 	"net"
 	"ribd"
+	"strconv"
 )
 
 type IPCClientBase struct {
@@ -46,13 +47,15 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
 
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
+		outIntf,_ :=strconv.Atoi(v4Route.OutgoingInterface)
+		proto,_ :=strconv.Atoi(v4Route.Protocol)
 		clnt.ClientHdl.CreateV4Route(
 			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NetworkMask).To4())),
+			ribd.Int(v4Route.Cost),
 			ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
-			0,
-			//v4Route.OutgoingInterface,
-			ribd.Int(v4Route.Cost))
+			ribd.Int(outIntf),
+			ribd.Int(proto))
 		break
 	default:
 		break
