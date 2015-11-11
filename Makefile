@@ -12,10 +12,10 @@ SRCS=apihandlers.go\
 	  remotebgppeer.go
 
 COMP_NAME=confd
-all: $(COMP_NAME)
+all: exe
 
-$(COMP_NAME): $(SRCS)
-	 go build -o $@ $(SRCS)
+exe: $(SRCS)
+	 go build -o $(COMP_NAME) $(SRCS)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
