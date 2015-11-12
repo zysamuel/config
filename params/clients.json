@@ -6,5 +6,8 @@
 	 "Port": 4050},
 
 	{"Name":"ribd",  
-	 "Port":5000}
+	 "Port":5000},
+	
+	{"Name":"portd", 
+	 "Port":5050}
 ]
