@@ -1,4 +1,5 @@
 RM=rm -f
+DESTDIR=$(SR_CODE_BASE)/snaproute/src/bin
 SRCS=apihandlers.go\
 	  ipcutils.go\
 	  client.go\
@@ -15,7 +16,7 @@ COMP_NAME=confd
 all: exe
 
 exe: $(SRCS)
-	 go build -o $(COMP_NAME) $(SRCS)
+	 go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
