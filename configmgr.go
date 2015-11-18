@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/gorilla/mux"
 	"models"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 type ConfigMgr struct {
 	clients    map[string]ClientIf
 	pRestRtr   *mux.Router
+	dbHdl      *sql.DB
 	restRoutes []ApiRoute
 	objHdlMap  map[string]ConfigObjInfo
 }
@@ -57,13 +59,24 @@ func (mgr *ConfigMgr) GetRestRtr() *mux.Router {
 // This function would work as a classical constructor for the
 // configMgr object
 //
-func NewConfigMgr(paramsFile string) *ConfigMgr {
+func NewConfigMgr(paramsDir string) *ConfigMgr {
+	var rc bool
 	mgr := new(ConfigMgr)
-	objectConfigFile := "../models/objectconfig.json"
-	mgr.InitializeClientHandles(paramsFile)
-	mgr.InitializeObjectHandles(objectConfigFile)
+	objectConfigFile := paramsDir + "/objectconfig.json"
+	paramsFile := paramsDir + "/clients.json"
+	rc = mgr.InitializeClientHandles(paramsFile)
+	if rc == false {
+		logger.Println("ERROR: Error in Initializing Client handles")
+		return nil
+	}
+	rc = mgr.InitializeObjectHandles(objectConfigFile)
+	if rc == false {
+		logger.Println("ERROR: Error in Initializing Object handles")
+		return nil
+	}
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
+	mgr.InstantiateDbIf()
 	logger.Println("Initialization Done!", mgr.clients)
 	return mgr
 }

@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"strconv"
 	"models"
+	"strconv"
 )
 
 type ClientIf interface {
@@ -28,7 +28,7 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 
 	bytes, err := ioutil.ReadFile(paramsFile)
 	if err != nil {
-		logger.Println("Error in reading configuration file")
+		logger.Println("Error in reading configuration file", paramsFile)
 		return false
 	}
 
@@ -41,7 +41,7 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 	for _, client := range clientsList {
 		logger.Println("#### Client name is ", client.Name)
 		mgr.clients[client.Name] = ClientInterfaces[client.Name]
-		mgr.clients[client.Name].Initialize(client.Name, "localhost:" + strconv.Itoa(client.Port))
+		mgr.clients[client.Name].Initialize(client.Name, "localhost:"+strconv.Itoa(client.Port))
 		mgr.clients[client.Name].ConnectToServer()
 		logger.Println("Initialization of Client: ", client.Name)
 	}

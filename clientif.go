@@ -2,8 +2,8 @@ package main
 
 import (
 	"asicdServices"
-	"portdServices"
 	"bgpd"
+	"portdServices"
 	//"encoding/binary"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"models"
@@ -23,7 +23,6 @@ type PortDClient struct {
 	IPCClientBase
 	ClientHdl *portdServices.PortServiceClient
 }
-
 
 func (clnt *PortDClient) Initialize(name string, address string) {
 	clnt.Address = address
@@ -47,18 +46,18 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj) bool {
 
 	switch obj.(type) {
 
-    case models.IPv4Intf : //IPv4Intf
-        v4Intf := obj.(models.IPv4Intf)
-        _, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
-        if err != nil {
-            return false
-        }
-    case models.IPv4Neighbor : //IPv4Neighbor
-        v4Nbr := obj.(models.IPv4Neighbor)
-        _, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
-        if err != nil {
-            return false
-        }
+	case models.IPv4Intf: //IPv4Intf
+		v4Intf := obj.(models.IPv4Intf)
+		_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
+		if err != nil {
+			return false
+		}
+	case models.IPv4Neighbor: //IPv4Neighbor
+		v4Nbr := obj.(models.IPv4Neighbor)
+		_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
+		if err != nil {
+			return false
+		}
 		break
 	default:
 		break
@@ -96,14 +95,14 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
 
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		outIntf,_ :=strconv.Atoi(v4Route.OutgoingInterface)
-		proto,_ :=strconv.Atoi(v4Route.Protocol)
+		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		proto, _ := strconv.Atoi(v4Route.Protocol)
 		//prefixLen, _ :=strconv.Atoi(v4Route.NetworkMask)
 		clnt.ClientHdl.CreateV4Route(
 			v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-			v4Route.NetworkMask,//ribd.Int(prefixLen),
+			v4Route.NetworkMask,   //ribd.Int(prefixLen),
 			ribd.Int(v4Route.Cost),
-			v4Route.NextHopIp,//ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+			v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
 			ribd.Int(outIntf),
 			ribd.Int(proto))
 		break
@@ -137,14 +136,14 @@ func (clnt *AsicDClient) IsConnectedToServer() bool {
 }
 
 func (clnt *AsicDClient) CreateObject(obj models.ConfigObj) bool {
-    switch obj.(type) {
-    case models.Vlan : //Vlan
-        vlanObj := obj.(models.Vlan)
-        _, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
-        if err != nil {
-            return false
-        }
-    }
+	switch obj.(type) {
+	case models.Vlan: //Vlan
+		vlanObj := obj.(models.Vlan)
+		_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
+		if err != nil {
+			return false
+		}
+	}
 	return true
 }
 
