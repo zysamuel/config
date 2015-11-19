@@ -36,4 +36,4 @@ ifndef SR_CODE_BASE
 endif
 
 clean:guard
-	 $(RM) $(COMP_NAME) 
+	 $(RM) $(DESTDIR)/$(COMP_NAME) 
