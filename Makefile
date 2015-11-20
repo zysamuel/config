@@ -17,12 +17,12 @@ SRCS=apihandlers.go\
 	  remotebgppeer.go
 
 COMP_NAME=confd
-all: exe files
+all: exe install 
 
 exe: $(SRCS)
 	 go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
 
-files:
+install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 @install params/clients.json $(PARAMSDIR)/
 	 @install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
