@@ -36,11 +36,16 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
-	logger.Println("####  CreateObject  called")
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
-		logger.Println("### Config Object is ", obj)
-		gMgr.objHdlMap[resource].owner.CreateObject(obj)
+		objectId, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+		if success == true {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusCreated)
+			if err := json.NewEncoder(w).Encode(objectId); err != nil {
+				logger.Println("### Failed to encode the objectId for object ", resource, objectId)
+			}
+		}
 	}
 	return
 }

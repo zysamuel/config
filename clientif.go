@@ -8,8 +8,9 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"models"
 	//"net"
+	"database/sql"
 	"ribd"
-	"strconv"
+	//"strconv"
 )
 
 type IPCClientBase struct {
@@ -42,7 +43,7 @@ func (clnt *PortDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *PortDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 
 	switch obj.(type) {
 
@@ -50,20 +51,20 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj) bool {
 		v4Intf := obj.(models.IPv4Intf)
 		_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	case models.IPv4Neighbor: //IPv4Neighbor
 		v4Nbr := obj.(models.IPv4Neighbor)
 		_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 		break
 	default:
 		break
 	}
 
-	return true
+	return int64(0), true
 }
 
 type RibClient struct {
@@ -89,7 +90,7 @@ func (clnt *RibClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 
 	switch obj.(type) {
 
@@ -97,7 +98,6 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
 		v4Route := obj.(models.IPV4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		proto, _ := strconv.Atoi(v4Route.Protocol)
-		//prefixLen, _ :=strconv.Atoi(v4Route.NetworkMask)
 		clnt.ClientHdl.CreateV4Route(
 			v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 			v4Route.NetworkMask,   //ribd.Int(prefixLen),
@@ -105,12 +105,14 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
 			v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
 			ribd.Int(outIntf),
 			ribd.Int(proto))
-		break
+		objId, _ := v4Route.StoreObjectInDb(dbHdl)
+		return objId, true
+
 	default:
 		break
 	}
 
-	return true
+	return int64(0), true
 }
 
 type AsicDClient struct {
@@ -135,16 +137,16 @@ func (clnt *AsicDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *AsicDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
 	case models.Vlan: //Vlan
 		vlanObj := obj.(models.Vlan)
 		_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	}
-	return true
+	return int64(0), true
 }
 
 type BgpDClient struct {
@@ -169,7 +171,7 @@ func (clnt *BgpDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
 	case models.BGPGlobalConfig:
 		bgpGlobalConf := obj.(models.BGPGlobalConfig)
@@ -178,7 +180,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
 		gConf.RouterId = bgpGlobalConf.RouterId
 		_, err := clnt.ClientHdl.CreateBGPGlobal(gConf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 
 	case models.BGPNeighborConfig:
@@ -190,8 +192,8 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
 		nConf.Description = bgpNeighborConf.Description
 		_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	}
-	return true
+	return int64(0), true
 }
