@@ -24,4 +24,4 @@ _testmain.go
 *.prof
 
 # ignore auto generated clientif
-*ClientIf.go
+gen*
