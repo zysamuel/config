@@ -26,7 +26,7 @@ func (mgr *ConfigMgr) InitializeObjectHandles(objsFile string) bool {
 	var objMap map[string]ConfigObjJson
 	bytes, err := ioutil.ReadFile(objsFile)
 	if err != nil {
-		logger.Println("Error in reading configuration file")
+		logger.Println("Error in reading Object configuration file", objsFile)
 		return false
 	}
 	err = json.Unmarshal(bytes, &objMap)
@@ -40,6 +40,5 @@ func (mgr *ConfigMgr) InitializeObjectHandles(objsFile string) bool {
 		}
 		mgr.objHdlMap[k] = *entry
 	}
-	//mgr.objHdlMap["IPV4Route"].owner.CreateObject()
 	return true
 }
