@@ -13,6 +13,7 @@ type ClientIf interface {
 	ConnectToServer() bool
 	IsConnectedToServer() bool
 	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
+	DeleteObject(objId int64, dbHdl *sql.DB) bool
 }
 
 type ClientJson struct {

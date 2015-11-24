@@ -10,7 +10,7 @@ import (
 	//"net"
 	"database/sql"
 	"ribd"
-	//"strconv"
+	"strconv"
 )
 
 type IPCClientBase struct {
@@ -67,6 +67,10 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	return int64(0), true
 }
 
+func (clnt *PortDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+	return true
+}
+
 type RibClient struct {
 	IPCClientBase
 	ClientHdl *ribd.RouteServiceClient
@@ -115,6 +119,11 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	return int64(0), true
 }
 
+func (clnt *RibClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+	logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId)
+	return true
+}
+
 type AsicDClient struct {
 	IPCClientBase
 	ClientHdl *asicdServices.AsicdServiceClient
@@ -147,6 +156,10 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		}
 	}
 	return int64(0), true
+}
+
+func (clnt *AsicDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+	return true
 }
 
 type BgpDClient struct {
@@ -196,4 +209,8 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		}
 	}
 	return int64(0), true
+}
+
+func (clnt *BgpDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+	return true
 }

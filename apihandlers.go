@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	//"net/url"
+	"github.com/gorilla/mux"
+	"strconv"
 )
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
@@ -45,6 +47,26 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err := json.NewEncoder(w).Encode(objectId); err != nil {
 				logger.Println("### Failed to encode the objectId for object ", resource, objectId)
 			}
+		}
+	}
+	return
+}
+
+func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
+	logger.Println("#### Delete Object called")
+	resource := strings.TrimPrefix(r.URL.String(), "/")
+	if _, ok := models.ConfigObjectMap[resource]; ok {
+		vars := mux.Vars(r)
+		objIdStr := vars["objId"]
+		objId, err := strconv.ParseInt(objIdStr, 10, 64)
+		if err != nil {
+			logger.Println("#### Failed to get int value from string")
+		}
+
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(objId, gMgr.dbHdl)
+		if success == true {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusOK)
 		}
 	}
 	return
