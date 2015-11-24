@@ -33,6 +33,12 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			ConfigObjectCreate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Delete",
+			"DELETE",
+			"/" + key + "/" + "{objId}",
+			ConfigObjectDelete,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 	}
 	return true
@@ -46,6 +52,7 @@ func (mgr *ConfigMgr) InstantiateRestRtr() *mux.Router {
 	for _, route := range mgr.restRoutes {
 		var handler http.Handler
 		handler = Logger(route.HandlerFunc, route.Name)
+		logger.Println("### Object Route: Pattern: Name: Method", route.Pattern, route.Name, route.Method)
 		mgr.pRestRtr.Methods(route.Method).Path(route.Pattern).Name(route.Name).Handler(handler)
 	}
 	return mgr.pRestRtr
