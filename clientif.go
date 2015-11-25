@@ -10,7 +10,7 @@ import (
 	//"net"
 	"database/sql"
 	"ribd"
-	"strconv"
+	_ "strconv"
 )
 
 type IPCClientBase struct {
@@ -67,7 +67,7 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	return int64(0), true
 }
 
-func (clnt *PortDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -100,15 +100,17 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
-		proto, _ := strconv.Atoi(v4Route.Protocol)
-		clnt.ClientHdl.CreateV4Route(
-			v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-			v4Route.NetworkMask,   //ribd.Int(prefixLen),
-			ribd.Int(v4Route.Cost),
-			v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
-			ribd.Int(outIntf),
-			ribd.Int(proto))
+		//outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		//proto, _ := strconv.Atoi(v4Route.Protocol)
+		////if clnt.ClientHdl != nil {
+		//	clnt.ClientHdl.CreateV4Route(
+		//		v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+		//		v4Route.NetworkMask,   //ribd.Int(prefixLen),
+		//		ribd.Int(v4Route.Cost),
+		//		v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+		//		ribd.Int(outIntf),
+		//		ribd.Int(proto))
+		//}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
 
@@ -119,8 +121,17 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	return int64(0), true
 }
 
-func (clnt *RibClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
-	logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId)
+func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
+	logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId, obj)
+	switch obj.(type) {
+	case models.IPV4Route:
+		v4Route := obj.(models.IPV4Route)
+		logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId)
+		v4Route.DeleteObjectFromDb(objId, dbHdl)
+		//default:
+		//	logger.Println("OBJECT Type is ", obj.(type))
+	}
+
 	return true
 }
 
@@ -158,7 +169,7 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	return int64(0), true
 }
 
-func (clnt *AsicDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -211,6 +222,6 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 	return int64(0), true
 }
 
-func (clnt *BgpDClient) DeleteObject(objId int64, dbHdl *sql.DB) bool {
+func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
