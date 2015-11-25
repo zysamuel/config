@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
 	"models"
 	"net/http"
 	"strings"
 	//"net/url"
-	"github.com/gorilla/mux"
 	"strconv"
 )
 
@@ -53,17 +53,16 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
-	logger.Println("#### Delete Object called")
-	resource := strings.TrimPrefix(r.URL.String(), "/")
-	if _, ok := models.ConfigObjectMap[resource]; ok {
-		vars := mux.Vars(r)
-		objIdStr := vars["objId"]
-		objId, err := strconv.ParseInt(objIdStr, 10, 64)
-		if err != nil {
-			logger.Println("#### Failed to get int value from string")
-		}
-
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(objId, gMgr.dbHdl)
+	resource := strings.Split(r.URL.String(), "/")[1]
+	vars := mux.Vars(r)
+	objId, err := strconv.ParseInt(vars["objId"], 10, 64)
+	if err != nil {
+		logger.Println("### Failure in deleting object with Id ", resource, vars["objId"], err)
+		return
+	}
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		obj, _ := GetConfigObj(r, objHdl)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
