@@ -20,7 +20,7 @@ type ConfigMgr struct {
 //
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
-	for key, _ := range models.ConfigObjectMap {
+	for key, _ := range genmodels.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
 			"/" + key,

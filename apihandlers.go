@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"genmodels"
 	"io"
 	"io/ioutil"
 	"models"
@@ -37,7 +38,7 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	logger.Println("####  CreateObject  called")
-	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+	if objHdl, ok := genmodels.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		logger.Println("### Config Object is ", obj)
 		gMgr.objHdlMap[resource].owner.CreateObject(obj)
