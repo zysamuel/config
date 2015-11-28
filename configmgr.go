@@ -33,6 +33,12 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			ConfigObjectCreate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Delete",
+			"DELETE",
+			"/" + key + "/" + "{objId}",
+			ConfigObjectDelete,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 	}
 	return true

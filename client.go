@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"models"
@@ -11,7 +12,8 @@ type ClientIf interface {
 	Initialize(name string, address string)
 	ConnectToServer() bool
 	IsConnectedToServer() bool
-	CreateObject(models.ConfigObj) bool
+	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
+	DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool
 }
 
 type ClientJson struct {

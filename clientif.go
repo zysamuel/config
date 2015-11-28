@@ -8,8 +8,9 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"models"
 	//"net"
+	"database/sql"
 	"ribd"
-	"strconv"
+	_ "strconv"
 )
 
 type IPCClientBase struct {
@@ -42,7 +43,7 @@ func (clnt *PortDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *PortDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 
 	switch obj.(type) {
 
@@ -50,19 +51,23 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj) bool {
 		v4Intf := obj.(models.IPv4Intf)
 		_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	case models.IPv4Neighbor: //IPv4Neighbor
 		v4Nbr := obj.(models.IPv4Neighbor)
 		_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 		break
 	default:
 		break
 	}
 
+	return int64(0), true
+}
+
+func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -89,25 +94,42 @@ func (clnt *RibClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *RibClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 
 	switch obj.(type) {
 
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
-		proto, _ := strconv.Atoi(v4Route.Protocol)
-		//prefixLen, _ :=strconv.Atoi(v4Route.NetworkMask)
-		clnt.ClientHdl.CreateV4Route(
-			v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-			v4Route.NetworkMask,   //ribd.Int(prefixLen),
-			ribd.Int(v4Route.Cost),
-			v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
-			ribd.Int(outIntf),
-			ribd.Int(proto))
-		break
+		//outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		//proto, _ := strconv.Atoi(v4Route.Protocol)
+		////if clnt.ClientHdl != nil {
+		//	clnt.ClientHdl.CreateV4Route(
+		//		v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+		//		v4Route.NetworkMask,   //ribd.Int(prefixLen),
+		//		ribd.Int(v4Route.Cost),
+		//		v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+		//		ribd.Int(outIntf),
+		//		ribd.Int(proto))
+		//}
+		objId, _ := v4Route.StoreObjectInDb(dbHdl)
+		return objId, true
+
 	default:
 		break
+	}
+
+	return int64(0), true
+}
+
+func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
+	logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId, obj)
+	switch obj.(type) {
+	case models.IPV4Route:
+		v4Route := obj.(models.IPV4Route)
+		logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId)
+		v4Route.DeleteObjectFromDb(objId, dbHdl)
+		//default:
+		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
 
 	return true
@@ -135,15 +157,19 @@ func (clnt *AsicDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *AsicDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
 	case models.Vlan: //Vlan
 		vlanObj := obj.(models.Vlan)
 		_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	}
+	return int64(0), true
+}
+
+func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -169,7 +195,7 @@ func (clnt *BgpDClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
+func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
 	case models.BGPGlobalConfig:
 		bgpGlobalConf := obj.(models.BGPGlobalConfig)
@@ -178,7 +204,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
 		gConf.RouterId = bgpGlobalConf.RouterId
 		_, err := clnt.ClientHdl.CreateBGPGlobal(gConf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 
 	case models.BGPNeighborConfig:
@@ -190,8 +216,12 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj) bool {
 		nConf.Description = bgpNeighborConf.Description
 		_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
 		if err != nil {
-			return false
+			return int64(0), false
 		}
 	}
+	return int64(0), true
+}
+
+func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
