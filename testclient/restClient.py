@@ -220,7 +220,8 @@ class ModelPanel(wx.Panel):
                             elif line == '\n' or \
                                 "//" in line or \
                                 "#" in line or \
-                                "package" in line:
+                                "package" in line or \
+                                    ("/*" in line and "*/" in line):
                                 continue
                             elif "/*" in line:
                                 deletingComment = True
