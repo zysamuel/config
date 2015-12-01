@@ -49,7 +49,7 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 
 	case models.IPv4Intf: //IPv4Intf
 		v4Intf := obj.(models.IPv4Intf)
-		_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf)
+		_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.VlanEnabled)
 		if err != nil {
 			return int64(0), false
 		}
@@ -60,6 +60,12 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			return int64(0), false
 		}
 		break
+	case models.Vlan: //Vlan
+		vlanObj := obj.(models.Vlan)
+		_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
+		if err != nil {
+			return int64(0), false
+		}
 	default:
 		break
 	}
