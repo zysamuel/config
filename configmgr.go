@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"genmodels"
 	"github.com/gorilla/mux"
-	"models"
 	"net/http"
 )
 

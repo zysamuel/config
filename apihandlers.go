@@ -62,7 +62,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		logger.Println("### Failure in deleting object with Id ", resource, vars["objId"], err)
 		return
 	}
-	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+	if objHdl, ok := genmodels.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
 		if success == true {

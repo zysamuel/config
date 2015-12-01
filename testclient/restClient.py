@@ -8,7 +8,7 @@ import wx.grid
 HOME = os.getenv("HOME")
 MODEL_NAME = 'genmodels'
 JSON_MODEL_REGISTRAION_PATH = HOME + "/git/snaproute/src/models/"
-GO_MODEL_BASE_PATH_LIST = [HOME + "/git/snaproute/generated/src/%s/" % MODEL_NAME,
+GO_MODEL_BASE_PATH_LIST = [HOME + "/git/generated/src/%s/" % MODEL_NAME,
                            HOME + "/git/snaproute/src/models/"]
 
 LOCAL_HOST_URL = "http://localhost:8080/"
