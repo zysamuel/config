@@ -6,7 +6,7 @@ import requests
 import wx.grid
 
 HOME = os.getenv("HOME")
-MODEL_NAME = 'genmodels'
+MODEL_NAME = 'models'
 JSON_MODEL_REGISTRAION_PATH = HOME + "/git/snaproute/src/models/"
 GO_MODEL_BASE_PATH_LIST = [HOME + "/git/generated/src/%s/" % MODEL_NAME,
                            HOME + "/git/snaproute/src/models/"]

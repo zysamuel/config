@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
-	"genmodels"
 	"github.com/gorilla/mux"
+	"models"
 	"net/http"
 )
 
@@ -20,7 +20,7 @@ type ConfigMgr struct {
 //
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
-	for key, _ := range genmodels.ConfigObjectMap {
+	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
 			"/" + key,

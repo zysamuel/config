@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"genmodels"
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
@@ -40,7 +39,7 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	logger.Println("####  CreateObject  called")
-	if objHdl, ok := genmodels.ConfigObjectMap[resource]; ok {
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		objectId, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
@@ -62,7 +61,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		logger.Println("### Failure in deleting object with Id ", resource, vars["objId"], err)
 		return
 	}
-	if objHdl, ok := genmodels.ConfigObjectMap[resource]; ok {
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
 		if success == true {
