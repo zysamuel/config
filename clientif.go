@@ -106,17 +106,17 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		//outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
-		//proto, _ := strconv.Atoi(v4Route.Protocol)
-		////if clnt.ClientHdl != nil {
-		//	clnt.ClientHdl.CreateV4Route(
-		//		v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-		//		v4Route.NetworkMask,   //ribd.Int(prefixLen),
-		//		ribd.Int(v4Route.Cost),
-		//		v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
-		//		ribd.Int(outIntf),
-		//		ribd.Int(proto))
-		//}
+		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		proto, _ := strconv.Atoi(v4Route.Protocol)
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreateV4Route(
+				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+				v4Route.NetworkMask,   //ribd.Int(prefixLen),
+				ribd.Int(v4Route.Cost),
+				v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+				ribd.Int(outIntf),
+				ribd.Int(proto))
+		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
 
