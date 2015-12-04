@@ -8,7 +8,7 @@ import wx.grid
 HOME = os.getenv("HOME")
 MODEL_NAME = 'models'
 JSON_MODEL_REGISTRAION_PATH = HOME + "/git/snaproute/src/models/"
-GO_MODEL_BASE_PATH_LIST = [HOME + "/git/generated/src/%s/" % MODEL_NAME,
+GO_MODEL_BASE_PATH_LIST = [
                            HOME + "/git/snaproute/src/models/"]
 
 LOCAL_HOST_URL = "http://localhost:8080/"
@@ -197,8 +197,8 @@ class ModelPanel(wx.Panel):
         (filename, structList) = fileStructTuple
         for path in GO_MODEL_BASE_PATH_LIST:
             try:
-                with open(path+filename+".go", "r") as f:
-                    print 'processing', path+filename+".go"
+                with open(path+filename, "r") as f:
+                    print 'processing', path+filename
                     for line in f.readlines():
                         if not deletingComment:
                             if "struct" in line:
@@ -398,12 +398,13 @@ class SnaprouteModelNotebook(wx.Notebook):
 
         goStructsList = []
         get_registered_structs_from_json(goStructsList)
+
         for (name, structList) in goStructsList:
-            if 'objectconfig' not in name:
-                self.AddPage(ModelPanel(self, (name, structList)), name)
-            else:
-                # manual configured objects
-                self.AddPage(ModelPanel(self, ('objects', structList)), name)
+            for path in GO_MODEL_BASE_PATH_LIST:
+                for p,f in scan_dir_for_go_files(path):
+                    if f.startswith('gen') or f == 'objects.go':
+                        print p, f, structList
+                        self.AddPage(ModelPanel(self, (f, structList)), f.lstrip('gen').rstrip('.go'))
 
         # Create the first tab and add it to the notebook
         #tabOne = NestedPanel(self)
