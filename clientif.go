@@ -20,6 +20,10 @@ type IPCClientBase struct {
 	IsConnected        bool
 }
 
+func (clnt *IPCClientBase) IsConnectedToServer() bool {
+	return clnt.IsConnected
+}
+
 type PortDClient struct {
 	IPCClientBase
 	ClientHdl *portdServices.PortServiceClient
@@ -32,14 +36,17 @@ func (clnt *PortDClient) Initialize(name string, address string) {
 
 func (clnt *PortDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	}
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = portdServices.NewPortServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
-	return true
-}
-
-func (clnt *PortDClient) IsConnectedToServer() bool {
 	return true
 }
 
@@ -89,14 +96,17 @@ func (clnt *RibClient) Initialize(name string, address string) {
 
 func (clnt *RibClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	}
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
-	return true
-}
-
-func (clnt *RibClient) IsConnectedToServer() bool {
 	return true
 }
 
@@ -152,14 +162,17 @@ func (clnt *AsicDClient) Initialize(name string, address string) {
 }
 
 func (clnt *AsicDClient) ConnectToServer() bool {
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	}
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
-	return true
-}
-
-func (clnt *AsicDClient) IsConnectedToServer() bool {
 	return true
 }
 
@@ -190,14 +203,17 @@ func (clnt *BgpDClient) Initialize(name string, address string) {
 }
 
 func (clnt *BgpDClient) ConnectToServer() bool {
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	}
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = bgpd.NewBGPServerClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
-	return true
-}
-
-func (clnt *BgpDClient) IsConnectedToServer() bool {
 	return true
 }
 

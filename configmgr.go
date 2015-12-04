@@ -5,14 +5,16 @@ import (
 	"github.com/gorilla/mux"
 	"models"
 	"net/http"
+	"time"
 )
 
 type ConfigMgr struct {
-	clients    map[string]ClientIf
-	pRestRtr   *mux.Router
-	dbHdl      *sql.DB
-	restRoutes []ApiRoute
-	objHdlMap  map[string]ConfigObjInfo
+	clients        map[string]ClientIf
+	pRestRtr       *mux.Router
+	dbHdl          *sql.DB
+	restRoutes     []ApiRoute
+	reconncetTimer *time.Ticker
+	objHdlMap      map[string]ConfigObjInfo
 }
 
 //
@@ -80,6 +82,7 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 		logger.Println("ERROR: Error in Initializing Object handles")
 		return nil
 	}
+	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
 	mgr.InstantiateDbIf()
