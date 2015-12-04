@@ -114,8 +114,9 @@ def scan_dir_for_go_files(dir):
 
 class StructPanel(wx.Panel):
     def __init__(self, parent, structName, memberDict):
-        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+        wx.Panel.__init__(self, parent=parent.nb, id=wx.ID_ANY)
 
+        self.url = parent.url
         self.jsonDict = {}
         self.structName = structName
         self.structStateName = structName.rstrip('Config') + 'State'
@@ -188,6 +189,7 @@ class ModelPanel(wx.Panel):
         self.jsonDict = {}
 
         self.nb = wx.Notebook(self, wx.ID_ANY)
+        self.url = parent.url
 
         # lets have a page for each struct within the model
         deletingComment = False
@@ -212,7 +214,7 @@ class ModelPanel(wx.Panel):
                             elif "}" in line and foundStruct:
                                 foundStruct = False
                                 # create the various functions for db
-                                self.nb.AddPage(StructPanel(self.nb, currentStruct, goMemberTypeDict[currentStruct]), currentStruct)
+                                self.nb.AddPage(StructPanel(self, currentStruct, goMemberTypeDict[currentStruct]), currentStruct)
                                 print 'struct end'
 
                             # lets skip all blank lines
@@ -293,6 +295,10 @@ class RestSetupPanel(wx.Panel):
         self.url = parent.url
         self.urlTitle = wx.StaticText(self, label="URL", pos=(50, 10))
 
+        # A multiline TextCtrl - This is here to show how the events work in this program, don't pay too much attention to it
+        self.logger = wx.TextCtrl(self, pos=(450,30), size=(200,300), style=wx.TE_MULTILINE | wx.TE_READONLY)
+
+
         self.urlTextCtrl = wx.TextCtrl(self, value=LOCAL_HOST_URL, pos=(20, 30), size=(200, -1), style=wx.TE_PROCESS_ENTER)
         self.Bind(wx.EVT_TEXT_ENTER, EvtUrlTextHandler(self), self.urlTextCtrl)
 
@@ -300,9 +306,11 @@ class RestSetupPanel(wx.Panel):
 class EvtUrlTextHandler(object):
     def __init__(self, parent):
         self.url = parent.url
+        self.logger = parent.logger
 
     def __call__(self, event):
         self.url = event.GetString()
+        self.logger.AppendText("URL set to %s\n" %(self.url,))
 
 
 class EvtSendDataOnClick(object):
@@ -315,15 +323,18 @@ class EvtSendDataOnClick(object):
         jsonKeys = self.parent.jsonDict.keys()
         if len(self.parent.memberDict.keys()) == len(jsonKeys):
             key = "-".join([str(v) for k,v in self.parent.jsonDict.iteritems() if 'Key' in k])
-            self.logger.AppendText(" Sending data to %d with key %s\n" %(event.GetId(), key))
-            response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict))
-            # save the current id to the grid
-            self.parent.mygrid.SetCellValue(0, self.parent.currentFreeIndex, key)
-            self.parent.mygrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['created'])
-            self.parent.currentFreeIndex += 1
-
+            self.logger.AppendText(" Sending url %s data to %d with key %s\n" %(self.parent.url, event.GetId(), key))
+            try:
+                response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict))
+                self.logger.AppendText(" response %s\n" %(response.__dict__))
+                # save the current id to the grid
+                self.parent.mygrid.SetCellValue(0, self.parent.currentFreeIndex, key)
+                self.parent.mygrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['created'])
+                self.parent.currentFreeIndex += 1
+            except Exception as e:
+                self.logger.AppendText("URL failed: %s" %(e, ))
         else:
-            self.logger.AppendText(" Error missing values for %s  %s %s" %(jsonKeys, self.parent.memberDict, set(self.parent.memberDict).difference(jsonKeys)))
+            self.logger.AppendText(" Error missing values for full list [%s] provlist[%s] missing[%s]" %(jsonKeys, self.parent.memberDict, set(self.parent.memberDict).difference(jsonKeys)))
 
 class EvtSendDeleteOnClick(object):
     def __init__(self, parent):
@@ -390,7 +401,7 @@ class SnaprouteModelNotebook(wx.Notebook):
                              #wx.BK_RIGHT)
                              )
 
-        self.url = None
+        self.url = "https://10.1.1.1:8080/"
 
         # create panel which will be used to setup
         # the whitbox info.  URL, launch applications, etc
