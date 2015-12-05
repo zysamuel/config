@@ -67,7 +67,7 @@ func (mgr *ConfigMgr) ConnectToAllClients() bool {
 	}
 	waitCount := 0
 	for t := range mgr.reconncetTimer.C {
-		_ := t
+		_ = t
 		if waitCount == 0 {
 			logger.Println("Looking for clients ", unconnectedClients)
 
