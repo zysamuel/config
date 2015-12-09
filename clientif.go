@@ -28,9 +28,10 @@ func (clnt *IPCClientBase) IsConnectedToServer() bool {
 func (clnt *IPCClientBase) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
+	more       bool,
 	objs []models.ConfigObj) {
 	//logger.Println("### Get Bulk request called with", currMarker, count)
-	return nil, 0, 0, make([]models.ConfigObj, 0)
+	return nil, 0, 0, false,make([]models.ConfigObj, 0)
 }
 
 type PortDClient struct {
@@ -117,6 +118,44 @@ func (clnt *RibClient) ConnectToServer() bool {
 		}
 	}
 	return true
+}
+
+func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+	objCount int64,
+	nextMarker int64,
+	more       bool,
+	objs []models.ConfigObj) {
+	logger.Println("### Get Bulk request called with", currMarker, count)
+	var ret_obj models.IPV4Route
+	switch obj.(type) {
+		case models.IPV4Route:
+		     if(clnt.ClientHdl != nil) {
+				routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
+                if(routesInfo.Count != 0){
+					objCount = int64(routesInfo.Count)
+					more = bool(routesInfo.More)
+					nextMarker = int64(routesInfo.EndIdx)
+					for i:=0;i<int(routesInfo.Count);i++ {
+						if(len(objs) == 0) {
+							objs = make([]models.ConfigObj, 0)
+						}
+						ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
+						ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+						ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
+						ret_obj.Cost = int(routesInfo.RouteList[i].Metric)
+						ret_obj.Protocol = ""
+                        if(routesInfo.RouteList[i].NextHopIfType == portdCommonDefs.VLAN) {
+							ret_obj.OutgoingIntfType = "VLAN"
+						} else {
+							ret_obj.OutgoingIntfType = "PHY"
+						}
+						ret_obj.OutgoingInterface = strconv.Itoa(int(routesInfo.RouteList[i].IfIndex))
+						objs = append(objs, ret_obj)
+					}
+				}
+			}
+	}
+	return nil, objCount, nextMarker, more, objs
 }
 
 func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {

@@ -17,6 +17,7 @@ type ClientIf interface {
 	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 		objcount int64,
 		nextMarker int64,
+		more       bool,
 		objs []models.ConfigObj)
 }
 
