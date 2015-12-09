@@ -14,6 +14,10 @@ type ClientIf interface {
 	IsConnectedToServer() bool
 	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
 	DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool
+	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+		objcount int64,
+		nextMarker int64,
+		objs []models.ConfigObj)
 }
 
 type ClientJson struct {
@@ -40,7 +44,6 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 		return false
 	}
 	for _, client := range clientsList {
-		logger.Println("#### Client name is ", client.Name)
 		if ClientInterfaces[client.Name] != nil {
 			mgr.clients[client.Name] = ClientInterfaces[client.Name]
 			mgr.clients[client.Name].Initialize(client.Name, "localhost:"+strconv.Itoa(client.Port))

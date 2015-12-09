@@ -36,6 +36,34 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 	logger.Println("####  ShowConfigObject called")
 }
 
+func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
+	resource := strings.TrimPrefix(r.URL.String(), "/")
+	resource = strings.Split(resource, "?")[0]
+	resource = resource[:len(resource)-1]
+
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		obj, _ := GetConfigObj(r, objHdl)
+		currentIndex, objCount := ExtractGetBulkParams(r)
+		gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+	}
+}
+
+func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int64) {
+	valueMap := r.URL.Query()
+	if currentIndexStr, ok1 := valueMap["CurrentMarker"]; ok1 {
+		currentIndex, _ = strconv.ParseInt(currentIndexStr[0], 10, 64)
+	} else {
+		currentIndex = 100
+	}
+
+	if objectCountStr, ok := valueMap["Count"]; ok {
+		objectCount, _ = strconv.ParseInt(objectCountStr[0], 10, 64)
+	} else {
+		objectCount = 100
+	}
+	return currentIndex, objectCount
+}
+
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
