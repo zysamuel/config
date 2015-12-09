@@ -5,6 +5,7 @@ import (
 	"bgpd"
 	"portdServices"
 	//"encoding/binary"
+	"infra/portd/portdCommonDefs"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"models"
 	//"net"
@@ -125,6 +126,12 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		var outIntfType ribd.Int
+		if(v4Route.OutgoingIntfType == "VLAN") {
+			outIntfType = portdCommonDefs.VLAN
+		} else {
+			outIntfType = portdCommonDefs.PHY
+		}
 		proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreateV4Route(
@@ -132,6 +139,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				ribd.Int(v4Route.Cost),
 				v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
+               outIntfType,
 				ribd.Int(outIntf),
 				ribd.Int(proto))
 		}
