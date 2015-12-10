@@ -91,7 +91,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
-		//_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		objectId, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
 
@@ -103,6 +102,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				logger.Println("### Failed to get objKey after executing ", objKey, err)
 			}
+
 			dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objectId)
 			_, err = models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 			if err != nil {
@@ -124,32 +124,24 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 
-	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["UUId"]).Scan(&objKey)
+	err := gMgr.dbHdl.QueryRow("SELECT kEY FROM UuidMap WHERE Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["UUId"], err)
+		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["objId"], err)
 		return
 	}
 
-/*
-	objId, err := strconv.ParseInt(vars["objId"], 10, 64)
-	if err != nil {
-		logger.Println("### Failure in deleting object with Id ", resource, vars["objId"], err)
-		return
-	}
-*/
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
-		//success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
 		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKey, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
 
-			dbCmd := "delete from " + "UuidMap" + " where Uuid = " + vars["UUId"]
-			fmt.Println("### DB Deleting Uuid")
+			dbCmd := "DELETE FROM " + "UuidMap" + " WHERE Uuid = " + vars["objId"]
+			fmt.Println("### DB Deleting Uuid", vars["objId"])
 			_, err := models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 			if err != nil {
-				logger.Println("### Failure in deleting Uuid map entry for ", vars["UUId"], err)
+				logger.Println("### Failure in deleting Uuid map entry for ", vars["objId"], err)
 			}
 
 		}
