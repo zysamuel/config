@@ -299,6 +299,51 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 	return int64(0), true
 }
 
+func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
+	nextMarker int64, more bool, objs []models.ConfigObj) {
+
+	logger.Println("BgpDClient: GetBulkObject called - start")
+	switch obj.(type) {
+	case models.BGPNeighborState:
+		var bgpNeighborStateBulk *bgpd.BGPNeighborStateBulk
+		bgpNeighborStateBulk, err = clnt.ClientHdl.BulkGetBGPNeighbors(currMarker, count)
+		if err != nil {
+			break
+		}
+
+		for _, item := range bgpNeighborStateBulk.StateList {
+			bgpNeighborState := models.BGPNeighborState{
+				PeerAS: uint32(item.PeerAS),
+				LocalAS: uint32(item.LocalAS),
+				PeerType: models.PeerType(item.PeerType),
+				AuthPassword: item.AuthPassword,
+				Description: item.Description,
+				NeighborAddress: item.NeighborAddress,
+				SessionState: uint32(item.SessionState),
+				Messages: models.BGPMessages{
+					Sent: models.BgpCounters{
+						Update: uint64(item.Messages.Sent.Update),
+						Notification: uint64(item.Messages.Sent.Notification),
+					},
+					Received: models.BgpCounters{
+						Update: uint64(item.Messages.Received.Update),
+						Notification: uint64(item.Messages.Received.Notification),
+					},
+				},
+				Queues: models.BGPQueues{
+					Input: uint32(item.Queues.Input),
+					Output: uint32(item.Queues.Output),
+				},
+			}
+			objs = append(objs, bgpNeighborState)
+		}
+		nextMarker = bgpNeighborStateBulk.NextIndex
+		objCount = bgpNeighborStateBulk.Count
+		more = bgpNeighborStateBulk.More
+	}
+	return err, objCount, nextMarker, more, objs
+}
+
 func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
 	return true
 }
