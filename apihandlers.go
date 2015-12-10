@@ -12,6 +12,14 @@ import (
 	"strconv"
 )
 
+type GetBulkResponse struct {
+	moreExist     bool
+	objCount      int64
+	currentMarker int64
+	nextMarker    int64
+	stateObjects  []models.ConfigObj
+}
+
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
 	var retObj models.ConfigObj
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
@@ -25,7 +33,7 @@ func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, erro
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-type", "application/jsoni;charset=UTF-8")
+	w.Header().Set("Content-type", "application/json;charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(peers); err != nil {
 		panic(err)
@@ -42,10 +50,23 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	resource = resource[:len(resource)-1]
 
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		var resp GetBulkResponse
+		var err error
 		obj, _ := GetConfigObj(r, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
-		gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+		resp.currentMarker = currentIndex
+		err, resp.objCount, resp.nextMarker, resp.moreExist,
+			resp.stateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj,
+			currentIndex,
+			objCount)
+		logger.Println("@@ Response ", resp)
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusCreated)
+		if err = json.NewEncoder(w).Encode(resp); err != nil {
+			logger.Println("### Failed to encode GetBulkResponse for ", resource, err)
+		}
 	}
+	return
 }
 
 func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int64) {
