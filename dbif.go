@@ -20,5 +20,18 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 			obj.CreateDBTable(mgr.dbHdl)
 		}
 	}
+
+	/*
+	 * Created a table in DB to store UUID to ConfigObject key mapping.
+	 */
+        dbCmd := "CREATE TABLE IF NOT EXISTS UuidMap " +
+                "(Uuid varchar(255) PRIMARY KEY ," +
+                "Key varchar(255))"
+
+        _, err = models.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
+	if err == nil {
+		logger.Println("### Created table for UUID")
+	}
+
 	return nil
 }
