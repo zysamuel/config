@@ -90,7 +90,7 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	return int64(0), true
 }
 
-func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
+func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -192,13 +192,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	return int64(0), true
 }
 
-func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
-	logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId, obj)
+func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey, obj)
 	switch obj.(type) {
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		logger.Println("### Delete Object is called in RIBClient. ObjectId: ", objId)
-		v4Route.DeleteObjectFromDb(objId, dbHdl)
+		logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey)
+		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
@@ -243,7 +243,7 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	return int64(0), true
 }
 
-func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
+func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -344,6 +344,6 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	return err, objCount, nextMarker, more, objs
 }
 
-func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool {
+func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	return true
 }

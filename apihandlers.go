@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	//"net/url"
 	"strconv"
+	"github.com/nu7hatch/gouuid"
 )
 
 const (
@@ -102,12 +104,27 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
-		objectId, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+		_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
+			UUId, err := uuid.NewV4()
+			if err != nil {
+			    logger.Println("### Failed to get UUID ", UUId, err)
+			}
+			objKey, err := obj.GetKey()
+			if err != nil  || len(objKey) == 0 {
+				logger.Println("### Failed to get objKey after executing ", objKey, err)
+			}
+
+			dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objKey)
+			_, err = models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+			if err != nil {
+				logger.Println("### Failed to insert uuid entry in db ", dbCmd, err)
+			}
+
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusCreated)
-			if err := json.NewEncoder(w).Encode(objectId); err != nil {
-				logger.Println("### Failed to encode the objectId for object ", resource, objectId)
+			if err = json.NewEncoder(w).Encode(UUId); err != nil {
+				logger.Println("### Failed to encode the UUId for object ", resource, UUId)
 			}
 		}
 	}
@@ -115,19 +132,26 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
+	var objKey string
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
-	objId, err := strconv.ParseInt(vars["objId"], 10, 64)
+	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		logger.Println("### Failure in deleting object with Id ", resource, vars["objId"], err)
+		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["objId"], err)
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(nil, objHdl)
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKey, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
+
+			dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
+			_, err := models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+			if err != nil {
+				logger.Println("### Failure in deleting Uuid map entry for ", vars["objId"], err)
+			}
 		}
 	}
 	return
