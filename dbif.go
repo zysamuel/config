@@ -16,7 +16,7 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
 	if err == nil {
 		for key, obj := range models.ConfigObjectMap {
-			logger.Println("### Creating DB for object", key)
+			logger.Println("Creating DB for object", key)
 			obj.CreateDBTable(mgr.dbHdl)
 		}
 	}

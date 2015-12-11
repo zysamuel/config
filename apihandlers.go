@@ -14,6 +14,7 @@ import (
 
 const (
 	MAX_OBJECTS_IN_GETBULK = 30
+	MAX_JSON_LENGTH        = 4096
 )
 
 type GetBulkResponse struct {
@@ -26,12 +27,16 @@ type GetBulkResponse struct {
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
 	var retObj models.ConfigObj
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
-	if err != nil {
-		return retObj, err
-	}
-	if err := r.Body.Close(); err != nil {
-		return retObj, err
+	var err error
+	var body []byte
+	if r != nil {
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
+		if err != nil {
+			return retObj, err
+		}
+		if err = r.Body.Close(); err != nil {
+			return retObj, err
+		}
 	}
 	return obj.UnmarshalObject(body)
 }
@@ -40,7 +45,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json;charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(peers); err != nil {
-		panic(err)
+		return
 	}
 }
 
@@ -56,7 +61,7 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var resp GetBulkResponse
 		var err error
-		obj, _ := GetConfigObj(r, objHdl)
+		obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
 		resp.CurrentMarker = currentIndex
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
@@ -118,7 +123,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		obj, _ := GetConfigObj(r, objHdl)
+		obj, _ := GetConfigObj(nil, objHdl)
 		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")

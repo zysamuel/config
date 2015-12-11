@@ -30,9 +30,13 @@ func (mgr *ConfigMgr) InitializeObjectHandles(objsFile string) bool {
 		return false
 	}
 	err = json.Unmarshal(bytes, &objMap)
+	if err != nil {
+		logger.Printf("Error in unmarshaling data from ", objsFile)
+	}
 
 	mgr.objHdlMap = make(map[string]ConfigObjInfo)
 	for k, v := range objMap {
+		logger.Printf("For Object [ %s ] Primary owner is [ %s ]\n", k, v.Owner)
 		entry := new(ConfigObjInfo)
 		entry.owner = mgr.clients[v.Owner]
 		for _, lsnr := range v.Listeners {
