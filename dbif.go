@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"models"
+	"utils/dbutils"
 )
 
 var UsrConfDbName string = "UsrConfDb.db"
@@ -28,7 +29,7 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
                 "(Uuid varchar(255) PRIMARY KEY ," +
                 "Key varchar(255))"
 
-        _, err = models.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
+        _, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
 	if err == nil {
 		logger.Println("### Created table for UUID")
 	}
