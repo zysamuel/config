@@ -106,7 +106,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 		obj, _ := GetConfigObj(r, objHdl)
 		_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
-
 			UUId, err := uuid.NewV4()
 			if err != nil {
 			    logger.Println("### Failed to get UUID ", UUId, err)
@@ -136,16 +135,14 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
-
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
 		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["objId"], err)
 		return
 	}
-
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(nil, objHdl)
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objId, gMgr.dbHdl)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKey, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
@@ -155,7 +152,6 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				logger.Println("### Failure in deleting Uuid map entry for ", vars["objId"], err)
 			}
-
 		}
 	}
 	return
