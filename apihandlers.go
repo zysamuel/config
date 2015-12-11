@@ -14,12 +14,16 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
+const (
+	MAX_OBJECTS_IN_GETBULK = 30
+)
+
 type GetBulkResponse struct {
-	moreExist     bool
-	objCount      int64
-	currentMarker int64
-	nextMarker    int64
-	stateObjects  []models.ConfigObj
+	MoreExist     bool               `json:"MoreExist"`
+	ObjCount      int64              `json:"ObjCount"`
+	CurrentMarker int64              `json:"CurrentMarker"`
+	NextMarker    int64              `json:"NextMarker"`
+	StateObjects  []models.ConfigObj `json:"StateObjects"`
 }
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
@@ -56,33 +60,37 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 		var err error
 		obj, _ := GetConfigObj(r, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
-		resp.currentMarker = currentIndex
-		err, resp.objCount, resp.nextMarker, resp.moreExist,
-			resp.stateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj,
+		resp.CurrentMarker = currentIndex
+		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
+			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj,
 			currentIndex,
 			objCount)
-		logger.Println("@@ Response ", resp)
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusCreated)
-		if err = json.NewEncoder(w).Encode(resp); err != nil {
-			logger.Println("### Failed to encode GetBulkResponse for ", resource, err)
+		js, err := json.Marshal(resp)
+		if err != nil {
+			logger.Println("### Error in marshalling JSON in getBulk for object ", resource, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(js)
 	}
 	return
 }
 
 func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int64) {
 	valueMap := r.URL.Query()
-	if currentIndexStr, ok1 := valueMap["CurrentMarker"]; ok1 {
+	if currentIndexStr, ok := valueMap["CurrentMarker"]; ok {
 		currentIndex, _ = strconv.ParseInt(currentIndexStr[0], 10, 64)
 	} else {
-		currentIndex = 100
+		currentIndex = 0
 	}
 
 	if objectCountStr, ok := valueMap["Count"]; ok {
 		objectCount, _ = strconv.ParseInt(objectCountStr[0], 10, 64)
 	} else {
-		objectCount = 100
+		objectCount = MAX_OBJECTS_IN_GETBULK
 	}
 	return currentIndex, objectCount
 }
