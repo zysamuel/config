@@ -132,7 +132,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 
-	err := gMgr.dbHdl.QueryRow("SELECT kEY FROM UuidMap WHERE Uuid = ?", vars["objId"]).Scan(&objKey)
+	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
 		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["objId"], err)
 		return
@@ -145,8 +145,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
 
-			dbCmd := "DELETE FROM " + "UuidMap" + " WHERE Uuid = " + vars["objId"]
-			fmt.Println("### DB Deleting Uuid", vars["objId"])
+			dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
 			_, err := models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 			if err != nil {
 				logger.Println("### Failure in deleting Uuid map entry for ", vars["objId"], err)
