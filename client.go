@@ -17,7 +17,7 @@ type ClientIf interface {
 	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 		objcount int64,
 		nextMarker int64,
-		more       bool,
+		more bool,
 		objs []models.ConfigObj)
 }
 
@@ -48,7 +48,6 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 		if ClientInterfaces[client.Name] != nil {
 			mgr.clients[client.Name] = ClientInterfaces[client.Name]
 			mgr.clients[client.Name].Initialize(client.Name, "localhost:"+strconv.Itoa(client.Port))
-			logger.Println("Initialization of Client: ", client.Name)
 		}
 	}
 
@@ -62,12 +61,10 @@ func (mgr *ConfigMgr) ConnectToAllClients() bool {
 	unconnectedClients := make([]string, len(mgr.clients))
 	idx := 0
 	for clntName, client := range mgr.clients {
-		logger.Println("#### Client name is ", clntName)
 		unconnectedClients[idx] = clntName
 		idx++
 		client.ConnectToServer()
 		client.IsConnectedToServer()
-		logger.Println("Initialization of Client: ", clntName)
 	}
 	waitCount := 0
 	for t := range mgr.reconncetTimer.C {
