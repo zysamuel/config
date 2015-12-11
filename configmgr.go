@@ -98,6 +98,6 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
 	mgr.InstantiateDbIf()
-	logger.Println("Initialization Done!", mgr.clients)
+	logger.Println("Initialization Done!")
 	return mgr
 }
