@@ -107,7 +107,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			    logger.Println("### Failed to get UUID ", UUId, err)
 			}
 			objKey, err := obj.GetKey()
-			if err != nil {
+			if err != nil  || len(objKey) == 0 {
 				logger.Println("### Failed to get objKey after executing ", objKey, err)
 			}
 
