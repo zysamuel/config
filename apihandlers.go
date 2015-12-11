@@ -103,7 +103,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				logger.Println("### Failed to get objKey after executing ", objKey, err)
 			}
 
-			dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objectId)
+			dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objKey)
 			_, err = models.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 			if err != nil {
 				logger.Println("### Failed to insert uuid entry in db ", dbCmd, err)
@@ -120,7 +120,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
-	var objKey int64
+	var objKey string
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 
