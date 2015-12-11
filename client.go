@@ -13,7 +13,7 @@ type ClientIf interface {
 	ConnectToServer() bool
 	IsConnectedToServer() bool
 	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
-	DeleteObject(obj models.ConfigObj, objId int64, dbHdl *sql.DB) bool
+	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool
 	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 		objcount int64,
 		nextMarker int64,
