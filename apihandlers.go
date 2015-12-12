@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 	//"net/url"
-	"strconv"
 	"github.com/nu7hatch/gouuid"
+	"strconv"
 	"utils/dbutils"
 )
 
@@ -104,16 +104,16 @@ func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int6
 func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 	UUId, err := uuid.NewV4()
 	if err != nil {
-	    logger.Println("### Failed to get UUID ", UUId, err)
+		logger.Println("Failed to get UUID ", UUId, err)
 	}
 	objKey, err := obj.GetKey()
-	if err != nil  || len(objKey) == 0 {
-		logger.Println("### Failed to get objKey after executing ", objKey, err)
+	if err != nil || len(objKey) == 0 {
+		logger.Println("Failed to get objKey after executing ", objKey, err)
 	}
 	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objKey)
 	_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 	if err != nil {
-		logger.Println("### Failed to insert uuid entry in db ", dbCmd, err)
+		logger.Println("Failed to insert uuid entry in db ", dbCmd, err)
 	}
 	return UUId, err
 }
