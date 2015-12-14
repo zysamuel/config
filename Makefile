@@ -24,9 +24,9 @@ exe: $(SRCS)
 	 go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
 
 install:
-	 $(MKDIR) $(PARAMSDIR)
-	 install params/clients.json $(PARAMSDIR)/
-	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
+	 @$(MKDIR) $(PARAMSDIR)
+	 @install params/clients.json $(PARAMSDIR)/
+	 @install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)

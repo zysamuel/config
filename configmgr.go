@@ -5,14 +5,16 @@ import (
 	"github.com/gorilla/mux"
 	"models"
 	"net/http"
+	"time"
 )
 
 type ConfigMgr struct {
-	clients    map[string]ClientIf
-	pRestRtr   *mux.Router
-	dbHdl      *sql.DB
-	restRoutes []ApiRoute
-	objHdlMap  map[string]ConfigObjInfo
+	clients        map[string]ClientIf
+	pRestRtr       *mux.Router
+	dbHdl          *sql.DB
+	restRoutes     []ApiRoute
+	reconncetTimer *time.Ticker
+	objHdlMap      map[string]ConfigObjInfo
 }
 
 //
@@ -37,6 +39,18 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			"DELETE",
 			"/" + key + "/" + "{objId}",
 			ConfigObjectDelete,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+
+		rt = ApiRoute{key + "s",
+			"GET",
+			"/" + key + "s/" + "{objId}",
+			ConfigObjectsBulkGet,
+		}
+		rt = ApiRoute{key + "s",
+			"GET",
+			"/" + key + "s",
+			ConfigObjectsBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 
@@ -80,9 +94,10 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 		logger.Println("ERROR: Error in Initializing Object handles")
 		return nil
 	}
+	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
 	mgr.InstantiateDbIf()
-	logger.Println("Initialization Done!", mgr.clients)
+	logger.Println("Initialization Done!")
 	return mgr
 }
