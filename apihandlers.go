@@ -104,13 +104,13 @@ func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int6
 func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 	UUId, err := uuid.NewV4()
 	if err != nil {
-	    logger.Println("### Failed to get UUID ", UUId, err)
+	    logger.Println("### Failed to get UUID ", UUId.String(), err)
 	}
 	objKey, err := obj.GetKey()
 	if err != nil  || len(objKey) == 0 {
 		logger.Println("### Failed to get objKey after executing ", objKey, err)
 	}
-	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objKey)
+	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId.String(), objKey)
 	_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 	if err != nil {
 		logger.Println("### Failed to insert uuid entry in db ", dbCmd, err)
@@ -130,8 +130,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusCreated)
-			if err = json.NewEncoder(w).Encode(UUId); err != nil {
-				logger.Println("### Failed to encode the UUId for object ", resource, UUId)
+			if err = json.NewEncoder(w).Encode(UUId.String()); err != nil {
+				logger.Println("### Failed to encode the UUId for object ", resource, UUId.String())
 			}
 		}
 	}
