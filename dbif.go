@@ -27,13 +27,13 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 	/*
 	 * Created a table in DB to store UUID to ConfigObject key mapping.
 	 */
-        dbCmd := "CREATE TABLE IF NOT EXISTS UuidMap " +
-                "(Uuid varchar(255) PRIMARY KEY ," +
-                "Key varchar(255))"
+	dbCmd := "CREATE TABLE IF NOT EXISTS UuidMap " +
+		"(Uuid varchar(255) PRIMARY KEY ," +
+		"Key varchar(255))"
 
-        _, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
+	_, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
 	if err == nil {
-		logger.Println("### Created table for UUID")
+		logger.Println("Created table for UUID")
 	}
 
 	return nil
