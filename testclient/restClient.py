@@ -328,8 +328,8 @@ class EvtSendDataOnClick(object):
                 response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict))
                 self.logger.AppendText(" response %s\n" %(response.__dict__))
                 # save the current id to the grid
-                self.parent.mygrid.SetCellValue(0, self.parent.currentFreeIndex, key)
-                self.parent.mygrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['created'])
+                self.parent.myGrid.SetCellValue(0, self.parent.currentFreeIndex, key)
+                self.parent.myGrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['created'])
                 self.parent.currentFreeIndex += 1
             except Exception as e:
                 self.logger.AppendText("URL failed: %s" %(e, ))
@@ -350,9 +350,9 @@ class EvtSendDeleteOnClick(object):
             response = requests.delete('%s/%s/%s' % (self.parent.url, self.parent.structName, self.parent.currGridSelection))
             self.logger.AppendText(response)
             # clear the cell contents
-            self.parent.mygrid.ClearSelection()
-            #self.parent.mygrid.SetCellValue(self.parent.currGridSelection[0], self.parent.currGridSelection[1]-1, None)
-            #self.parent.mygrid.SetCellValue(self.parent.currGridSelection[0], self.parent.currGridSelection[1], None)
+            self.parent.myGrid.ClearSelection()
+            #self.parent.myGrid.SetCellValue(self.parent.currGridSelection[0], self.parent.currGridSelection[1]-1, None)
+            #self.parent.myGrid.SetCellValue(self.parent.currGridSelection[0], self.parent.currGridSelection[1], None)
             self.parent.currGridSelection = None
             # TODO sort grid
 
@@ -401,7 +401,7 @@ class SnaprouteModelNotebook(wx.Notebook):
                              #wx.BK_RIGHT)
                              )
 
-        self.url = "https://10.1.1.1:8080/"
+        self.url = "http://10.1.10.242:8080/"
 
         # create panel which will be used to setup
         # the whitbox info.  URL, launch applications, etc
