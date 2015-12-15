@@ -317,15 +317,16 @@ class EvtSendDataOnClick(object):
     def __init__(self, parent):
         self.parent = parent
         self.logger = parent.logger
-
+        self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
     def __call__(self, event):
+
 
         jsonKeys = self.parent.jsonDict.keys()
         if len(self.parent.memberDict.keys()) == len(jsonKeys):
             key = "-".join([str(v) for k,v in self.parent.jsonDict.iteritems() if 'Key' in k])
             self.logger.AppendText(" Sending url %s data to %d with key %s\n" %(self.parent.url, event.GetId(), key))
             try:
-                response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict))
+                response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict), headers=self.headers)
                 self.logger.AppendText(" response %s\n" %(response.__dict__))
                 # save the current id to the grid
                 self.parent.myGrid.SetCellValue(0, self.parent.currentFreeIndex, key)
