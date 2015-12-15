@@ -140,6 +140,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
+	var objKeySqlStr string
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -149,7 +150,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(nil, objHdl)
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKey, gMgr.dbHdl)
+		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKeySqlStr, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
