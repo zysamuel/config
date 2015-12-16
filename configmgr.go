@@ -22,6 +22,21 @@ type ConfigMgr struct {
 //
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
+
+	rt = ApiRoute{"UserDoc",
+		"GET",
+		"/api-docs",
+		GetAPIDocs,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	//rt = ApiRoute{"ResourceDoc",
+	//	"GET",
+	//	"/listings/greetings",
+	//	GetObjectAPIDocs,
+	//}
+	//mgr.restRoutes = append(mgr.restRoutes, rt)
+
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
