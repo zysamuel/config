@@ -57,7 +57,7 @@ class_map = {
   # Other types may add their own types to this dictionary that have meaning
   # only for themselves. For example, a ReferenceType can add the path that it
   # references, and whether the require-instance keyword was set or not.
-  'boolean':          {"native_type": "bool", "map": class_bool_map,
+  'bool':          {"native_type": "bool", "map": class_bool_map,
                           "base_type": True, "quote_arg": True},
   'binary':           {"native_type": "bitarray", "base_type": True,
                           "quote_arg": True},
@@ -324,7 +324,10 @@ class EvtSendDataOnClick(object):
         jsonKeys = self.parent.jsonDict.keys()
         if len(self.parent.memberDict.keys()) == len(jsonKeys):
             key = "-".join([str(v) for k,v in self.parent.jsonDict.iteritems() if 'Key' in k])
-            self.logger.AppendText(" Sending url %s data to %d with key %s\n" %(self.parent.url, event.GetId(), key))
+            self.logger.AppendText(" Sending url %s/%s data to %d with key %s\n" %(self.parent.url,
+                                                                                   self.parent.structName,
+                                                                                   event.GetId(),
+                                                                                   key))
             try:
                 response = requests.post('%s/%s' % (self.parent.url, self.parent.structName), data=json.dumps(self.parent.jsonDict), headers=self.headers)
                 self.logger.AppendText(" response %s\n" %(response.__dict__))
@@ -381,8 +384,20 @@ class EvtTextHandler(object):
         self.parent = parent
 
     def __call__(self, event):
-        self.parent.jsonDict.update({self._memberName : event.GetString()})
-        self.logger.AppendText('EvtText %s %s\n' % (self._memberName, event.GetString()))
+        data = event.GetString()
+        if data in class_bool_map.keys():
+            print 'found boolean', data
+            data = class_bool_map[data]
+        elif data.isdigit():
+            print 'found digit', data
+            data = int(data)
+        else:
+            print 'found string', data
+
+        self.parent.jsonDict.update({self._memberName : data})
+
+
+        self.logger.AppendText('EvtText %s %s\n' % (self._memberName, data))
 
 
 
@@ -402,7 +417,7 @@ class SnaprouteModelNotebook(wx.Notebook):
                              #wx.BK_RIGHT)
                              )
 
-        self.url = "http://10.1.10.242:8080/"
+        self.url = "http://10.1.10.242:8080"
 
         # create panel which will be used to setup
         # the whitbox info.  URL, launch applications, etc
