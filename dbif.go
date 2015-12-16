@@ -20,6 +20,8 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 			logger.Println("Creating DB for object", key)
 			obj.CreateDBTable(mgr.dbHdl)
 		}
+	} else {
+		logger.Println("### Failed to open DB", UsrConfDbName, err)
 	}
 
 	/*

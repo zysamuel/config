@@ -11,6 +11,7 @@ import (
 	"strings"
 	//"net/url"
 	"github.com/nu7hatch/gouuid"
+	//"path"
 	"strconv"
 	"utils/dbutils"
 )
@@ -110,7 +111,7 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 	if err != nil || len(objKey) == 0 {
 		logger.Println("Failed to get objKey after executing ", objKey, err)
 	}
-	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId, objKey)
+	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId.String(), objKey)
 	_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 	if err != nil {
 		logger.Println("Failed to insert uuid entry in db ", dbCmd, err)
@@ -131,8 +132,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusCreated)
-			if err = json.NewEncoder(w).Encode(UUId); err != nil {
-				logger.Println("### Failed to encode the UUId for object ", resource, UUId)
+			if err = json.NewEncoder(w).Encode(UUId.String()); err != nil {
+				logger.Println("### Failed to encode the UUId for object ", resource, UUId.String())
 			}
 		}
 	}
@@ -141,6 +142,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
+	var objKeySqlStr string
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -150,7 +152,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(nil, objHdl)
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKey, gMgr.dbHdl)
+		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKeySqlStr, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
@@ -162,5 +165,26 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	return
+}
+
+func GetAPIDocs(w http.ResponseWriter, r *http.Request) {
+	logger.Println("### GetAPIDocs is called")
+	//fp := path.Join("./", "api-docs.json")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, api_key, Authorization")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+
+	//http.ServeFile(w, r, fp)
+	return
+}
+
+func GetObjectAPIDocs(w http.ResponseWriter, r *http.Request) {
+	logger.Println("### GetObjectAPIDocs is called")
+	//fp := path.Join("./", "greetings.json")
+	//http.ServeFile(w, r, fp)
 	return
 }
