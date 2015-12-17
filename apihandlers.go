@@ -181,6 +181,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		obj, _ := GetConfigObj(nil, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		logger.Println("ConfigObjectUpdate", objKeySqlStr, err)
+/*
 		success := gMgr.objHdlMap[resource].owner.UpdateObject(obj, objKeySqlStr, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -189,6 +190,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
 			}
 		}
+*/
 	}
 }
 
