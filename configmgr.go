@@ -112,7 +112,7 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
-	mgr.InstantiateDbIf()
+	mgr.InstantiateDbIf(paramsDir)
 	logger.Println("Initialization Done!")
 	return mgr
 }

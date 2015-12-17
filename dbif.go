@@ -7,13 +7,15 @@ import (
 	"utils/dbutils"
 )
 
-var UsrConfDbName string = "UsrConfDb.db"
+var UsrConfDbName string
 
 //
 //  This method creates new rest router interface
 //
-func (mgr *ConfigMgr) InstantiateDbIf() error {
+func (mgr *ConfigMgr) InstantiateDbIf(params_Dir string) error {
 	var err error
+        var DbName string = "UsrConfDb.db"
+        UsrConfDbName = params_Dir + "/../bin/" + DbName
 	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
 	if err == nil {
 		for key, obj := range models.ConfigObjectMap {
