@@ -194,7 +194,14 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	switch obj.(type) {
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey)
+		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.DeleteV4Route(
+				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+				v4Route.NetworkMask,   //ribd.Int(prefixLen),
+				ribd.Int(outIntf))
+		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
