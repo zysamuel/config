@@ -134,8 +134,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err = json.NewEncoder(w).Encode(UUId.String()); err != nil {
 				logger.Println("### Failed to encode the UUId for object ", resource, UUId.String())
 			}
-		} else {
-			logger.Println("### Failed to CreateObject")
 		}
 	}
 	return
