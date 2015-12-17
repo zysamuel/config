@@ -23,5 +23,3 @@ _testmain.go
 *.test
 *.prof
 
-# ignore auto generated clientif
-gen*
