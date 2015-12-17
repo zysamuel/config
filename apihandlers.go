@@ -153,7 +153,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(nil, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
-		success := gMgr.objHdlMap[resource].owner.DeleteObject(obj, objKeySqlStr, gMgr.dbHdl)
+		v4Route, _ := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
+		success := gMgr.objHdlMap[resource].owner.DeleteObject(v4Route, objKeySqlStr, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
