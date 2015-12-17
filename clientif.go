@@ -346,5 +346,18 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 }
 
 func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	if clnt.ClientHdl != nil {
+		switch obj.(type) {
+		case models.BGPGlobalConfig:
+			return false
+
+		case models.BGPNeighborConfig:
+			bgpNeighborConf := obj.(models.BGPNeighborConfig)
+			_, err := clnt.ClientHdl.DeleteBGPNeighbor(bgpNeighborConf.NeighborAddress)
+			if err != nil {
+				return false
+			}
+		}
+	}
 	return true
 }
