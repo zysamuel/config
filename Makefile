@@ -14,7 +14,8 @@ SRCS=apihandlers.go\
 	  configmgr.go\
 	  dbif.go\
 	  main.go\
-	  remotebgppeer.go
+	  remotebgppeer.go\
+	  genlacpdclientif.go\
 
 COMP_NAME=confd
 all: exe install 
