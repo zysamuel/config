@@ -277,7 +277,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		case models.BGPGlobalConfig:
 			bgpGlobalConf := obj.(models.BGPGlobalConfig)
 			gConf := bgpd.NewBGPGlobal()
-			gConf.AS = int32(bgpGlobalConf.AS)
+			gConf.AS = int32(bgpGlobalConf.ASNum)
 			gConf.RouterId = bgpGlobalConf.RouterId
 			_, err := clnt.ClientHdl.CreateBGPGlobal(gConf)
 			if err != nil {
