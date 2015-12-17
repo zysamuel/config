@@ -121,6 +121,7 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), "/")
+	logger.Println("####  CreateObject  called")
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
