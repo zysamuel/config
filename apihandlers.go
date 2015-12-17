@@ -133,6 +133,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err = json.NewEncoder(w).Encode(UUId.String()); err != nil {
 				logger.Println("### Failed to encode the UUId for object ", resource, UUId.String())
 			}
+		} else {
+			logger.Println("### Failed to CreateObject")
 		}
 	}
 	return
@@ -160,6 +162,32 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 			if err != nil {
 				logger.Println("### Failure in deleting Uuid map entry for ", vars["objId"], err)
+			}
+		}
+	}
+	return
+}
+
+func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
+	var objKey string
+	var objKeySqlStr string
+	resource := strings.Split(r.URL.String(), "/")[1]
+	vars := mux.Vars(r)
+	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	if err != nil {
+		logger.Println("### Failure in getting objKey for Uuid ", resource, vars["objId"], err)
+		return
+	}
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		obj, _ := GetConfigObj(nil, objHdl)
+		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
+		logger.Println("ConfigObjectUpdate", objKeySqlStr, err)
+		success := gMgr.objHdlMap[resource].owner.UpdateObject(obj, objKeySqlStr, gMgr.dbHdl)
+		if success == true {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusOK)
+			if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
+				logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
 			}
 		}
 	}

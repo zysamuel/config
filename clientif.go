@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"asicdServices"
 	"bgpd"
 	"portdServices"
@@ -13,6 +14,53 @@ import (
 	"ribd"
 	"strconv"
 )
+
+type AttrUpdate struct {
+	attrId    int
+	oldVal    string
+	newVal    string
+}
+
+type MoUpdate struct {
+	moId      int
+	attrList  []AttrUpdate
+}
+
+const (
+	MOID_IPV4ROUTE = 1 + iota
+	MOID_BGPGLOBALCONFIG
+	MOID_BGPNEIGHBORCONFIG
+	MOID_VLAN
+	MOID_IPV4INTF
+	MOID_IPV4NEIGHBOR
+)
+
+//IPV4Route
+const (
+	ATTRID_DESTINATIONNW = 1 + iota
+	ATTRID_NETWORKMASK
+	ATTRID_COST
+	ATTRID_NEXTHOPIP
+	ATTRID_OUTGOINGINTERFACE
+	ATTRID_PROTOCOL
+)
+
+//BGPGlobalConfig
+
+
+//BGPNeighborConfig
+
+
+//Vlan
+
+
+//IPv4Intf
+
+
+//IPv4Neighbor
+
+
+
 
 type IPCClientBase struct {
 	Address            string
@@ -95,6 +143,11 @@ func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	return true
 }
 
+func (clnt *PortDClient) UpdateObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	return true
+}
+
+
 type RibClient struct {
 	IPCClientBase
 	ClientHdl *ribd.RouteServiceClient
@@ -159,10 +212,31 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	return nil, objCount, nextMarker, more, objs
 }
 
+
 func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
+		// Verify if the object is present in DB.
+		// If so then this is an update request.
+		dbV4Route, success := v4Route.GetObjectFromDb(dbHdl)
+		if success == true {
+			// This is an update request.
+			fmt.Println("This is an update. DB object", dbV4Route)
+			v4MoUpdate := MoUpdate {
+				moId: MOID_IPV4ROUTE,
+				attrList: []AttrUpdate {
+					AttrUpdate { attrId: ATTRID_DESTINATIONNW, oldVal: dbV4Route.(models.IPV4Route).DestinationNw, newVal: v4Route.DestinationNw },
+					AttrUpdate { attrId: ATTRID_NETWORKMASK, oldVal: dbV4Route.(models.IPV4Route).NetworkMask, newVal: v4Route.NetworkMask },
+					AttrUpdate { attrId: ATTRID_COST, oldVal: strconv.Itoa(dbV4Route.(models.IPV4Route).Cost), newVal: strconv.Itoa(v4Route.Cost) },
+					AttrUpdate { attrId: ATTRID_NEXTHOPIP, oldVal: dbV4Route.(models.IPV4Route).NextHopIp, newVal: v4Route.NextHopIp },
+					AttrUpdate { attrId: ATTRID_OUTGOINGINTERFACE, oldVal: dbV4Route.(models.IPV4Route).OutgoingInterface, newVal: v4Route.OutgoingInterface },
+					AttrUpdate { attrId: ATTRID_PROTOCOL, oldVal: dbV4Route.(models.IPV4Route).Protocol, newVal: v4Route.Protocol },
+				},
+			}
+			fmt.Println("MoUpdate", v4MoUpdate)
+			return int64(0), false
+		}
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		var outIntfType ribd.Int
 		if v4Route.OutgoingIntfType == "VLAN" {
@@ -181,12 +255,16 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				ribd.Int(outIntf),
 				ribd.Int(proto))
 		}
-		objId, _ := v4Route.StoreObjectInDb(dbHdl)
-		return objId, true
+		objId, err := v4Route.StoreObjectInDb(dbHdl)
+		if (err == nil) {
+			return objId, true
+		} else {
+			return objId, false
+		}
 	default:
 		break
 	}
-	return int64(0), true
+	return int64(0), false
 }
 
 func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
@@ -198,6 +276,19 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
+	}
+
+	return true
+}
+
+func (clnt *RibClient) UpdateObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	switch obj.(type) {
+	case models.IPV4Route:
+		//v4Route := obj.(models.IPV4Route)
+		logger.Println("### Update Object is called in RIBClient. ObjectKey: ", objKey)
+		//v4Route.UpdateObjectInDb(objKey, dbHdl)
+	//default:
+		//logger.Println("OBJECT Type is ", obj.(type))
 	}
 
 	return true
@@ -243,6 +334,10 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 }
 
 func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	return true
+}
+
+func (clnt *AsicDClient) UpdateObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -346,5 +441,9 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 }
 
 func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	return true
+}
+
+func (clnt *BgpDClient) UpdateObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	return true
 }

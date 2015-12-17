@@ -19,6 +19,7 @@ type ClientIf interface {
 		nextMarker int64,
 		more bool,
 		objs []models.ConfigObj)
+	UpdateObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool
 }
 
 type ClientJson struct {
