@@ -183,36 +183,36 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		obj, _ := GetConfigObj(nil, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		logger.Println("ConfigObjectUpdate", objKeySqlStr, err)
-/*
-		success := gMgr.objHdlMap[resource].owner.UpdateObject(obj, objKeySqlStr, gMgr.dbHdl)
-		if success == true {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
-				logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
+		/*
+			success := gMgr.objHdlMap[resource].owner.UpdateObject(obj, objKeySqlStr, gMgr.dbHdl)
+			if success == true {
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(http.StatusOK)
+				if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
+					logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
+				}
 			}
-		}
-*/
+		*/
 	}
 }
 
-func GetAPIDocs(w http.ResponseWriter, r *http.Request) {
-	logger.Println("### GetAPIDocs is called")
-	//fp := path.Join("./", "api-docs.json")
+//func GetAPIDocs(w http.ResponseWriter, r *http.Request) {
+//	logger.Println("### GetAPIDocs is called")
+//	//fp := path.Join("./", "api-docs.json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, api_key, Authorization")
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+//	w.Header().Set("Access-Control-Allow-Origin", "*")
+//	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+//	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, api_key, Authorization")
+//	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+//	w.WriteHeader(http.StatusOK)
 
-	//http.ServeFile(w, r, fp)
-	return
-}
+//	//http.ServeFile(w, r, fp)
+//	return
+//}
 
-func GetObjectAPIDocs(w http.ResponseWriter, r *http.Request) {
-	logger.Println("### GetObjectAPIDocs is called")
-	//fp := path.Join("./", "greetings.json")
-	//http.ServeFile(w, r, fp)
-	return
-}
+//func GetObjectAPIDocs(w http.ResponseWriter, r *http.Request) {
+//	logger.Println("### GetObjectAPIDocs is called")
+//	//fp := path.Join("./", "greetings.json")
+//	//http.ServeFile(w, r, fp)
+//	return
+//}
