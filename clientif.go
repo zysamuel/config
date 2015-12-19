@@ -95,6 +95,10 @@ func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	return true
 }
 
+func (clnt *PortDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+	return true
+}
+
 type RibClient struct {
 	IPCClientBase
 	ClientHdl *ribd.RouteServiceClient
@@ -210,6 +214,29 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	return true
 }
 
+func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+	logger.Println("### Update Object is called in RIBClient. ", objKey, dbObj, obj, attrSet)
+	switch obj.(type) {
+	case models.IPV4Route:
+		v4Route := obj.(models.IPV4Route)
+		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
+		logger.Println("### UpdateV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, outIntf)
+/*
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.UpdateV4Route(
+				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
+				v4Route.NetworkMask,   //ribd.Int(prefixLen),
+				ribd.Int(outIntf),
+				attrSet)
+		}
+		v4Route.UpdateObjectInDb(objKey, dbHdl)
+*/
+		//default:
+		//	logger.Println("OBJECT Type is ", obj.(type))
+	}
+	return true
+}
+
 type AsicDClient struct {
 	IPCClientBase
 	ClientHdl *asicdServices.AsicdServiceClient
@@ -250,6 +277,10 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 }
 
 func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+	return true
+}
+
+func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -366,5 +397,9 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			}
 		}
 	}
+	return true
+}
+
+func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
