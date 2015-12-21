@@ -333,7 +333,7 @@ class EvtSendDataOnClick(object):
                 self.logger.AppendText(" response %s\n" %(response.__dict__))
                 # save the current id to the grid
                 self.parent.myGrid.SetCellValue(0, self.parent.currentFreeIndex, key)
-                self.parent.myGrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['created'])
+                self.parent.myGrid.SetCellValue(1, self.parent.currentFreeIndex, response.json()['_content'])
                 self.parent.currentFreeIndex += 1
             except Exception as e:
                 self.logger.AppendText("URL failed: %s" %(e, ))
