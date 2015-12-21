@@ -224,13 +224,12 @@ func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj
 /*
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.UpdateV4Route(
-				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
-				v4Route.NetworkMask,   //ribd.Int(prefixLen),
-				ribd.Int(outIntf),
+				dbObj,
+				obj,
 				attrSet)
 		}
-		v4Route.UpdateObjectInDb(objKey, dbHdl)
 */
+		v4Route.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
