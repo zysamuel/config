@@ -171,6 +171,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		break
 	}
 	return nil, objCount, nextMarker, more, objs
+}
 
 func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrs []byte, objId string, dbHdl *sql.DB) bool {
 	return true
