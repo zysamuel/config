@@ -23,20 +23,6 @@ type ConfigMgr struct {
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 
-	rt = ApiRoute{"UserDoc",
-		"GET",
-		"/api-docs",
-		GetAPIDocs,
-	}
-	mgr.restRoutes = append(mgr.restRoutes, rt)
-
-	//rt = ApiRoute{"ResourceDoc",
-	//	"GET",
-	//	"/listings/greetings",
-	//	GetObjectAPIDocs,
-	//}
-	//mgr.restRoutes = append(mgr.restRoutes, rt)
-
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
@@ -78,6 +64,9 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 //
 func (mgr *ConfigMgr) InstantiateRestRtr() *mux.Router {
 	mgr.pRestRtr = mux.NewRouter().StrictSlash(true)
+	mgr.pRestRtr.PathPrefix("/api-docs/").Handler(http.StripPrefix("/api-docs/",
+		http.FileServer(http.Dir("./docsui"))))
+
 	for _, route := range mgr.restRoutes {
 		var handler http.Handler
 		handler = Logger(route.HandlerFunc, route.Name)

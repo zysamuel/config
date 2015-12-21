@@ -2,6 +2,7 @@ RM=rm -f
 DESTDIR=$(SR_CODE_BASE)/snaproute/src/bin
 PARAMSDIR=$(DESTDIR)/params
 MKDIR=mkdir -p
+RSYNC=rsync -rupE
 
 SRCS=apihandlers.go\
 	  ipcutils.go\
@@ -25,6 +26,7 @@ exe: $(SRCS)
 
 install:
 	 @$(MKDIR) $(PARAMSDIR)
+	 @$(RSYNC) docsui $(DESTDIR)
 	 @install params/clients.json $(PARAMSDIR)/
 	 @install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 
