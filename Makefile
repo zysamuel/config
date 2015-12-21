@@ -26,7 +26,7 @@ exe: $(SRCS)
 
 install:
 	 @$(MKDIR) $(PARAMSDIR)
-	 @$(RSYNC) docsui $(DESTDIR)
+	 @$(RSYNC) docsui $(PARAMSDIR)
 	 @install params/clients.json $(PARAMSDIR)/
 	 @install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 

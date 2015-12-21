@@ -12,11 +12,12 @@ var UsrConfDbName string
 //
 //  This method creates new rest router interface
 //
-func (mgr *ConfigMgr) InstantiateDbIf(params_Dir string) error {
+func (mgr *ConfigMgr) InstantiateDbIf() error {
 	var err error
-        var DbName string = "UsrConfDb.db"
-        UsrConfDbName = DbName
-	//UsrConfDbName = params_Dir + "/../bin/" + DbName
+	var DbName string = "UsrConfDb.db"
+
+	UsrConfDbName = mgr.fullPath + DbName
+
 	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
 	if err == nil {
 		for key, obj := range models.ConfigObjectMap {
