@@ -195,23 +195,23 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetAPIDocs(w http.ResponseWriter, r *http.Request) {
-	logger.Println("### GetAPIDocs is called")
-	//fp := path.Join("./", "api-docs.json")
+//func GetAPIDocs(w http.ResponseWriter, r *http.Request) {
+//	logger.Println("### GetAPIDocs is called")
+//	//fp := path.Join("./", "api-docs.json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, api_key, Authorization")
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
+//	w.Header().Set("Access-Control-Allow-Origin", "*")
+//	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+//	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, api_key, Authorization")
+//	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+//	w.WriteHeader(http.StatusOK)
 
-	//http.ServeFile(w, r, fp)
-	return
-}
+//	//http.ServeFile(w, r, fp)
+//	return
+//}
 
-func GetObjectAPIDocs(w http.ResponseWriter, r *http.Request) {
-	logger.Println("### GetObjectAPIDocs is called")
-	//fp := path.Join("./", "greetings.json")
-	//http.ServeFile(w, r, fp)
-	return
-}
+//func GetObjectAPIDocs(w http.ResponseWriter, r *http.Request) {
+//	logger.Println("### GetObjectAPIDocs is called")
+//	//fp := path.Join("./", "greetings.json")
+//	//http.ServeFile(w, r, fp)
+//	return
+//}
