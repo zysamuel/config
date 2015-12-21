@@ -15,7 +15,8 @@ var UsrConfDbName string
 func (mgr *ConfigMgr) InstantiateDbIf(params_Dir string) error {
 	var err error
         var DbName string = "UsrConfDb.db"
-        UsrConfDbName = params_Dir + "/../bin/" + DbName
+        UsrConfDbName = DbName
+	//UsrConfDbName = params_Dir + "/../bin/" + DbName
 	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
 	if err == nil {
 		for key, obj := range models.ConfigObjectMap {
@@ -29,14 +30,12 @@ func (mgr *ConfigMgr) InstantiateDbIf(params_Dir string) error {
 	/*
 	 * Created a table in DB to store UUID to ConfigObject key mapping.
 	 */
+	logger.Println("Creating table for UUID")
 	dbCmd := "CREATE TABLE IF NOT EXISTS UuidMap " +
 		"(Uuid varchar(255) PRIMARY KEY ," +
 		"Key varchar(255))"
 
 	_, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
-	if err == nil {
-		logger.Println("Created table for UUID")
-	}
 
 	return nil
 }

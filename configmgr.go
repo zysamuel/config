@@ -54,6 +54,12 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			ConfigObjectsBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Update",
+			"PATCH",
+			"/" + key + "/" + "{objId}",
+			ConfigObjectUpdate,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 	}
 	return true
