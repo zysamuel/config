@@ -3,6 +3,7 @@ package main
 import (
 	"asicdServices"
 	"bgpd"
+        "arpd"
 	"portdServices"
 	//"encoding/binary"
 	"git.apache.org/thrift.git/lib/go/thrift"
@@ -407,4 +408,51 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 
 func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
 	return true
+}
+
+type ArpDClient struct {
+        IPCClientBase
+        ClientHdl *arpd.ARPServiceClient
+}
+
+func (clnt *ArpDClient) Initialize(name string, address string) {
+        clnt.Address = address
+        return
+}
+
+func (clnt *ArpDClient) ConnectToServer() bool {
+        if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+                clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+        }
+        if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+                clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+                if clnt.ClientHdl != nil {
+                        clnt.IsConnected = true
+                } else {
+                        clnt.IsConnected = false
+                }
+        }
+        return true
+}
+
+func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+        if clnt.ClientHdl != nil {
+                switch obj.(type) {
+                case models.ArpTimeout: //Arp Timeout
+                        arpTimeoutObj := obj.(models.ArpTimeout)
+                        _, err := clnt.ClientHdl.ArpTimeout(arpd.Int(arpTimeoutObj.Timeout))
+                        if err != nil {
+                                return int64(0), false
+                        }
+                }
+        }
+        return int64(0), true
+}
+
+func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+        return true
+}
+
+func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+        return true
 }
