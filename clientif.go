@@ -438,9 +438,9 @@ func (clnt *ArpDClient) ConnectToServer() bool {
 func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
         if clnt.ClientHdl != nil {
                 switch obj.(type) {
-                case models.ArpTimeout: //Arp Timeout
-                        arpTimeoutObj := obj.(models.ArpTimeout)
-                        _, err := clnt.ClientHdl.ArpTimeout(arpd.Int(arpTimeoutObj.Timeout))
+                case models.ArpConfig: //Arp Timeout
+                        arpConfigObj := obj.(models.ArpConfig)
+                        _, err := clnt.ClientHdl.SetArpConfig(arpd.Int(arpConfigObj.Timeout))
                         if err != nil {
                                 return int64(0), false
                         }
