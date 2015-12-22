@@ -184,7 +184,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		dbObj, _ := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
 		diff, err := obj.CompareObjectsAndDiff(dbObj)
-		success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, obj, diff, objKeySqlStr, gMgr.dbHdl)
+		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
+		success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKeySqlStr, gMgr.dbHdl)
 		if success == true {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
