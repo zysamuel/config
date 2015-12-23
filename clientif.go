@@ -445,6 +445,7 @@ func (clnt *ArpDClient) ConnectToServer() bool {
 }
 
 func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+	logger.Println("ArpDClient: CreateObject called - start")
         if clnt.ClientHdl != nil {
                 switch obj.(type) {
                 case models.ArpConfig: //Arp Timeout
@@ -464,4 +465,31 @@ func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 
 func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
         return true
+}
+
+func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
+	nextMarker int64, more bool, objs []models.ConfigObj) {
+
+	logger.Println("ArpDClient: GetBulkObject called - start")
+	switch obj.(type) {
+	case models.ArpEntry:
+		var arpEntryBulk *arpd.ArpEntryBulk
+		arpEntryBulk, err = clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+		if err != nil || arpEntryBulk == nil {
+			break
+		}
+		for _, item := range arpEntryBulk.ArpList {
+                    arpEntry := models.ArpEntry {
+                        IpAddr:     item.IpAddr,
+                        MacAddr:    item.MacAddr,
+                        Vlan:       int(item.Vlan),
+                        Intf:       item.Intf,
+                    }
+                    objs = append(objs, arpEntry)
+		}
+		nextMarker = int64(arpEntryBulk.NextIdx)
+		objCount = int64(arpEntryBulk.Count)
+		more = arpEntryBulk.More
+	}
+	return err, objCount, nextMarker, more, objs
 }

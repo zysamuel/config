@@ -11,6 +11,8 @@ import (
 
 type ConfigMgr struct {
 	clients        map[string]ClientIf
+	apiVer         string
+	apiBase        string
 	basePath       string
 	fullPath       string
 	pRestRtr       *mux.Router
@@ -29,37 +31,37 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
-			"/" + key,
+			mgr.apiBase + key,
 			ShowConfigObject,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Create",
 			"POST",
-			"/" + key,
+			mgr.apiBase + key,
 			ConfigObjectCreate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Delete",
 			"DELETE",
-			"/" + key + "/" + "{objId}",
+			mgr.apiBase + key + "/" + "{objId}",
 			ConfigObjectDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 		rt = ApiRoute{key + "s",
 			"GET",
-			"/" + key + "s/" + "{objId}",
+			mgr.apiBase + key + "s/" + "{objId}",
 			ConfigObjectsBulkGet,
 		}
 		rt = ApiRoute{key + "s",
 			"GET",
-			"/" + key + "s",
+			mgr.apiBase + key + "s",
 			ConfigObjectsBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
 			"PATCH",
-			"/" + key + "/" + "{objId}",
+			mgr.apiBase + key + "/" + "{objId}",
 			ConfigObjectUpdate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -96,6 +98,8 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	var rc bool
 	mgr := new(ConfigMgr)
 	var err error
+	mgr.apiVer = "v1"
+	mgr.apiBase = "/public/" + mgr.apiVer + "/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Printf("ERROR: Unable to get absolute path for %s, error [%s]\n", paramsDir, err)
 		return nil
