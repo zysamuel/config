@@ -9,6 +9,7 @@ import (
 	//"io/ioutil"
 	"log"
 	"os"
+	"reflect"
 )
 
 var oneTabs string = "\t"
@@ -16,9 +17,8 @@ var twoTabs string = "\t\t"
 var threeTabs string = "\t\t\t"
 var fourTabs string = "\t\t\t\t"
 
-func writeHeaders(dstFile *os.File) {
-	hdrFile := "header.txt"
-	hdr, err := os.Open(hdrFile)
+func writeStaticPart(inputFile string, dstFile *os.File) {
+	hdr, err := os.Open(inputFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +27,6 @@ func writeHeaders(dstFile *os.File) {
 	scanner := bufio.NewScanner(hdr)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
 		dstFile.WriteString(line + "\n")
 	}
 
@@ -39,10 +38,10 @@ func writeHeaders(dstFile *os.File) {
 func writeResourceHdr(strName string, dstFile *os.File) {
 	dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
 	dstFile.WriteString(twoTabs + "\"post\": { " + "\n")
-	dstFile.WriteString(threeTabs+ "\"tags\": [ " + "\n")
-	dstFile.WriteString(fourTabs+ "\"" + strName + "\"" + "\n")
-	dstFile.WriteString(threeTabs+ "]," + "\n")
-	dstFile.WriteString(twoTabs + "\"summary\": \"Create New" + strName +"\","+ "\n")
+	dstFile.WriteString(threeTabs + "\"tags\": [ " + "\n")
+	dstFile.WriteString(fourTabs + "\"" + strName + "\"" + "\n")
+	dstFile.WriteString(threeTabs + "]," + "\n")
+	dstFile.WriteString(twoTabs + "\"summary\": \"Create New" + strName + "\"," + "\n")
 	dstFile.WriteString(twoTabs + "\"description\":" + "\"" + strName + "\"," + "\n")
 	//dstFile.WriteString(twoTabs + "\"operationId\": \"add" + strName + ",\n")
 	dstFile.WriteString(twoTabs + "\"consumes\": [" + "\n")
@@ -63,11 +62,21 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " } " + "\n")
 }
 
-func writeAttributeJson (attrName string, dstFile *os.File) {
+func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
+	var attrTypeVal string
 	dstFile.WriteString(fourTabs + "{" + "\n")
-	dstFile.WriteString(fourTabs + "\"in\": \"body\","  + "\n")
-	dstFile.WriteString(fourTabs + "\"name\":"  + "\""+  attrName+ "\""+ ","+  "\n")
-	dstFile.WriteString(fourTabs + "\"description\":"  + "\""+  attrName+ "\""+ ","+  "\n")
+	dstFile.WriteString(fourTabs + "\"in\": \"formData\"," + "\n")
+	dstFile.WriteString(fourTabs + "\"name\":" + "\"" + attrName + "\"" + "," + "\n")
+	switch attrType {
+	case "string":
+		attrTypeVal = "string"
+	case "int32", "uint32":
+		attrTypeVal = "integer"
+	default:
+		attrTypeVal = "string"
+	}
+	dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + attrName + "\"" + "," + "\n")
 	dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
 	dstFile.WriteString(fourTabs + "}," + "\n")
 }
@@ -89,7 +98,7 @@ func main() {
 	defer docJsFile.Close()
 
 	// Write Header by copying each line from header file
-	writeHeaders(docJsFile)
+	writeStaticPart("part1.txt", docJsFile)
 	docJsFile.Sync()
 
 	// Parse the object file.
@@ -102,48 +111,22 @@ func main() {
 		fmt.Println("Failed to parse input file ", inputFile, err)
 		return
 	}
+
 	/*
-	   "/pet": {
-	        "post": {
-	          "tags": [
-	            "pet"
-	          ],
-	          "summary": "Add a new pet to the store",
-	          "description": "",
-	          "operationId": "addPet",
-	          "consumes": [
-	            "application/json",
-	            "application/xml"
-	          ],
-	          "produces": [
-	            "application/json",
-	            "application/xml"
-	          ],
-	          "parameters": [
-	            {
-	              "in": "body",
-	              "name": "pet",
-	              "description": "Pet object that needs to be added to the store",
-	              "required": false,
-	              "schema": {
-	                "$ref": "#/definitions/Pet"
-	              }
-	            }
-	          ],
-	          "responses": {
-	            "405": {
-	              "description": "Invalid input"
-	            }
-	          },
-	          "security": [
-	            {
-	              "petstore_auth": [
-	                "write:pets",
-	                "read:pets"
-	              ]
-	            }
-	          ]
-	        },
+		"responses": {
+			  "200": {
+					"description": "successful operation",
+					"schema": {
+						 "type": "array",
+						 "items": {
+							  "$ref": "#/definitions/Pet"
+						 }
+					}
+			  },
+			  "400": {
+					"description": "Invalid status value"
+			  }
+		 },
 	*/
 	for _, dec := range f.Decls {
 		tk, ok := dec.(*ast.GenDecl)
@@ -160,8 +143,10 @@ func main() {
 							writeResourceHdr(typ.Name.Name, docJsFile)
 							for _, fld := range str.Fields.List {
 								if fld.Names != nil {
-								   writeAttributeJson(fld.Names[0].Name,  docJsFile)
-									fmt.Printf("-- %s : %s \n", fld.Names[0], fld.Type)
+									idnt := fld.Type.(*ast.Ident)
+									writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+									fmt.Println("## Attr Type ", idnt.String())
+									fmt.Printf("-- %s : %s  %s\n", fld.Names[0], fld.Type, reflect.TypeOf(fld.Type))
 								}
 							}
 							docJsFile.WriteString(twoTabs + " ], " + "\n")
@@ -176,6 +161,6 @@ func main() {
 		}
 	}
 	docJsFile.WriteString(twoTabs + " } " + "\n")
-	docJsFile.WriteString(twoTabs + " } " + "\n")
-
+	docJsFile.WriteString(twoTabs + " }; " + "\n")
+	writeStaticPart("part2.txt", docJsFile)
 }
