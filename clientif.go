@@ -281,6 +281,15 @@ func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 }
 
 func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+/*
+	if clnt.ClientHdl != nil {
+		switch obj.(type) {
+		case models.PortintfConfig:
+			portIntfObj := obj.(models.PortIntfConfig)
+			clnt.ClientHdl.UpatePortIntfConfig(dbObj, obj, attrSet)
+		}
+	}
+*/
 	return true
 }
 
