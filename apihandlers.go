@@ -58,7 +58,7 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
-	resource := strings.TrimPrefix(r.URL.String(), "/")
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
 
@@ -120,10 +120,13 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 }
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
-	resource := strings.TrimPrefix(r.URL.String(), "/")
-	logger.Println("####  CreateObject  called")
+
+
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
+
 		_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
 			UUId, err := StoreUuidToKeyMapInDb(obj)
