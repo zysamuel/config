@@ -14,7 +14,7 @@ var UsrConfDbName string
 //
 func (mgr *ConfigMgr) InstantiateDbIf() error {
 	var err error
-	var DbName string = "UsrConfDb.db"
+	var DbName string = "/UsrConfDb.db"
 
 	UsrConfDbName = mgr.fullPath + DbName
 

@@ -3,6 +3,7 @@ package main
 import (
 	"asicdServices"
 	"bgpd"
+        "arpd"
 	"portdServices"
 	//"encoding/binary"
 	"git.apache.org/thrift.git/lib/go/thrift"
@@ -328,6 +329,8 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
 			nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
 			nConf.Description = bgpNeighborConf.Description
+			nConf.RouteReflectorClusterId = bgpNeighborConf.RouteReflectorClusterId
+			nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
 			_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
 			if err != nil {
 				return int64(0), false
@@ -372,6 +375,8 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					Input:  uint32(item.Queues.Input),
 					Output: uint32(item.Queues.Output),
 				},
+				RouteReflectorClusterId: item.RouteReflectorClusterId,
+				RouteReflectorClient: item.RouteReflectorClient,
 			}
 			objs = append(objs, bgpNeighborState)
 		}
@@ -389,7 +394,9 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			return false
 
 		case models.BGPNeighborConfig:
+			logger.Println("BgpDClient: BGPNeighborConfig delete")
 			bgpNeighborConf := obj.(models.BGPNeighborConfig)
+			logger.Println("BgpDClient: BGPNeighborConfig delete - %s", bgpNeighborConf)
 			_, err := clnt.ClientHdl.DeleteBGPNeighbor(bgpNeighborConf.NeighborAddress)
 			if err != nil {
 				return false
@@ -401,4 +408,51 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 
 func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
 	return true
+}
+
+type ArpDClient struct {
+        IPCClientBase
+        ClientHdl *arpd.ARPServiceClient
+}
+
+func (clnt *ArpDClient) Initialize(name string, address string) {
+        clnt.Address = address
+        return
+}
+
+func (clnt *ArpDClient) ConnectToServer() bool {
+        if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+                clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+        }
+        if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+                clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+                if clnt.ClientHdl != nil {
+                        clnt.IsConnected = true
+                } else {
+                        clnt.IsConnected = false
+                }
+        }
+        return true
+}
+
+func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+        if clnt.ClientHdl != nil {
+                switch obj.(type) {
+                case models.ArpConfig: //Arp Timeout
+                        arpConfigObj := obj.(models.ArpConfig)
+                        _, err := clnt.ClientHdl.SetArpConfig(arpd.Int(arpConfigObj.Timeout))
+                        if err != nil {
+                                return int64(0), false
+                        }
+                }
+        }
+        return int64(0), true
+}
+
+func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+        return true
+}
+
+func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+        return true
 }
