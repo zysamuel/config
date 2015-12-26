@@ -466,7 +466,11 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	switch obj.(type) {
 	    case models.ArpEntry:
                 if clnt.ClientHdl != nil {
-                    arpEntryBulk, _ := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+                    arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+                    if err != nil {
+                        logger.Println("GetBulkObject call to Arpd failed:", err)
+                        return nil, objCount, nextMarker, more, objs
+                    }
                     if arpEntryBulk.Count != 0 {
                         objCount = int64(arpEntryBulk.Count)
                         more = arpEntryBulk.More
