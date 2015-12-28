@@ -121,9 +121,15 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 
-
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
-
+	if gMgr.systemReady == false {
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode("System not ready"); err != nil {
+			logger.Println("### Failed to encode the system not ready for object ", resource)
+		}
+		return
+	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 
