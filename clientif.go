@@ -494,25 +494,33 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 
 	logger.Println("ArpDClient: GetBulkObject called - start")
+        var ret_obj models.ArpEntry
 	switch obj.(type) {
-	case models.ArpEntry:
-		var arpEntryBulk *arpd.ArpEntryBulk
-		arpEntryBulk, err = clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
-		if err != nil || arpEntryBulk == nil {
-			break
-		}
-		for _, item := range arpEntryBulk.ArpList {
-                    arpEntry := models.ArpEntry {
-                        IpAddr:     item.IpAddr,
-                        MacAddr:    item.MacAddr,
-                        Vlan:       int(item.Vlan),
-                        Intf:       item.Intf,
+	    case models.ArpEntry:
+                if clnt.ClientHdl != nil {
+                    arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+                    if err != nil {
+                        logger.Println("GetBulkObject call to Arpd failed:", err)
+                        return nil, objCount, nextMarker, more, objs
                     }
-                    objs = append(objs, arpEntry)
-		}
-		nextMarker = int64(arpEntryBulk.NextIdx)
-		objCount = int64(arpEntryBulk.Count)
-		more = arpEntryBulk.More
+                    if arpEntryBulk.Count != 0 {
+                        objCount = int64(arpEntryBulk.Count)
+                        more = arpEntryBulk.More
+                        nextMarker = int64(arpEntryBulk.EndIdx)
+                        cnt := int(arpEntryBulk.Count)
+                        for i := 0; i < cnt; i++ {
+                            if len(objs) == 0 {
+                                objs = make([]models.ConfigObj, 0)
+                            }
+                            ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
+                            ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
+                            ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
+                            ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
+                            ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
+                            objs = append(objs, ret_obj)
+                        }
+                    }
+                }
 	}
-	return err, objCount, nextMarker, more, objs
+	return nil, objCount, nextMarker, more, objs
 }
