@@ -59,7 +59,6 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 //  This method connects to all the config daemon's cleints
 //
 func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
-/*
 	unconnectedClients := make([]string, len(mgr.clients))
 	idx := 0
 	for clntName, client := range mgr.clients {
@@ -89,7 +88,6 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 		}
 		waitCount++
 	}
-*/
 	mgr.systemReady = true
 	clientsUp <- true
 	return true
