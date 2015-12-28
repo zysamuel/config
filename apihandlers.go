@@ -54,7 +54,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func CheckIfSystemIsReady(w http.ResponseWriter) bool {
-	if gMgr.systemReady == false {
+	if gMgr.IsReady() == false {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		if err := json.NewEncoder(w).Encode("System is not ready"); err != nil {
