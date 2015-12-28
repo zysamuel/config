@@ -80,7 +80,6 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objId string, dbHdl *sql.DB) bool {
 	return true
 }
-
 func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
@@ -171,8 +170,111 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		break
 	}
 	return nil, objCount, nextMarker, more, objs
-}
 
-func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrs []byte, objId string, dbHdl *sql.DB) bool {
-	return true
+}
+func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+
+	logger.Println("### Update Object called LACPD", attrSet, objKey)
+	ok := false
+	switch obj.(type) {
+
+	case models.EthernetConfig:
+		// cast original object
+		origdata := dbObj.(models.EthernetConfig)
+		updatedata := obj.(models.EthernetConfig)
+		// create new thrift objects
+		origconf := lacpdServices.NewEthernetConfig()
+		updateconf := lacpdServices.NewEthernetConfig()
+
+		origconf.MacAddress = string(origdata.MacAddress)
+		origconf.Description = string(origdata.Description)
+		origconf.AggregateId = string(origdata.AggregateId)
+		origconf.NameKey = string(origdata.NameKey)
+		origconf.Enabled = bool(origdata.Enabled)
+		origconf.Speed = string(origdata.Speed)
+		origconf.Mtu = int16(origdata.Mtu)
+		origconf.DuplexMode = int32(origdata.DuplexMode)
+		origconf.EnableFlowControl = bool(origdata.EnableFlowControl)
+		origconf.Auto = bool(origdata.Auto)
+		origconf.Type = string(origdata.Type)
+
+		updateconf.MacAddress = string(updatedata.MacAddress)
+		updateconf.Description = string(updatedata.Description)
+		updateconf.AggregateId = string(updatedata.AggregateId)
+		updateconf.NameKey = string(updatedata.NameKey)
+		updateconf.Enabled = bool(updatedata.Enabled)
+		updateconf.Speed = string(updatedata.Speed)
+		updateconf.Mtu = int16(updatedata.Mtu)
+		updateconf.DuplexMode = int32(updatedata.DuplexMode)
+		updateconf.EnableFlowControl = bool(updatedata.EnableFlowControl)
+		updateconf.Auto = bool(updatedata.Auto)
+		updateconf.Type = string(updatedata.Type)
+
+		//convert attrSet to uint8 list
+		newattrset := make([]int8, len(attrSet))
+		for i, v := range attrSet {
+			newattrset[i] = int8(v)
+		}
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, newattrset)
+			if ok {
+				dbObj.UpdateObjectInDb(obj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.AggregationLacpConfig:
+		// cast original object
+		origdata := dbObj.(models.AggregationLacpConfig)
+		updatedata := obj.(models.AggregationLacpConfig)
+		// create new thrift objects
+		origconf := lacpdServices.NewAggregationLacpConfig()
+		updateconf := lacpdServices.NewAggregationLacpConfig()
+
+		origconf.Description = string(origdata.Description)
+		origconf.MinLinks = int16(origdata.MinLinks)
+		origconf.SystemPriority = int16(origdata.SystemPriority)
+		origconf.NameKey = string(origdata.NameKey)
+		origconf.Interval = int32(origdata.Interval)
+		origconf.Enabled = bool(origdata.Enabled)
+		origconf.Mtu = int16(origdata.Mtu)
+		origconf.SystemIdMac = string(origdata.SystemIdMac)
+		origconf.LagType = int32(origdata.LagType)
+		origconf.Type = string(origdata.Type)
+		origconf.LacpMode = int32(origdata.LacpMode)
+
+		updateconf.Description = string(updatedata.Description)
+		updateconf.MinLinks = int16(updatedata.MinLinks)
+		updateconf.SystemPriority = int16(updatedata.SystemPriority)
+		updateconf.NameKey = string(updatedata.NameKey)
+		updateconf.Interval = int32(updatedata.Interval)
+		updateconf.Enabled = bool(updatedata.Enabled)
+		updateconf.Mtu = int16(updatedata.Mtu)
+		updateconf.SystemIdMac = string(updatedata.SystemIdMac)
+		updateconf.LagType = int32(updatedata.LagType)
+		updateconf.Type = string(updatedata.Type)
+		updateconf.LacpMode = int32(updatedata.LacpMode)
+
+		//convert attrSet to uint8 list
+		newattrset := make([]int8, len(attrSet))
+		for i, v := range attrSet {
+			newattrset[i] = int8(v)
+		}
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, newattrset)
+			if ok {
+				dbObj.UpdateObjectInDb(obj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	default:
+		break
+	}
+	return ok
+
 }
