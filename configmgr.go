@@ -20,6 +20,7 @@ type ConfigMgr struct {
 	restRoutes     []ApiRoute
 	reconncetTimer *time.Ticker
 	objHdlMap      map[string]ConfigObjInfo
+	systemReady    bool
 }
 
 //

@@ -22,7 +22,10 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 	if err == nil {
 		for key, obj := range models.ConfigObjectMap {
 			logger.Println("Creating DB for object", key)
-			obj.CreateDBTable(mgr.dbHdl)
+			err = obj.CreateDBTable(mgr.dbHdl)
+			if err != nil {
+				logger.Println("Failed to create DB for object", key)
+			}
 		}
 	} else {
 		logger.Println("### Failed to open DB", UsrConfDbName, err)
@@ -37,6 +40,8 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 		"Key varchar(255))"
 
 	_, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
-
+	if err != nil {
+		logger.Println("Failed to create DB for object UUID")
+	}
 	return nil
 }
