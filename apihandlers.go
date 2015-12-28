@@ -53,11 +53,29 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func CheckIfSystemIsReady(w http.ResponseWriter) bool {
+	if gMgr.systemReady == false {
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode("System is not ready"); err != nil {
+			logger.Println("### Failed to encode the system not ready message")
+		}
+		return false
+	}
+	return true
+}
+
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		return
+	}
 	logger.Println("####  ShowConfigObject called")
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		return
+	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
@@ -120,16 +138,10 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 }
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
-
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
-	if gMgr.systemReady == false {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		if err := json.NewEncoder(w).Encode("System not ready"); err != nil {
-			logger.Println("### Failed to encode the system not ready for object ", resource)
-		}
+	if CheckIfSystemIsReady(w) != true {
 		return
 	}
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 
@@ -152,6 +164,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var objKeySqlStr string
+	if CheckIfSystemIsReady(w) != true {
+		return
+	}
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -181,6 +196,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var objKeySqlStr string
+	if CheckIfSystemIsReady(w) != true {
+		return
+	}
 	resource := strings.Split(r.URL.String(), "/")[1]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
