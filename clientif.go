@@ -315,6 +315,7 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
                 Autoneg: elem.Autoneg,
                 MediaType: elem.MediaType,
                 Mtu: elem.Mtu,
+                PortStat: elem.PortStat,
             }
             objs = append(objs, portState)
         }
