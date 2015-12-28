@@ -484,6 +484,7 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
                             ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
                             ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
                             ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
+                            ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
                             objs = append(objs, ret_obj)
                         }
                     }
