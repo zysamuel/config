@@ -218,7 +218,7 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, newattrset)
 			if ok {
-				dbObj.UpdateObjectInDb(obj, attrSet, dbHdl)
+				obj.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
 				panic(err)
 			}
@@ -265,7 +265,7 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, newattrset)
 			if ok {
-				dbObj.UpdateObjectInDb(obj, attrSet, dbHdl)
+				obj.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
 				panic(err)
 			}
