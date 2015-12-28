@@ -58,7 +58,8 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 //
 //  This method connects to all the config daemon's cleints
 //
-func (mgr *ConfigMgr) ConnectToAllClients() bool {
+func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
+/*
 	unconnectedClients := make([]string, len(mgr.clients))
 	idx := 0
 	for clntName, client := range mgr.clients {
@@ -72,7 +73,6 @@ func (mgr *ConfigMgr) ConnectToAllClients() bool {
 		_ = t
 		if waitCount == 0 {
 			logger.Println("Looking for clients ", unconnectedClients)
-
 		}
 		for i := 0; i < len(unconnectedClients); i++ {
 			if waitCount%100 == 0 {
@@ -89,6 +89,9 @@ func (mgr *ConfigMgr) ConnectToAllClients() bool {
 		}
 		waitCount++
 	}
+*/
+	mgr.systemReady = true
+	clientsUp <- true
 	return true
 }
 
@@ -103,5 +106,14 @@ func (mgr *ConfigMgr) IsReady() bool {
 // This method is to disconnect from all clients
 //
 func (mgr *ConfigMgr) disconnectFromAllClients() bool {
+	return false
+}
+
+//
+// This method is to get Port interfaces from Asicd and store in DB for config update on those ports
+//
+func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
+	<-clientsUp
+	logger.Println("Started thread to get port interface list")
 	return false
 }
