@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"models"
 	"strconv"
+	"asicd/asicdConstDefs"
 )
 
 type ClientIf interface {
@@ -97,7 +98,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 // This method is to check if config manager is ready to accept config requests
 //
 func (mgr *ConfigMgr) IsReady() bool {
-	return false
+	return mgr.systemReady
 }
 
 //
@@ -111,7 +112,31 @@ func (mgr *ConfigMgr) disconnectFromAllClients() bool {
 // This method is to get Port interfaces from Asicd and store in DB for config update on those ports
 //
 func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
-	<-clientsUp
-	logger.Println("Started thread to get port interface list")
-	return false
+	logger.Println("Waiting for PortConfig server")
+	serverUp := <-clientsUp
+	logger.Println("PortConfig server is up? ", serverUp)
+	resource := "PortIntfConfig"
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		var resp GetBulkResponse
+		var err error
+		obj, _ := GetConfigObj(nil, objHdl)
+		//currentIndex, objCount := ExtractGetBulkParams(r)
+		//resp.CurrentMarker = currentIndex
+		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
+		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
+		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
+			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+		logger.Println("PortIntf thread: ", err, resp.ObjCount, resp.NextMarker, resp.MoreExist)
+		if err == nil {
+			for i := int64(0); i < resp.ObjCount; i++ {
+				portConfig := resp.StateObjects[i].(models.PortIntfConfig)
+				logger.Println("PortIntf: ", i, portConfig)
+				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
+				if err != nil {
+					logger.Println("Failed to store PortIntfConfig in DB ", i, portConfig, err)
+				}
+			}
+		}
+	}
+	return true
 }
