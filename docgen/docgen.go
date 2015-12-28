@@ -9,7 +9,6 @@ import (
 	//"io/ioutil"
 	"log"
 	"os"
-	"reflect"
 )
 
 var oneTabs string = "\t"
@@ -112,22 +111,6 @@ func main() {
 		return
 	}
 
-	/*
-		"responses": {
-			  "200": {
-					"description": "successful operation",
-					"schema": {
-						 "type": "array",
-						 "items": {
-							  "$ref": "#/definitions/Pet"
-						 }
-					}
-			  },
-			  "400": {
-					"description": "Invalid status value"
-			  }
-		 },
-	*/
 	for _, dec := range f.Decls {
 		tk, ok := dec.(*ast.GenDecl)
 		if ok {
@@ -135,18 +118,20 @@ func main() {
 				switch spec.(type) {
 				case *ast.TypeSpec:
 					typ := spec.(*ast.TypeSpec)
-					fmt.Printf("%s \n", typ.Name)
-
 					str, ok := typ.Type.(*ast.StructType)
-					if (typ.Name.Name == "BGPNeighborConfig") || (typ.Name.Name == "IPv4Intf") {
+					switch typ.Name.Name {
+					case "BGPNeighborConfig", "IPv4Intf", "Vlan", "PortIntfConfig":
+						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							writeResourceHdr(typ.Name.Name, docJsFile)
 							for _, fld := range str.Fields.List {
 								if fld.Names != nil {
-									idnt := fld.Type.(*ast.Ident)
-									writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
-									fmt.Println("## Attr Type ", idnt.String())
-									fmt.Printf("-- %s : %s  %s\n", fld.Names[0], fld.Type, reflect.TypeOf(fld.Type))
+									switch fld.Type.(type) {
+									case *ast.Ident:
+										fmt.Printf("-- %s \n", fld.Names[0])
+										idnt := fld.Type.(*ast.Ident)
+										writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+									}
 								}
 							}
 							docJsFile.WriteString(twoTabs + " ], " + "\n")
@@ -155,6 +140,7 @@ func main() {
 						}
 
 					}
+
 				}
 
 			}
