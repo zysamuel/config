@@ -27,7 +27,7 @@ func (clnt *LACPDClient) IsConnectedToServer() bool {
 	return true
 }
 func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-
+	var objId int64
 	switch obj.(type) {
 
 	case models.EthernetConfig:
@@ -49,6 +49,7 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		if err != nil {
 			return int64(0), false
 		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
 
 	case models.AggregationLacpConfig:
@@ -70,12 +71,13 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		if err != nil {
 			return int64(0), false
 		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
 	default:
 		break
 	}
 
-	return int64(0), true
+	return objId, true
 }
 func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objId string, dbHdl *sql.DB) bool {
 	return true
