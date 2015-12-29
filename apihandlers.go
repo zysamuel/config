@@ -197,6 +197,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var objKeySqlStr string
 	if CheckIfSystemIsReady(w) != true {
+		logger.Println("Update: System not ready")
 		return
 	}
 	resource := strings.Split(r.URL.String(), "/")[1]
@@ -209,7 +210,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
-		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+		dbObj, gerr := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
 		if gerr == nil {
 			diff, err := obj.CompareObjectsAndDiff(dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
@@ -220,11 +221,15 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
 					logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
 				}
+			} else {
+
 			}
 		} else {
-			fmt.Println("Error getting obj via objKeySqlStr ", objKeySqlStr, gerr)
+			logger.Println("Error getting obj via objKeySqlStr ", objKeySqlStr, gerr)
 		}
 
+	} else {
+		logger.Println("unable to find resource", resource)
 	}
 }
 
