@@ -281,7 +281,49 @@ func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 }
 
 func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+/*
+	if clnt.ClientHdl != nil {
+		switch obj.(type) {
+		case models.PortintfConfig:
+			portIntfObj := obj.(models.PortIntfConfig)
+			clnt.ClientHdl.UpatePortIntfConfig(dbObj, obj, attrSet)
+		}
+	}
+*/
 	return true
+}
+
+func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
+	nextMarker int64, more bool, objs []models.ConfigObj) {
+	switch obj.(type) {
+    case models.PortIntfConfig:
+        portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
+        if err != nil {
+            break
+        }
+        for _, elem := range portStateBulk.PortStateList {
+            portState := models.PortIntfConfig {
+                PortNum: elem.PortNum,
+                Name: elem.Name,
+                Description: elem.Description,
+                Type: elem.Type,
+                AdminState: elem.AdminState,
+                OperState: elem.OperState,
+                MacAddr: elem.MacAddr,
+                Speed: elem.Speed,
+                Duplex: elem.Duplex,
+                Autoneg: elem.Autoneg,
+                MediaType: elem.MediaType,
+                Mtu: elem.Mtu,
+                PortStat: elem.PortStat,
+            }
+            objs = append(objs, portState)
+        }
+        objCount = portStateBulk.ObjCount
+        nextMarker = portStateBulk.NextMarker
+        more = portStateBulk.More
+    }
+	return err, objCount, nextMarker, more, objs
 }
 
 type BgpDClient struct {
@@ -436,6 +478,7 @@ func (clnt *ArpDClient) ConnectToServer() bool {
 }
 
 func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+	logger.Println("ArpDClient: CreateObject called - start")
         if clnt.ClientHdl != nil {
                 switch obj.(type) {
                 case models.ArpConfig: //Arp Timeout
@@ -455,4 +498,39 @@ func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 
 func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
         return true
+}
+
+func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
+	nextMarker int64, more bool, objs []models.ConfigObj) {
+
+	logger.Println("ArpDClient: GetBulkObject called - start")
+        var ret_obj models.ArpEntry
+	switch obj.(type) {
+	    case models.ArpEntry:
+                if clnt.ClientHdl != nil {
+                    arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+                    if err != nil {
+                        logger.Println("GetBulkObject call to Arpd failed:", err)
+                        return nil, objCount, nextMarker, more, objs
+                    }
+                    if arpEntryBulk.Count != 0 {
+                        objCount = int64(arpEntryBulk.Count)
+                        more = arpEntryBulk.More
+                        nextMarker = int64(arpEntryBulk.EndIdx)
+                        cnt := int(arpEntryBulk.Count)
+                        for i := 0; i < cnt; i++ {
+                            if len(objs) == 0 {
+                                objs = make([]models.ConfigObj, 0)
+                            }
+                            ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
+                            ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
+                            ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
+                            ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
+                            ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
+                            objs = append(objs, ret_obj)
+                        }
+                    }
+                }
+	}
+	return nil, objCount, nextMarker, more, objs
 }

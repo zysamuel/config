@@ -1,5 +1,5 @@
 RM=rm -f
-DESTDIR=$(SR_CODE_BASE)/snaproute/src/bin
+DESTDIR=$(SR_CODE_BASE)/snaproute/src/out/bin
 PARAMSDIR=$(DESTDIR)/params
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
