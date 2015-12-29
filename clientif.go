@@ -296,32 +296,33 @@ func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 	switch obj.(type) {
-	case models.PortIntfConfig:
-		portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
-		if err != nil {
-			break
-		}
-		for _, elem := range portStateBulk.PortStateList {
-			portState := models.PortIntfConfig {
-					PortNum: elem.PortNum,
-					Name: elem.Name,
-					Description: elem.Description,
-					Type: elem.Type,
-					AdminState: elem.AdminState,
-					OperState: elem.OperState,
-					MacAddr: elem.MacAddr,
-					Speed: elem.Speed,
-					Duplex: elem.Duplex,
-					Autoneg: elem.Autoneg,
-					MediaType: elem.MediaType,
-					Mtu: elem.Mtu,
-			}
-			objs = append(objs, portState)
-	}
-	objCount = portStateBulk.ObjCount
-	nextMarker = portStateBulk.NextMarker
-	more = portStateBulk.More
-	}
+    case models.PortIntfConfig:
+        portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
+        if err != nil {
+            break
+        }
+        for _, elem := range portStateBulk.PortStateList {
+            portState := models.PortIntfConfig {
+                PortNum: elem.PortNum,
+                Name: elem.Name,
+                Description: elem.Description,
+                Type: elem.Type,
+                AdminState: elem.AdminState,
+                OperState: elem.OperState,
+                MacAddr: elem.MacAddr,
+                Speed: elem.Speed,
+                Duplex: elem.Duplex,
+                Autoneg: elem.Autoneg,
+                MediaType: elem.MediaType,
+                Mtu: elem.Mtu,
+                PortStat: elem.PortStat,
+            }
+            objs = append(objs, portState)
+        }
+        objCount = portStateBulk.ObjCount
+        nextMarker = portStateBulk.NextMarker
+        more = portStateBulk.More
+    }
 	return err, objCount, nextMarker, more, objs
 }
 
