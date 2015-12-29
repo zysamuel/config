@@ -1,12 +1,12 @@
 package main
 
 import (
+	"asicd/asicdConstDefs"
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"models"
 	"strconv"
-	"asicd/asicdConstDefs"
 )
 
 type ClientIf interface {
