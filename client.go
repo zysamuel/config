@@ -1,12 +1,12 @@
 package main
 
 import (
+	"asicd/asicdConstDefs"
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"models"
 	"strconv"
-	"asicd/asicdConstDefs"
 )
 
 type ClientIf interface {
@@ -86,6 +86,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 		}
 		if len(unconnectedClients) == 0 {
 			mgr.reconncetTimer.Stop()
+			break
 		}
 		waitCount++
 	}
