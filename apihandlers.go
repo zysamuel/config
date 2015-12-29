@@ -167,7 +167,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	if CheckIfSystemIsReady(w) != true {
 		return
 	}
-	resource := strings.Split(r.URL.String(), "/")[1]
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
@@ -200,7 +200,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		logger.Println("Update: System not ready")
 		return
 	}
-	resource := strings.Split(r.URL.String(), "/")[1]
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
