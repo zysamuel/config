@@ -297,12 +297,12 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 	switch obj.(type) {
     case models.PortIntfConfig:
-        portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
+        portConfigBulk, err := clnt.ClientHdl.GetBulkPortConfig(currMarker, count)
         if err != nil {
             break
         }
-        for _, elem := range portStateBulk.PortStateList {
-            portState := models.PortIntfConfig {
+        for _, elem := range portConfigBulk.PortConfigList {
+            portConfig := models.PortIntfConfig {
                 PortNum: elem.PortNum,
                 Name: elem.Name,
                 Description: elem.Description,
@@ -315,13 +315,29 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
                 Autoneg: elem.Autoneg,
                 MediaType: elem.MediaType,
                 Mtu: elem.Mtu,
-                PortStat: elem.PortStat,
+            }
+            objs = append(objs, portConfig)
+        }
+        objCount = portConfigBulk.ObjCount
+        nextMarker = portConfigBulk.NextMarker
+        more = portConfigBulk.More
+
+    case models.PortIntfState:
+        portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
+        if err != nil {
+            break
+        }
+        for _, elem := range portStateBulk.PortStateList {
+            portState := models.PortIntfState {
+                PortNum: elem.PortNum,
+                PortStats: elem.Stats,
             }
             objs = append(objs, portState)
         }
         objCount = portStateBulk.ObjCount
         nextMarker = portStateBulk.NextMarker
         more = portStateBulk.More
+
     }
 	return err, objCount, nextMarker, more, objs
 }
