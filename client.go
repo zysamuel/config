@@ -86,6 +86,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 		}
 		if len(unconnectedClients) == 0 {
 			mgr.reconncetTimer.Stop()
+			break
 		}
 		waitCount++
 	}
@@ -124,11 +125,9 @@ func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
-		logger.Println("PortIntf thread: ", err, resp.ObjCount, resp.NextMarker, resp.MoreExist)
 		if err == nil {
 			for i := int64(0); i < resp.ObjCount; i++ {
 				portConfig := resp.StateObjects[i].(models.PortIntfConfig)
-				logger.Println("PortIntf: ", i, portConfig)
 				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
 				if err != nil {
 					logger.Println("Failed to store PortIntfConfig in DB ", i, portConfig, err)
