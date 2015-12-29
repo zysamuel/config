@@ -120,8 +120,6 @@ func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
 		var resp GetBulkResponse
 		var err error
 		obj, _ := GetConfigObj(nil, objHdl)
-		//currentIndex, objCount := ExtractGetBulkParams(r)
-		//resp.CurrentMarker = currentIndex
 		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
