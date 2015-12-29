@@ -182,7 +182,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
-		dbObj, gerr := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
+		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
 		if gerr == nil {
 			diff, err := obj.CompareObjectsAndDiff(dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
