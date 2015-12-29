@@ -209,17 +209,22 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
-		dbObj, _ := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
-		diff, err := obj.CompareObjectsAndDiff(dbObj)
-		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-		success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKeySqlStr, gMgr.dbHdl)
-		if success == true {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
-				logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
+		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+		if gerr == nil {
+			diff, err := obj.CompareObjectsAndDiff(dbObj)
+			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
+			success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKeySqlStr, gMgr.dbHdl)
+			if success == true {
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(http.StatusOK)
+				if err = json.NewEncoder(w).Encode(vars["objId"]); err != nil {
+					logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
+				}
 			}
+		} else {
+			fmt.Println("Error getting obj via objKeySqlStr ", objKeySqlStr, gerr)
 		}
+
 	}
 }
 
