@@ -222,7 +222,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 					logger.Println("### Failed to encode the UUId for object ", resource, vars["objId"])
 				}
 			} else {
-
+				logger.Println("UpdateObject FAILED for resource ", resource)
 			}
 		} else {
 			logger.Println("Error getting obj via objKeySqlStr ", objKeySqlStr, gerr)
