@@ -79,7 +79,57 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 
 	return objId, true
 }
-func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objId string, dbHdl *sql.DB) bool {
+func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+
+	switch obj.(type) {
+
+	case models.EthernetConfig:
+		data := obj.(models.EthernetConfig)
+		conf := lacpdServices.NewEthernetConfig()
+		conf.MacAddress = string(data.MacAddress)
+		conf.Description = string(data.Description)
+		conf.AggregateId = string(data.AggregateId)
+		conf.NameKey = string(data.NameKey)
+		conf.Enabled = bool(data.Enabled)
+		conf.Speed = string(data.Speed)
+		conf.Mtu = int16(data.Mtu)
+		conf.DuplexMode = int32(data.DuplexMode)
+		conf.EnableFlowControl = bool(data.EnableFlowControl)
+		conf.Auto = bool(data.Auto)
+		conf.Type = string(data.Type)
+
+		_, err := clnt.ClientHdl.DeleteEthernetConfig(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.AggregationLacpConfig:
+		data := obj.(models.AggregationLacpConfig)
+		conf := lacpdServices.NewAggregationLacpConfig()
+		conf.Description = string(data.Description)
+		conf.MinLinks = int16(data.MinLinks)
+		conf.SystemPriority = int16(data.SystemPriority)
+		conf.NameKey = string(data.NameKey)
+		conf.Interval = int32(data.Interval)
+		conf.Enabled = bool(data.Enabled)
+		conf.Mtu = int16(data.Mtu)
+		conf.SystemIdMac = string(data.SystemIdMac)
+		conf.LagType = int32(data.LagType)
+		conf.Type = string(data.Type)
+		conf.LacpMode = int32(data.LacpMode)
+
+		_, err := clnt.ClientHdl.DeleteAggregationLacpConfig(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	default:
+		break
+	}
+
 	return true
 }
 func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
