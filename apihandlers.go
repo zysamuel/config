@@ -42,7 +42,40 @@ func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, erro
 			return retObj, err
 		}
 	}
+
+	var objmap map[string]*json.RawMessage
+	err = json.Unmarshal(body, &objmap)
+	if err != nil {
+		return retObj, err
+	}
+
 	return obj.UnmarshalObject(body)
+}
+
+func GetUpdateKeys(r *http.Request, obj models.ConfigObj) (map[string]bool, error) {
+	var objmap map[string]*json.RawMessage
+	var err error
+	var body []byte
+	updateKeys := make(map[string]bool)
+	if r != nil {
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
+		if err != nil {
+			return updateKeys, err
+		}
+		if err = r.Body.Close(); err != nil {
+			return updateKeys, err
+		}
+	}
+
+	err = json.Unmarshal(body, &objmap)
+	if err != nil {
+		return updateKeys, err
+	}
+	for key, _ := range objmap {
+		updateKeys[key] = true
+	}
+
+	return updateKeys, err
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -209,10 +242,11 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		obj, _ := GetConfigObj(r, objHdl)
+		updateKeys, _ := GetUpdateKeys(r, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		dbObj, gerr := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
 		if gerr == nil {
-			diff, err := obj.CompareObjectsAndDiff(dbObj)
+			diff, err := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKeySqlStr, gMgr.dbHdl)
 			if success == true {
