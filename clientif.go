@@ -387,7 +387,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
 			nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
 			nConf.Description = bgpNeighborConf.Description
-			nConf.RouteReflectorClusterId = bgpNeighborConf.RouteReflectorClusterId
+			nConf.RouteReflectorClusterId = int32(bgpNeighborConf.RouteReflectorClusterId)
 			nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
 			_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
 			if err != nil {
@@ -433,7 +433,7 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					Input:  uint32(item.Queues.Input),
 					Output: uint32(item.Queues.Output),
 				},
-				RouteReflectorClusterId: item.RouteReflectorClusterId,
+				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
 				RouteReflectorClient: item.RouteReflectorClient,
 			}
 			objs = append(objs, bgpNeighborState)
