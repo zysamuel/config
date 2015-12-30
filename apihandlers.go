@@ -29,20 +29,35 @@ type GetBulkResponse struct {
 	StateObjects  []models.ConfigObj `json:"StateObjects"`
 }
 
-func GetConfigObj(r *http.Request, obj models.ConfigObj) (models.ConfigObj, error) {
-	var retObj models.ConfigObj
-	var err error
-	var body []byte
+func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
+
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
 		if err != nil {
-			return retObj, err
+			return body, retobj, err
 		}
 		if err = r.Body.Close(); err != nil {
-			return retObj, err
+			return body, retobj, err
 		}
 	}
-	return obj.UnmarshalObject(body)
+
+	retobj, err = obj.UnmarshalObject(body)
+	return body, retobj, err
+}
+
+func GetUpdateKeys(body []byte) (map[string]bool, error) {
+	var objmap map[string]*json.RawMessage
+	var err error
+	updateKeys := make(map[string]bool)
+
+	err = json.Unmarshal(body, &objmap)
+	if err != nil {
+		return updateKeys, err
+	}
+	for key, _ := range objmap {
+		updateKeys[key] = true
+	}
+	return updateKeys, err
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +98,7 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var resp GetBulkResponse
 		var err error
-		obj, _ := GetConfigObj(nil, objHdl)
+		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
 		resp.CurrentMarker = currentIndex
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
@@ -143,7 +158,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		obj, _ := GetConfigObj(r, objHdl)
+		_, obj, _ := GetConfigObj(r, objHdl)
 
 		_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 		if success == true {
@@ -175,7 +190,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		obj, _ := GetConfigObj(nil, objHdl)
+		_, obj, _ := GetConfigObj(nil, objHdl)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		dbObj, _ := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
 		success := gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKeySqlStr, gMgr.dbHdl)
@@ -208,11 +223,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		obj, _ := GetConfigObj(r, objHdl)
+		body, obj, _ := GetConfigObj(r, objHdl)
+		updateKeys, _ := GetUpdateKeys(body)
 		objKeySqlStr, err = obj.GetSqlKeyStr(objKey)
 		dbObj, gerr := obj.GetObjectFromDb(objKeySqlStr, gMgr.dbHdl)
 		if gerr == nil {
-			diff, err := obj.CompareObjectsAndDiff(dbObj)
+			diff, err := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKeySqlStr, gMgr.dbHdl)
 			if success == true {
