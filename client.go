@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"models"
 	"strconv"
+	"time"
 )
 
 type ClientIf interface {
@@ -57,39 +58,45 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 }
 
 //
-//  This method connects to all the config daemon's cleints
+//  This method connects to all the config daemon's clients
 //
 func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 	unconnectedClients := make([]string, len(mgr.clients))
+	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
+	mgr.systemReady = false
 	idx := 0
 	for clntName, client := range mgr.clients {
-		unconnectedClients[idx] = clntName
-		idx++
 		client.ConnectToServer()
-		client.IsConnectedToServer()
+		if client.IsConnectedToServer() == false {
+			unconnectedClients[idx] = clntName
+			idx++
+		}
 	}
 	waitCount := 0
-	for t := range mgr.reconncetTimer.C {
-		_ = t
-		if waitCount == 0 {
-			logger.Println("Looking for clients ", unconnectedClients)
-		}
-		for i := 0; i < len(unconnectedClients); i++ {
-			if waitCount%100 == 0 {
-				logger.Println("Waiting to connect to these clients", unconnectedClients[i])
+	if idx > 0 {
+		for t := range mgr.reconncetTimer.C {
+			_ = t
+			if waitCount == 0 {
+				logger.Println("Looking for clients ", unconnectedClients)
 			}
-			if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
-				unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
-			} else {
-				mgr.clients[unconnectedClients[i]].ConnectToServer()
+			for i := 0; i < len(unconnectedClients); i++ {
+				if waitCount%100 == 0 {
+					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
+				}
+				if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
+					unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
+				} else {
+					mgr.clients[unconnectedClients[i]].ConnectToServer()
+				}
 			}
+			if len(unconnectedClients) == 0 {
+				mgr.reconncetTimer.Stop()
+				break
+			}
+			waitCount++
 		}
-		if len(unconnectedClients) == 0 {
-			mgr.reconncetTimer.Stop()
-			break
-		}
-		waitCount++
 	}
+	logger.Println("Connected to all clients")
 	mgr.systemReady = true
 	clientsUp <- true
 	return true
@@ -121,17 +128,13 @@ func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
 		var resp GetBulkResponse
 		var err error
 		_, obj, _ := GetConfigObj(nil, objHdl)
-		//currentIndex, objCount := ExtractGetBulkParams(r)
-		//resp.CurrentMarker = currentIndex
 		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
-		logger.Println("PortIntf thread: ", err, resp.ObjCount, resp.NextMarker, resp.MoreExist)
 		if err == nil {
 			for i := int64(0); i < resp.ObjCount; i++ {
 				portConfig := resp.StateObjects[i].(models.PortIntfConfig)
-				logger.Println("PortIntf: ", i, portConfig)
 				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
 				if err != nil {
 					logger.Println("Failed to store PortIntfConfig in DB ", i, portConfig, err)
