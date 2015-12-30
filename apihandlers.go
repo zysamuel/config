@@ -54,11 +54,9 @@ func GetUpdateKeys(body []byte) (map[string]bool, error) {
 	if err != nil {
 		return updateKeys, err
 	}
-	fmt.Println(objmap)
 	for key, _ := range objmap {
 		updateKeys[key] = true
 	}
-	fmt.Println(updateKeys)
 	return updateKeys, err
 }
 
