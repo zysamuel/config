@@ -127,7 +127,7 @@ func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var resp GetBulkResponse
 		var err error
-		obj, _ := GetConfigObj(nil, objHdl)
+		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
