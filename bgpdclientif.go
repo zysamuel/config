@@ -30,6 +30,23 @@ func (clnt *BGPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 	var objId int64
 	switch obj.(type) {
 
+	case models.IPV4Route:
+		data := obj.(models.IPV4Route)
+		conf := bgpdServices.NewIPV4Route()
+		conf.DestinationNw = string(data.DestinationNw)
+		conf.OutgoingIntfType = string(data.OutgoingIntfType)
+		conf.Protocol = string(data.Protocol)
+		conf.OutgoingInterface = string(data.OutgoingInterface)
+		conf.NetworkMask = string(data.NetworkMask)
+		conf.NextHopIp = string(data.NextHopIp)
+
+		_, err := clnt.ClientHdl.CreateIPV4Route(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
 	case models.BGPGlobalConfig:
 		data := obj.(models.BGPGlobalConfig)
 		conf := bgpdServices.NewBGPGlobalConfig()
@@ -69,6 +86,23 @@ func (clnt *BGPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 func (clnt *BGPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 
 	switch obj.(type) {
+
+	case models.IPV4Route:
+		data := obj.(models.IPV4Route)
+		conf := bgpdServices.NewIPV4Route()
+		conf.DestinationNw = string(data.DestinationNw)
+		conf.OutgoingIntfType = string(data.OutgoingIntfType)
+		conf.Protocol = string(data.Protocol)
+		conf.OutgoingInterface = string(data.OutgoingInterface)
+		conf.NetworkMask = string(data.NetworkMask)
+		conf.NextHopIp = string(data.NextHopIp)
+
+		_, err := clnt.ClientHdl.DeleteIPV4Route(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
 
 	case models.BGPGlobalConfig:
 		data := obj.(models.BGPGlobalConfig)
@@ -114,6 +148,31 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
+
+	case models.IPV4Route:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.IPV4Route
+			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(bgpdServices.Int(currMarker), bgpdServices.Int(count))
+			if bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.DestinationNw = string(bulkInfo.IPV4RouteList[i].DestinationNw)
+					ret_obj.OutgoingIntfType = string(bulkInfo.IPV4RouteList[i].OutgoingIntfType)
+					ret_obj.Protocol = string(bulkInfo.IPV4RouteList[i].Protocol)
+					ret_obj.OutgoingInterface = string(bulkInfo.IPV4RouteList[i].OutgoingInterface)
+					ret_obj.NetworkMask = string(bulkInfo.IPV4RouteList[i].NetworkMask)
+					ret_obj.NextHopIp = string(bulkInfo.IPV4RouteList[i].NextHopIp)
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
 
 	case models.BGPGlobalState:
 

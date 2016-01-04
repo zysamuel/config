@@ -29,6 +29,49 @@ func (clnt *PORTDClient) IsConnectedToServer() bool {
 func (clnt *PORTDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
 	switch obj.(type) {
+
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := portdServices.NewVlan()
+		conf.PortTagType = string(data.PortTagType)
+		conf.Ports = string(data.Ports)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.CreateVlan(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := portdServices.NewIPv4Intf()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.IfType = int32(data.IfType)
+		conf.IpAddr = string(data.IpAddr)
+
+		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := portdServices.NewIPv4Neighbor()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.MacAddr = string(data.MacAddr)
+		conf.IpAddr = string(data.IpAddr)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.CreateIPv4Neighbor(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
 	default:
 		break
 	}
@@ -38,6 +81,49 @@ func (clnt *PORTDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 func (clnt *PORTDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 
 	switch obj.(type) {
+
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := portdServices.NewVlan()
+		conf.PortTagType = string(data.PortTagType)
+		conf.Ports = string(data.Ports)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.DeleteVlan(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := portdServices.NewIPv4Intf()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.IfType = int32(data.IfType)
+		conf.IpAddr = string(data.IpAddr)
+
+		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := portdServices.NewIPv4Neighbor()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.MacAddr = string(data.MacAddr)
+		conf.IpAddr = string(data.IpAddr)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.DeleteIPv4Neighbor(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
 	default:
 		break
 	}
@@ -64,6 +150,37 @@ func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	logger.Println("### Update Object called PORTD", attrSet, objKey)
 	ok := false
 	switch obj.(type) {
+
+	case models.Vlan:
+		// cast original object
+		origdata := dbObj.(models.Vlan)
+		updatedata := obj.(models.Vlan)
+		// create new thrift objects
+		origconf := portdServices.NewVlan()
+		updateconf := portdServices.NewVlan()
+
+		origconf.PortTagType = string(origdata.PortTagType)
+		origconf.Ports = string(origdata.Ports)
+		origconf.VlanId = int32(origdata.VlanId)
+
+		updateconf.PortTagType = string(updatedata.PortTagType)
+		updateconf.Ports = string(updatedata.Ports)
+		updateconf.VlanId = int32(updatedata.VlanId)
+
+		//convert attrSet to uint8 list
+		newattrset := make([]int8, len(attrSet))
+		for i, v := range attrSet {
+			newattrset[i] = int8(v)
+		}
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, newattrset)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
 
 	case models.IPv4Intf:
 		// cast original object

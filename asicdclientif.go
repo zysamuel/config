@@ -30,6 +30,66 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	var objId int64
 	switch obj.(type) {
 
+	case models.IPV4Route:
+		data := obj.(models.IPV4Route)
+		conf := asicdServices.NewIPV4Route()
+		conf.DestinationNw = string(data.DestinationNw)
+		conf.OutgoingIntfType = string(data.OutgoingIntfType)
+		conf.Protocol = string(data.Protocol)
+		conf.OutgoingInterface = string(data.OutgoingInterface)
+		conf.NetworkMask = string(data.NetworkMask)
+		conf.NextHopIp = string(data.NextHopIp)
+
+		_, err := clnt.ClientHdl.CreateIPV4Route(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		conf.PortTagType = string(data.PortTagType)
+		conf.Ports = string(data.Ports)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.CreateVlan(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.IfType = int32(data.IfType)
+		conf.IpAddr = string(data.IpAddr)
+
+		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := asicdServices.NewIPv4Neighbor()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.MacAddr = string(data.MacAddr)
+		conf.IpAddr = string(data.IpAddr)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.CreateIPv4Neighbor(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
 	case models.PortIntfConfig:
 		data := obj.(models.PortIntfConfig)
 		conf := asicdServices.NewPortIntfConfig()
@@ -61,6 +121,66 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 
 	switch obj.(type) {
+
+	case models.IPV4Route:
+		data := obj.(models.IPV4Route)
+		conf := asicdServices.NewIPV4Route()
+		conf.DestinationNw = string(data.DestinationNw)
+		conf.OutgoingIntfType = string(data.OutgoingIntfType)
+		conf.Protocol = string(data.Protocol)
+		conf.OutgoingInterface = string(data.OutgoingInterface)
+		conf.NetworkMask = string(data.NetworkMask)
+		conf.NextHopIp = string(data.NextHopIp)
+
+		_, err := clnt.ClientHdl.DeleteIPV4Route(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		conf.PortTagType = string(data.PortTagType)
+		conf.Ports = string(data.Ports)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.DeleteVlan(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.IfType = int32(data.IfType)
+		conf.IpAddr = string(data.IpAddr)
+
+		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := asicdServices.NewIPv4Neighbor()
+		conf.RouterIf = int32(data.RouterIf)
+		conf.MacAddr = string(data.MacAddr)
+		conf.IpAddr = string(data.IpAddr)
+		conf.VlanId = int32(data.VlanId)
+
+		_, err := clnt.ClientHdl.DeleteIPv4Neighbor(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
 
 	case models.PortIntfConfig:
 		data := obj.(models.PortIntfConfig)
@@ -98,6 +218,31 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
+
+	case models.IPV4Route:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.IPV4Route
+			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.DestinationNw = string(bulkInfo.IPV4RouteList[i].DestinationNw)
+					ret_obj.OutgoingIntfType = string(bulkInfo.IPV4RouteList[i].OutgoingIntfType)
+					ret_obj.Protocol = string(bulkInfo.IPV4RouteList[i].Protocol)
+					ret_obj.OutgoingInterface = string(bulkInfo.IPV4RouteList[i].OutgoingInterface)
+					ret_obj.NetworkMask = string(bulkInfo.IPV4RouteList[i].NetworkMask)
+					ret_obj.NextHopIp = string(bulkInfo.IPV4RouteList[i].NextHopIp)
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
 
 	default:
 		break
@@ -140,6 +285,37 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		}
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateIPV4Route(origconf, updateconf, newattrset)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.Vlan:
+		// cast original object
+		origdata := dbObj.(models.Vlan)
+		updatedata := obj.(models.Vlan)
+		// create new thrift objects
+		origconf := asicdServices.NewVlan()
+		updateconf := asicdServices.NewVlan()
+
+		origconf.PortTagType = string(origdata.PortTagType)
+		origconf.Ports = string(origdata.Ports)
+		origconf.VlanId = int32(origdata.VlanId)
+
+		updateconf.PortTagType = string(updatedata.PortTagType)
+		updateconf.Ports = string(updatedata.Ports)
+		updateconf.VlanId = int32(updatedata.VlanId)
+
+		//convert attrSet to uint8 list
+		newattrset := make([]int8, len(attrSet))
+		for i, v := range attrSet {
+			newattrset[i] = int8(v)
+		}
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, newattrset)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
