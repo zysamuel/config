@@ -368,6 +368,9 @@ func (clnt *BgpDClient) ConnectToServer() bool {
 }
 
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+	retVal := false
+	objId := int64(0)
+
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
 		case models.BGPGlobalConfig:
@@ -379,6 +382,8 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			if err != nil {
 				return int64(0), false
 			}
+			objId, _ = bgpGlobalConf.StoreObjectInDb(dbHdl)
+			retVal = true
 
 		case models.BGPNeighborConfig:
 			bgpNeighborConf := obj.(models.BGPNeighborConfig)
@@ -393,9 +398,12 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			if err != nil {
 				return int64(0), false
 			}
+			objId, _ = bgpNeighborConf.StoreObjectInDb(dbHdl)
+			retVal = true
 		}
 	}
-	return int64(0), true
+
+	return objId, retVal
 }
 
 func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
@@ -459,6 +467,10 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			if err != nil {
 				return false
 			}
+			bgpNeighborConf.DeleteObjectFromDb(objKey, dbHdl)
+
+		default:
+			return false
 		}
 	}
 	return true
