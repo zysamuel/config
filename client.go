@@ -79,7 +79,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 			if waitCount == 0 {
 				logger.Println("Looking for clients ", unconnectedClients)
 			}
-			for i := 0; i < len(unconnectedClients); i++ {
+			for i := 0; i < idx; i++ {
 				if waitCount%100 == 0 {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
