@@ -1,9 +1,9 @@
 package main
 
 import (
+	"arpd"
 	"asicdServices"
 	"bgpd"
-        "arpd"
 	"portdServices"
 	//"encoding/binary"
 	"git.apache.org/thrift.git/lib/go/thrift"
@@ -222,14 +222,14 @@ func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj
 		v4Route := obj.(models.IPV4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		logger.Println("### UpdateV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, outIntf)
-/*
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.UpdateV4Route(
-				dbObj,
-				obj,
-				attrSet)
-		}
-*/
+		/*
+			if clnt.ClientHdl != nil {
+				clnt.ClientHdl.UpdateV4Route(
+					dbObj,
+					obj,
+					attrSet)
+			}
+		*/
 		v4Route.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
@@ -281,64 +281,64 @@ func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 }
 
 func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
-/*
-	if clnt.ClientHdl != nil {
-		switch obj.(type) {
-		case models.PortintfConfig:
-			portIntfObj := obj.(models.PortIntfConfig)
-			clnt.ClientHdl.UpatePortIntfConfig(dbObj, obj, attrSet)
+	/*
+		if clnt.ClientHdl != nil {
+			switch obj.(type) {
+			case models.PortintfConfig:
+				portIntfObj := obj.(models.PortIntfConfig)
+				clnt.ClientHdl.UpatePortIntfConfig(dbObj, obj, attrSet)
+			}
 		}
-	}
-*/
+	*/
 	return true
 }
 
 func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 	switch obj.(type) {
-    case models.PortIntfConfig:
-        portConfigBulk, err := clnt.ClientHdl.GetBulkPortConfig(currMarker, count)
-        if err != nil {
-            break
-        }
-        for _, elem := range portConfigBulk.PortConfigList {
-            portConfig := models.PortIntfConfig {
-                PortNum: elem.PortNum,
-                Name: elem.Name,
-                Description: elem.Description,
-                Type: elem.Type,
-                AdminState: elem.AdminState,
-                OperState: elem.OperState,
-                MacAddr: elem.MacAddr,
-                Speed: elem.Speed,
-                Duplex: elem.Duplex,
-                Autoneg: elem.Autoneg,
-                MediaType: elem.MediaType,
-                Mtu: elem.Mtu,
-            }
-            objs = append(objs, portConfig)
-        }
-        objCount = portConfigBulk.ObjCount
-        nextMarker = portConfigBulk.NextMarker
-        more = portConfigBulk.More
+	case models.PortIntfConfig:
+		portConfigBulk, err := clnt.ClientHdl.GetBulkPortConfig(currMarker, count)
+		if err != nil {
+			break
+		}
+		for _, elem := range portConfigBulk.PortConfigList {
+			portConfig := models.PortIntfConfig{
+				PortNum:     elem.PortNum,
+				Name:        elem.Name,
+				Description: elem.Description,
+				Type:        elem.Type,
+				AdminState:  elem.AdminState,
+				OperState:   elem.OperState,
+				MacAddr:     elem.MacAddr,
+				Speed:       elem.Speed,
+				Duplex:      elem.Duplex,
+				Autoneg:     elem.Autoneg,
+				MediaType:   elem.MediaType,
+				Mtu:         elem.Mtu,
+			}
+			objs = append(objs, portConfig)
+		}
+		objCount = portConfigBulk.ObjCount
+		nextMarker = portConfigBulk.NextMarker
+		more = portConfigBulk.More
 
-    case models.PortIntfState:
-        portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
-        if err != nil {
-            break
-        }
-        for _, elem := range portStateBulk.PortStateList {
-            portState := models.PortIntfState {
-                PortNum: elem.PortNum,
-                PortStats: elem.Stats,
-            }
-            objs = append(objs, portState)
-        }
-        objCount = portStateBulk.ObjCount
-        nextMarker = portStateBulk.NextMarker
-        more = portStateBulk.More
+	case models.PortIntfState:
+		portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
+		if err != nil {
+			break
+		}
+		for _, elem := range portStateBulk.PortStateList {
+			portState := models.PortIntfState{
+				PortNum:   elem.PortNum,
+				PortStats: elem.Stats,
+			}
+			objs = append(objs, portState)
+		}
+		objCount = portStateBulk.ObjCount
+		nextMarker = portStateBulk.NextMarker
+		more = portStateBulk.More
 
-    }
+	}
 	return err, objCount, nextMarker, more, objs
 }
 
@@ -442,7 +442,7 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					Output: uint32(item.Queues.Output),
 				},
 				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
-				RouteReflectorClient: item.RouteReflectorClient,
+				RouteReflectorClient:    item.RouteReflectorClient,
 			}
 			objs = append(objs, bgpNeighborState)
 		}
@@ -481,84 +481,84 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 }
 
 type ArpDClient struct {
-        IPCClientBase
-        ClientHdl *arpd.ARPServiceClient
+	IPCClientBase
+	ClientHdl *arpd.ARPServiceClient
 }
 
 func (clnt *ArpDClient) Initialize(name string, address string) {
-        clnt.Address = address
-        return
+	clnt.Address = address
+	return
 }
 
 func (clnt *ArpDClient) ConnectToServer() bool {
-        if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-                clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
-        }
-        if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-                clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
-                if clnt.ClientHdl != nil {
-                        clnt.IsConnected = true
-                } else {
-                        clnt.IsConnected = false
-                }
-        }
-        return true
+	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	}
+	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
+	}
+	return true
 }
 
 func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	logger.Println("ArpDClient: CreateObject called - start")
-        if clnt.ClientHdl != nil {
-                switch obj.(type) {
-                case models.ArpConfig: //Arp Timeout
-                        arpConfigObj := obj.(models.ArpConfig)
-                        _, err := clnt.ClientHdl.SetArpConfig(arpd.Int(arpConfigObj.Timeout))
-                        if err != nil {
-                                return int64(0), false
-                        }
-                }
-        }
-        return int64(0), true
+	if clnt.ClientHdl != nil {
+		switch obj.(type) {
+		case models.ArpConfig: //Arp Timeout
+			arpConfigObj := obj.(models.ArpConfig)
+			_, err := clnt.ClientHdl.SetArpConfig(arpd.Int(arpConfigObj.Timeout))
+			if err != nil {
+				return int64(0), false
+			}
+		}
+	}
+	return int64(0), true
 }
 
 func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
-        return true
+	return true
 }
 
 func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
-        return true
+	return true
 }
 
 func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 
 	logger.Println("ArpDClient: GetBulkObject called - start")
-        var ret_obj models.ArpEntry
+	var ret_obj models.ArpEntry
 	switch obj.(type) {
-	    case models.ArpEntry:
-                if clnt.ClientHdl != nil {
-                    arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
-                    if err != nil {
-                        logger.Println("GetBulkObject call to Arpd failed:", err)
-                        return nil, objCount, nextMarker, more, objs
-                    }
-                    if arpEntryBulk.Count != 0 {
-                        objCount = int64(arpEntryBulk.Count)
-                        more = arpEntryBulk.More
-                        nextMarker = int64(arpEntryBulk.EndIdx)
-                        cnt := int(arpEntryBulk.Count)
-                        for i := 0; i < cnt; i++ {
-                            if len(objs) == 0 {
-                                objs = make([]models.ConfigObj, 0)
-                            }
-                            ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
-                            ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
-                            ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
-                            ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
-                            ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
-                            objs = append(objs, ret_obj)
-                        }
-                    }
-                }
+	case models.ArpEntry:
+		if clnt.ClientHdl != nil {
+			arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
+			if err != nil {
+				logger.Println("GetBulkObject call to Arpd failed:", err)
+				return nil, objCount, nextMarker, more, objs
+			}
+			if arpEntryBulk.Count != 0 {
+				objCount = int64(arpEntryBulk.Count)
+				more = arpEntryBulk.More
+				nextMarker = int64(arpEntryBulk.EndIdx)
+				cnt := int(arpEntryBulk.Count)
+				for i := 0; i < cnt; i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
+					ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
+					ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
+					ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
+					ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
 	}
 	return nil, objCount, nextMarker, more, objs
 }

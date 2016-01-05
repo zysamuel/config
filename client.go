@@ -119,7 +119,7 @@ func (mgr *ConfigMgr) disconnectFromAllClients() bool {
 //
 // This method is to get Port interfaces from Asicd and store in DB for config update on those ports
 //
-func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
+func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 	logger.Println("Waiting for PortConfig server")
 	serverUp := <-clientsUp
 	logger.Println("PortConfig server is up? ", serverUp)
