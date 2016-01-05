@@ -83,15 +83,17 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 				if waitCount%100 == 0 {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
-				if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
-					unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
-				} else {
-					mgr.clients[unconnectedClients[i]].ConnectToServer()
+				if len(unconnectedClients) == 0 {
+					mgr.reconncetTimer.Stop()
+					break
 				}
-			}
-			if len(unconnectedClients) == 0 {
-				mgr.reconncetTimer.Stop()
-				break
+				if len(unconnectedClients) < i  {
+					if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
+						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
+					} else {
+						mgr.clients[unconnectedClients[i]].ConnectToServer()
+					}
+				}
 			}
 			waitCount++
 		}
@@ -119,7 +121,7 @@ func (mgr *ConfigMgr) disconnectFromAllClients() bool {
 //
 // This method is to get Port interfaces from Asicd and store in DB for config update on those ports
 //
-func (mgr *ConfigMgr) StartPortInterfaceThread(clientsUp chan bool) bool {
+func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 	logger.Println("Waiting for PortConfig server")
 	serverUp := <-clientsUp
 	logger.Println("PortConfig server is up? ", serverUp)

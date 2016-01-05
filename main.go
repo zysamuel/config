@@ -27,7 +27,7 @@ func main() {
 	}
 	clientsUp := make(chan bool, 1)
 	go gMgr.ConnectToAllClients(clientsUp)
-	go gMgr.StartPortInterfaceThread(clientsUp)
+	go gMgr.DiscoverSystemObjects(clientsUp)
 	restRtr := gMgr.GetRestRtr()
 	http.ListenAndServe(":8080", restRtr)
 }
