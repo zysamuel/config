@@ -61,14 +61,15 @@ func (mgr *ConfigMgr) InitializeClientHandles(paramsFile string) bool {
 //  This method connects to all the config daemon's clients
 //
 func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
-	unconnectedClients := make([]string, len(mgr.clients))
+	unconnectedClients := make([]string, 0)
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
 	idx := 0
 	for clntName, client := range mgr.clients {
 		client.ConnectToServer()
 		if client.IsConnectedToServer() == false {
-			unconnectedClients[idx] = clntName
+			unconnectedClients = append(unconnectedClients, clntName)
+			//unconnectedClients[idx] = clntName
 			idx++
 		}
 	}
@@ -79,7 +80,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 			if waitCount == 0 {
 				logger.Println("Looking for clients ", unconnectedClients)
 			}
-			for i := 0; i < idx; i++ {
+			for i := 0; i < len(unconnectedClients); i++ {
 				if waitCount%100 == 0 {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
