@@ -33,6 +33,7 @@ func (clnt *ARPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 	case models.ArpConfig:
 		data := obj.(models.ArpConfig)
 		conf := arpdServices.NewArpConfig()
+		conf.ArpConfigKey = string(data.ArpConfigKey)
 		conf.Timeout = int32(data.Timeout)
 
 		_, err := clnt.ClientHdl.CreateArpConfig(conf)
@@ -54,6 +55,7 @@ func (clnt *ARPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 	case models.ArpConfig:
 		data := obj.(models.ArpConfig)
 		conf := arpdServices.NewArpConfig()
+		conf.ArpConfigKey = string(data.ArpConfigKey)
 		conf.Timeout = int32(data.Timeout)
 
 		_, err := clnt.ClientHdl.DeleteArpConfig(conf)
@@ -120,8 +122,10 @@ func (clnt *ARPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		origconf := arpdServices.NewArpConfig()
 		updateconf := arpdServices.NewArpConfig()
 
+		origconf.ArpConfigKey = string(origdata.ArpConfigKey)
 		origconf.Timeout = int32(origdata.Timeout)
 
+		updateconf.ArpConfigKey = string(updatedata.ArpConfigKey)
 		updateconf.Timeout = int32(updatedata.Timeout)
 
 		//convert attrSet to uint8 list
