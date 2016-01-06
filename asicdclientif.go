@@ -4,6 +4,7 @@ import (
 	"asicdServices"
 	"database/sql"
 	"models"
+	"utils/ipcutils"
 )
 
 type ASICDClient struct {
@@ -17,7 +18,7 @@ func (clnt *ASICDClient) Initialize(name string, address string) {
 }
 func (clnt *ASICDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = asicdServices.NewASICDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}

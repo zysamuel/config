@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"models"
 	"ribdServices"
+	"utils/ipcutils"
 )
 
 type RIBDClient struct {
@@ -17,7 +18,7 @@ func (clnt *RIBDClient) Initialize(name string, address string) {
 }
 func (clnt *RIBDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = ribdServices.NewRIBDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}
