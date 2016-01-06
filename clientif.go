@@ -96,7 +96,7 @@ func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	return true
 }
 
-func (clnt *PortDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *PortDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 
@@ -215,7 +215,7 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	return true
 }
 
-func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Update Object is called in RIBClient. ", objKey, dbObj, obj, attrSet)
 	switch obj.(type) {
 	case models.IPV4Route:
@@ -280,7 +280,7 @@ func (clnt *AsicDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	return true
 }
 
-func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	/*
 		if clnt.ClientHdl != nil {
 			switch obj.(type) {
@@ -367,6 +367,24 @@ func (clnt *BgpDClient) ConnectToServer() bool {
 	return true
 }
 
+func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd.BGPGlobal {
+	gConf := bgpd.NewBGPGlobal()
+	gConf.AS = int32(bgpGlobalConf.ASNum)
+	gConf.RouterId = bgpGlobalConf.RouterId
+	return gConf
+}
+
+func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig) *bgpd.BGPNeighbor {
+	nConf := bgpd.NewBGPNeighbor()
+	nConf.PeerAS = int32(bgpNeighborConf.PeerAS)
+	nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
+	nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
+	nConf.Description = bgpNeighborConf.Description
+	nConf.RouteReflectorClusterId = int32(bgpNeighborConf.RouteReflectorClusterId)
+	nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
+	return nConf
+}
+
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	retVal := false
 	objId := int64(0)
@@ -375,9 +393,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		switch obj.(type) {
 		case models.BGPGlobalConfig:
 			bgpGlobalConf := obj.(models.BGPGlobalConfig)
-			gConf := bgpd.NewBGPGlobal()
-			gConf.AS = int32(bgpGlobalConf.ASNum)
-			gConf.RouterId = bgpGlobalConf.RouterId
+			gConf := convertBGPGlobalConfToThriftObj(bgpGlobalConf)
 			_, err := clnt.ClientHdl.CreateBGPGlobal(gConf)
 			if err != nil {
 				return int64(0), false
@@ -387,13 +403,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 
 		case models.BGPNeighborConfig:
 			bgpNeighborConf := obj.(models.BGPNeighborConfig)
-			nConf := bgpd.NewBGPNeighbor()
-			nConf.PeerAS = int32(bgpNeighborConf.PeerAS)
-			nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
-			nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
-			nConf.Description = bgpNeighborConf.Description
-			nConf.RouteReflectorClusterId = int32(bgpNeighborConf.RouteReflectorClusterId)
-			nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
+			nConf := convertBGPNeighborConfToThriftObj(bgpNeighborConf)
 			_, err := clnt.ClientHdl.CreateBGPNeighbor(nConf)
 			if err != nil {
 				return int64(0), false
@@ -476,7 +486,37 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 	return true
 }
 
-func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
+	if clnt.ClientHdl != nil {
+		switch obj.(type) {
+		case models.BGPGlobalConfig:
+			logger.Println("BgpDClient: BGPGlobalConfig update")
+			origBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
+			origGConf := convertBGPGlobalConfToThriftObj(origBgpGlobalConf)
+			updatedBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
+			updatedGConf := convertBGPGlobalConfToThriftObj(updatedBgpGlobalConf)
+			_, err := clnt.ClientHdl.UpdateBGPGlobal(origGConf, updatedGConf, attrSet)
+			if err != nil {
+				return false
+			}
+			origBgpGlobalConf.UpdateObjectInDb(obj, attrSet, dbHdl)
+
+		case models.BGPNeighborConfig:
+			logger.Println("BgpDClient: BGPNeighborConfig update")
+			origBgpNeighborConf := obj.(models.BGPNeighborConfig)
+			origNConf := convertBGPNeighborConfToThriftObj(origBgpNeighborConf)
+			updatedBgpNeighborConf := obj.(models.BGPNeighborConfig)
+			updatedNConf := convertBGPNeighborConfToThriftObj(updatedBgpNeighborConf)
+			_, err := clnt.ClientHdl.UpdateBGPNeighbor(origNConf, updatedNConf, attrSet)
+			if err != nil {
+				return false
+			}
+			origBgpNeighborConf.UpdateObjectInDb(obj, attrSet, dbHdl)
+
+		default:
+			return false
+		}
+	}
 	return true
 }
 
@@ -524,7 +564,7 @@ func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 	return true
 }
 
-func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	return true
 }
 

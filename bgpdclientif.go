@@ -230,7 +230,7 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	return nil, objCount, nextMarker, more, objs
 
 }
-func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 
 	logger.Println("### Update Object called BGPD", attrSet, objKey)
 	ok := false
@@ -258,13 +258,8 @@ func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		updateconf.NetworkMask = string(updatedata.NetworkMask)
 		updateconf.NextHopIp = string(updatedata.NextHopIp)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPV4Route(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateIPV4Route(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -287,13 +282,8 @@ func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		updateconf.RouterId = string(updatedata.RouterId)
 		updateconf.ASNum = int32(updatedata.ASNum)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateBGPGlobalConfig(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateBGPGlobalConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -326,13 +316,8 @@ func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		updateconf.LocalAS = int32(updatedata.LocalAS)
 		updateconf.AuthPassword = string(updatedata.AuthPassword)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateBGPNeighborConfig(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateBGPNeighborConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
