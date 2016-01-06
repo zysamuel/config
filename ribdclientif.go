@@ -118,7 +118,7 @@ func (clnt *RIBDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	return nil, objCount, nextMarker, more, objs
 
 }
-func (clnt *RIBDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RIBDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 
 	logger.Println("### Update Object called RIBD", attrSet, objKey)
 	ok := false
@@ -146,13 +146,8 @@ func (clnt *RIBDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		updateconf.NetworkMask = string(updatedata.NetworkMask)
 		updateconf.NextHopIp = string(updatedata.NextHopIp)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPV4Route(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateIPV4Route(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
