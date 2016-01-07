@@ -145,7 +145,7 @@ func (clnt *PORTDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	return nil, objCount, nextMarker, more, objs
 
 }
-func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 
 	logger.Println("### Update Object called PORTD", attrSet, objKey)
 	ok := false
@@ -167,13 +167,8 @@ func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updateconf.Ports = string(updatedata.Ports)
 		updateconf.VlanId = int32(updatedata.VlanId)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -198,13 +193,8 @@ func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updateconf.IfType = int32(updatedata.IfType)
 		updateconf.IpAddr = string(updatedata.IpAddr)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPv4Intf(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateIPv4Intf(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -231,13 +221,8 @@ func (clnt *PORTDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updateconf.IpAddr = string(updatedata.IpAddr)
 		updateconf.VlanId = int32(updatedata.VlanId)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPv4Neighbor(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateIPv4Neighbor(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
