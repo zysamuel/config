@@ -148,7 +148,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
-					ret_obj.Cost = int(routesInfo.RouteList[i].Metric)
+					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
 					ret_obj.Protocol = ""
 					if routesInfo.RouteList[i].NextHopIfType == portdCommonDefs.VLAN {
 						ret_obj.OutgoingIntfType = "VLAN"
@@ -493,7 +493,7 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 			logger.Println("BgpDClient: BGPGlobalConfig update")
 			origBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
 			origGConf := convertBGPGlobalConfToThriftObj(origBgpGlobalConf)
-			updatedBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
+			updatedBgpGlobalConf := obj.(models.BGPGlobalConfig)
 			updatedGConf := convertBGPGlobalConfToThriftObj(updatedBgpGlobalConf)
 			_, err := clnt.ClientHdl.UpdateBGPGlobal(origGConf, updatedGConf, attrSet)
 			if err != nil {
@@ -592,7 +592,7 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					}
 					ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
 					ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
-					ret_obj.Vlan = int(arpEntryBulk.ArpList[i].Vlan)
+					ret_obj.Vlan = uint32(arpEntryBulk.ArpList[i].Vlan)
 					ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
 					ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
 					objs = append(objs, ret_obj)
