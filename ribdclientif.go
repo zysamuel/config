@@ -3,12 +3,12 @@ package main
 import (
 	"database/sql"
 	"models"
-	"ribdServices"
+	"ribd"
 )
 
 type RIBDClient struct {
 	IPCClientBase
-	ClientHdl *ribdServices.RIBDServicesClient
+	ClientHdl *ribd.RIBDServicesClient
 }
 
 func (clnt *RIBDClient) Initialize(name string, address string) {
@@ -19,7 +19,7 @@ func (clnt *RIBDClient) ConnectToServer() bool {
 
 	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = ribdServices.NewRIBDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		clnt.ClientHdl = ribd.NewRIBDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}
 	return true
 }
@@ -91,7 +91,7 @@ func (clnt *RIBDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.IPV4Route
-			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(ribdServices.Int(currMarker), ribdServices.Int(count))
+			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(ribd.Int(currMarker), ribd.Int(count))
 			if bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
