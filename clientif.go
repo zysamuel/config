@@ -493,7 +493,7 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 			logger.Println("BgpDClient: BGPGlobalConfig update")
 			origBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
 			origGConf := convertBGPGlobalConfToThriftObj(origBgpGlobalConf)
-			updatedBgpGlobalConf := dbObj.(models.BGPGlobalConfig)
+			updatedBgpGlobalConf := obj.(models.BGPGlobalConfig)
 			updatedGConf := convertBGPGlobalConfToThriftObj(updatedBgpGlobalConf)
 			_, err := clnt.ClientHdl.UpdateBGPGlobal(origGConf, updatedGConf, attrSet)
 			if err != nil {
