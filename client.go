@@ -136,7 +136,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
-			for i := int64(0); i < resp.ObjCount; i++ {
+			for i := 0; i < len(resp.StateObjects); i++ {
 				portConfig := resp.StateObjects[i].(models.PortIntfConfig)
 				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
 				if err != nil {
