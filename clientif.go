@@ -6,7 +6,7 @@ import (
 	"bgpd"
 	"portdServices"
 	//"encoding/binary"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	//"git.apache.org/thrift.git/lib/go/thrift"
 	"infra/portd/portdCommonDefs"
 	"models"
 	//"net"
@@ -16,28 +16,28 @@ import (
 	"utils/ipcutils"
 )
 
-type IPCClientBase struct {
+/*type IPCClientBase struct {
 	Address            string
 	Transport          thrift.TTransport
 	PtrProtocolFactory *thrift.TBinaryProtocolFactory
 	IsConnected        bool
 }
 
-func (clnt *IPCClientBase) IsConnectedToServer() bool {
+func (clnt *ipcutils.IPCClientBase) IsConnectedToServer() bool {
 	return clnt.IsConnected
 }
 
-func (clnt *IPCClientBase) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+func (clnt *ipcutils.IPCClientBase) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
 	more bool,
 	objs []models.ConfigObj) {
 	//logger.Println("### Get Bulk request called with", currMarker, count)
 	return nil, 0, 0, false, make([]models.ConfigObj, 0)
-}
+}*/
 
 type PortDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *portdServices.PortServiceClient
 }
 
@@ -48,11 +48,11 @@ func (clnt *PortDClient) Initialize(name string, address string) {
 
 func (clnt *PortDClient) ConnectToServer() bool {
 
-	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
+	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
 	}
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = portdServices.NewPortServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = portdServices.NewPortServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -102,7 +102,7 @@ func (clnt *PortDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 }
 
 type RibClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *ribd.RouteServiceClient
 }
 
@@ -113,11 +113,11 @@ func (clnt *RibClient) Initialize(name string, address string) {
 
 func (clnt *RibClient) ConnectToServer() bool {
 
-	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
+	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
 	}
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -239,7 +239,7 @@ func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj
 }
 
 type AsicDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *asicdServices.AsicdServiceClient
 }
 
@@ -249,11 +249,11 @@ func (clnt *AsicDClient) Initialize(name string, address string) {
 }
 
 func (clnt *AsicDClient) ConnectToServer() bool {
-	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
+	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
 	}
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -344,7 +344,7 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 }
 
 type BgpDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *bgpd.BGPServerClient
 }
 
@@ -354,11 +354,11 @@ func (clnt *BgpDClient) Initialize(name string, address string) {
 }
 
 func (clnt *BgpDClient) ConnectToServer() bool {
-	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
+	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
 	}
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = bgpd.NewBGPServerClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = bgpd.NewBGPServerClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -482,7 +482,7 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 }
 
 type ArpDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *arpd.ARPServiceClient
 }
 
@@ -492,11 +492,11 @@ func (clnt *ArpDClient) Initialize(name string, address string) {
 }
 
 func (clnt *ArpDClient) ConnectToServer() bool {
-	if clnt.Transport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address, clnt)
+	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
+		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
 	}
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
