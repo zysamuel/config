@@ -65,6 +65,7 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		conf.Mtu = int16(data.Mtu)
 		conf.SystemIdMac = string(data.SystemIdMac)
 		conf.LagType = int32(data.LagType)
+		conf.LagHash = int32(data.LagHash)
 		conf.Type = string(data.Type)
 		conf.LacpMode = int32(data.LacpMode)
 
@@ -118,6 +119,7 @@ func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		conf.Mtu = int16(data.Mtu)
 		conf.SystemIdMac = string(data.SystemIdMac)
 		conf.LagType = int32(data.LagType)
+		conf.LagHash = int32(data.LagHash)
 		conf.Type = string(data.Type)
 		conf.LacpMode = int32(data.LacpMode)
 
@@ -164,6 +166,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.Mtu = uint16(bulkInfo.AggregationLacpStateList[i].Mtu)
 					ret_obj.SystemIdMac = string(bulkInfo.AggregationLacpStateList[i].SystemIdMac)
 					ret_obj.LagType = int32(bulkInfo.AggregationLacpStateList[i].LagType)
+					ret_obj.LagHash = int32(bulkInfo.AggregationLacpStateList[i].LagHash)
 					ret_obj.Type = string(bulkInfo.AggregationLacpStateList[i].Type)
 					ret_obj.LacpMode = int32(bulkInfo.AggregationLacpStateList[i].LacpMode)
 					objs = append(objs, ret_obj)
@@ -185,6 +188,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
+					ret_obj.LacpRxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpRxErrors)
 					ret_obj.SystemIdMac = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemIdMac)
 					ret_obj.MinLinks = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].MinLinks)
 					ret_obj.SystemPriority = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemPriority)
@@ -200,7 +204,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.SystemId = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemId)
 					ret_obj.Timeout = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Timeout)
 					ret_obj.Activity = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Activity)
-					ret_obj.LacpRxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpRxErrors)
+					ret_obj.LagHash = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LagHash)
 					ret_obj.Type = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Type)
 					ret_obj.Collecting = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Collecting)
 					ret_obj.LagType = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LagType)
@@ -225,7 +229,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	return nil, objCount, nextMarker, more, objs
 
 }
-func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []byte, objKey string, dbHdl *sql.DB) bool {
+func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 
 	logger.Println("### Update Object called LACPD", attrSet, objKey)
 	ok := false
@@ -263,13 +267,8 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updateconf.Auto = bool(updatedata.Auto)
 		updateconf.Type = string(updatedata.Type)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -295,6 +294,7 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		origconf.Mtu = int16(origdata.Mtu)
 		origconf.SystemIdMac = string(origdata.SystemIdMac)
 		origconf.LagType = int32(origdata.LagType)
+		origconf.LagHash = int32(origdata.LagHash)
 		origconf.Type = string(origdata.Type)
 		origconf.LacpMode = int32(origdata.LacpMode)
 
@@ -307,16 +307,12 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updateconf.Mtu = int16(updatedata.Mtu)
 		updateconf.SystemIdMac = string(updatedata.SystemIdMac)
 		updateconf.LagType = int32(updatedata.LagType)
+		updateconf.LagHash = int32(updatedata.LagHash)
 		updateconf.Type = string(updatedata.Type)
 		updateconf.LacpMode = int32(updatedata.LacpMode)
 
-		//convert attrSet to uint8 list
-		newattrset := make([]int8, len(attrSet))
-		for i, v := range attrSet {
-			newattrset[i] = int8(v)
-		}
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, newattrset)
+			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
