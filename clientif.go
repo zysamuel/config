@@ -49,7 +49,7 @@ func (clnt *PortDClient) Initialize(name string, address string) {
 func (clnt *PortDClient) ConnectToServer() bool {
 
 	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = portdServices.NewPortServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
@@ -114,7 +114,7 @@ func (clnt *RibClient) Initialize(name string, address string) {
 func (clnt *RibClient) ConnectToServer() bool {
 
 	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
@@ -250,7 +250,7 @@ func (clnt *AsicDClient) Initialize(name string, address string) {
 
 func (clnt *AsicDClient) ConnectToServer() bool {
 	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
@@ -355,7 +355,7 @@ func (clnt *BgpDClient) Initialize(name string, address string) {
 
 func (clnt *BgpDClient) ConnectToServer() bool {
 	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = bgpd.NewBGPServerClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
@@ -533,7 +533,7 @@ func (clnt *ArpDClient) Initialize(name string, address string) {
 
 func (clnt *ArpDClient) ConnectToServer() bool {
 	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)

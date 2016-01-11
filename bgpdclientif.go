@@ -18,7 +18,7 @@ func (clnt *BGPDClient) Initialize(name string, address string) {
 }
 func (clnt *BGPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = bgpdServices.NewBGPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}
