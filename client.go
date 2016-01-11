@@ -8,8 +8,6 @@ import (
 	"models"
 	"strconv"
 	"time"
-	//"git.apache.org/thrift.git/lib/go/thrift"
-	"fmt"
 )
 
 type ClientIf interface {
@@ -151,18 +149,5 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 }
 
 func (mgr *ConfigMgr) MonitorSystemStatus() bool {
-	/*KATimer := time.NewTicker(time.Millisecond * 1000)
-	for {
-		for t := range KATimer.C {
-			_ = t
-			for clientName, _ := range mgr.clients {
-				if mgr.clients[clientName].IsConnectedToServer() == false {
-					logger.Println("MonitorSystemStatus - clinet %s is not connected", clientName)
-					clientsUp := make(chan bool, 1)
-					gMgr.ConnectToAllClients(clientsUp)
-				}
-			}
-		}
-	}*/
 	return true
 }
