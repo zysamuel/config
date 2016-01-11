@@ -150,7 +150,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = ""
+					ret_obj.Protocol = strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == portdCommonDefs.VLAN {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
