@@ -18,7 +18,7 @@ func (clnt *ARPDClient) Initialize(name string, address string) {
 }
 func (clnt *ARPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = arpdServices.NewARPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
 	}
