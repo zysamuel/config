@@ -151,22 +151,18 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 }
 
 func (mgr *ConfigMgr) MonitorSystemStatus() bool {
-	KATimer := time.NewTicker(time.Millisecond * 1000)
-	fmt.Println("MonitorSystemStatus - num clients ", len(mgr.clients))
-	for clientName, _ := range mgr.clients {
-		fmt.Println("MonitorSystemStatus - clinet ", clientName)
-	}
+	/*KATimer := time.NewTicker(time.Millisecond * 1000)
 	for {
 		for t := range KATimer.C {
 			_ = t
 			for clientName, _ := range mgr.clients {
 				if mgr.clients[clientName].IsConnectedToServer() == false {
-					fmt.Println("MonitorSystemStatus - clinet %s is not connected", clientName)
+					logger.Println("MonitorSystemStatus - clinet %s is not connected", clientName)
 					clientsUp := make(chan bool, 1)
 					gMgr.ConnectToAllClients(clientsUp)
 				}
 			}
 		}
-	}
+	}*/
 	return true
 }
