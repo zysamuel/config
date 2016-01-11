@@ -20,11 +20,16 @@ func (clnt *LACPDClient) ConnectToServer() bool {
 	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = lacpd.NewLACPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *LACPDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
