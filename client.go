@@ -147,3 +147,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 	}
 	return true
 }
+
+func (mgr *ConfigMgr) MonitorSystemStatus() bool {
+	return true
+}

@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"lacpdServices"
 	"models"
+	"utils/ipcutils"
 )
 
 type LACPDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *lacpdServices.LACPDServicesClient
 }
 
@@ -17,9 +18,9 @@ func (clnt *LACPDClient) Initialize(name string, address string) {
 }
 func (clnt *LACPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = lacpdServices.NewLACPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	clnt.TTransport, clnt.PtrProtocolFactory = ipcutils.CreateIPCHandles(clnt.Address)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = lacpdServices.NewLACPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 	}
 	return true
 }
