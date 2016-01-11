@@ -7,7 +7,7 @@ import (
 //
 // This method gets Thrift related IPC handles.
 //
-func CreateIPCHandles(address string, clnt interface{}) (thrift.TTransport, *thrift.TBinaryProtocolFactory) {
+func CreateIPCHandles(address string) (thrift.TTransport, *thrift.TBinaryProtocolFactory) {
 	var transportFactory thrift.TTransportFactory
 	var transport thrift.TTransport
 	var protocolFactory *thrift.TBinaryProtocolFactory
