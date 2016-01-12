@@ -63,6 +63,8 @@ func (clnt *PortDClient) ConnectToServer() bool {
 }
 
 func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+	var objId int64
+	logger.Println("in create object")
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
 
@@ -70,27 +72,33 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			v4Intf := obj.(models.IPv4Intf)
 			_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
 			if err != nil {
+				logger.Println("failed creating ipv4intf, err = ", err)
 				return int64(0), false
 			}
+		objId, err := v4Intf.StoreObjectInDb(dbHdl)
+		return objId, true
 		case models.IPv4Neighbor: //IPv4Neighbor
 			v4Nbr := obj.(models.IPv4Neighbor)
 			_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
 			if err != nil {
 				return int64(0), false
 			}
-			break
+		objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
+		return objId, true
 		case models.Vlan: //Vlan
 			vlanObj := obj.(models.Vlan)
 			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
 			if err != nil {
 				return int64(0), false
 			}
+		objId, _ = vlanObj.StoreObjectInDb(dbHdl)
+		return objId, true
 		default:
 			break
 		}
 	}
 
-	return int64(0), true
+		return int64(0), true
 }
 
 func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
