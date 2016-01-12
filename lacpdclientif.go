@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"lacpd"
 	"models"
 	"utils/ipcutils"
@@ -107,8 +108,8 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.AggregationLacpState
-			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpState(lacpd.Int(currMarker), lacpd.Int(count))
-			if bulkInfo.Count != 0 {
+			bulkInfo, err := clnt.ClientHdl.GetBulkAggregationLacpState(lacpd.Int(currMarker), lacpd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
 				nextMarker = int64(bulkInfo.EndIdx)
@@ -131,6 +132,9 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.LacpMode = int32(bulkInfo.AggregationLacpStateList[i].LacpMode)
 					objs = append(objs, ret_obj)
 				}
+
+			} else {
+				fmt.Println(err)
 			}
 		}
 		break
@@ -139,8 +143,8 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.AggregationLacpMemberStateCounters
-			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpMemberStateCounters(lacpd.Int(currMarker), lacpd.Int(count))
-			if bulkInfo.Count != 0 {
+			bulkInfo, err := clnt.ClientHdl.GetBulkAggregationLacpMemberStateCounters(lacpd.Int(currMarker), lacpd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
 				nextMarker = int64(bulkInfo.EndIdx)
@@ -197,6 +201,9 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.LacpMode = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpMode)
 					objs = append(objs, ret_obj)
 				}
+
+			} else {
+				fmt.Println(err)
 			}
 		}
 		break
