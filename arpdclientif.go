@@ -4,10 +4,11 @@ import (
 	"arpd"
 	"database/sql"
 	"models"
+	"utils/ipcutils"
 )
 
 type ARPDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *arpd.ARPDServicesClient
 }
 
@@ -17,14 +18,19 @@ func (clnt *ARPDClient) Initialize(name string, address string) {
 }
 func (clnt *ARPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = arpd.NewARPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *ARPDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *ARPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64

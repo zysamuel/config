@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"models"
 	"ribd"
+	"utils/ipcutils"
 )
 
 type RIBDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *ribd.RIBDServicesClient
 }
 
@@ -17,14 +18,19 @@ func (clnt *RIBDClient) Initialize(name string, address string) {
 }
 func (clnt *RIBDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = ribd.NewRIBDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *RIBDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *RIBDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64

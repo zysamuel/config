@@ -4,10 +4,11 @@ import (
 	"asicdServices"
 	"database/sql"
 	"models"
+	"utils/ipcutils"
 )
 
 type ASICDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *asicdServices.ASICDServicesClient
 }
 
@@ -17,14 +18,19 @@ func (clnt *ASICDClient) Initialize(name string, address string) {
 }
 func (clnt *ASICDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = asicdServices.NewASICDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *ASICDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64

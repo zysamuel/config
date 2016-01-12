@@ -28,6 +28,7 @@ func main() {
 	clientsUp := make(chan bool, 1)
 	go gMgr.ConnectToAllClients(clientsUp)
 	go gMgr.DiscoverSystemObjects(clientsUp)
+	go gMgr.MonitorSystemStatus()
 	restRtr := gMgr.GetRestRtr()
 	http.ListenAndServe(":8080", restRtr)
 }

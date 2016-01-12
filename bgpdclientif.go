@@ -4,10 +4,11 @@ import (
 	"bgpd"
 	"database/sql"
 	"models"
+	"utils/ipcutils"
 )
 
 type BGPDClient struct {
-	IPCClientBase
+	ipcutils.IPCClientBase
 	ClientHdl *bgpd.BGPDServicesClient
 }
 
@@ -17,14 +18,19 @@ func (clnt *BGPDClient) Initialize(name string, address string) {
 }
 func (clnt *BGPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory = CreateIPCHandles(clnt.Address)
+	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
 		clnt.ClientHdl = bgpd.NewBGPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *BGPDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *BGPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
