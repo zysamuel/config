@@ -18,9 +18,9 @@ func (clnt *PORTDClient) Initialize(name string, address string) {
 }
 func (clnt *PORTDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = portdServices.NewPORTDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = portdServices.NewPORTDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {

@@ -18,9 +18,9 @@ func (clnt *LACPDClient) Initialize(name string, address string) {
 }
 func (clnt *LACPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = lacpd.NewLACPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = lacpd.NewLACPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
