@@ -154,6 +154,7 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
+	var errCode int
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -170,32 +171,36 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					resp.UUId = UUId.String()
 					js, err := json.Marshal(resp)
 					if err != nil {
-						logger.Println("Error in marshalling JSON in config for object ", resource, resp.UUId, err)
-						http.Error(w, "Config create successful. Failed to marshal response", http.StatusInternalServerError)
-						return
+						errCode = SRRespMarshalErr
+					} else {
+						w.Write(js)
+						errCode = SRSuccess
 					}
-					w.Write(js)
 				} else {
-					http.Error(w, "Config create failed to store return Id", http.StatusInternalServerError)
+					errCode = SRIdStoreFail
 					logger.Println("Failed to store UuidToKey map ", obj, err)
 				}
 			} else {
-				http.Error(w, "Config create failed by backend server", http.StatusInternalServerError)
+				errCode = SRServerError
 				logger.Println("Failed to create object ", obj)
 			}
 		} else {
-			http.Error(w, "Config create failed to get object handle", http.StatusInternalServerError)
+			errCode = SRObjHdlError
 			logger.Println("Failed to get object handle from http request ", objHdl, err)
 		}
 	} else {
-		http.Error(w, "Config create failed to get object map", http.StatusInternalServerError)
+		errCode = SRObjMapError
 		logger.Println("Failed to get ObjectMap ", resource)
+	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
 	}
 	return
 }
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
+	var errCode int
 	var objKey string
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
@@ -205,8 +210,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		http.Error(w, "Config delete failed to find entry", http.StatusNotFound)
-		logger.Println("Failure in getting objKey for Uuid ", resource, vars["objId"], err)
+		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -217,37 +221,41 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
 				_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 				if err != nil {
+					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", vars["objId"], err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
+				} else {
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					resp.UUId = vars["objId"]
+					js, err := json.Marshal(resp)
+					if err != nil {
+						errCode = SRRespMarshalErr
+					} else {
+						w.Write(js)
+						errCode = SRSuccess
+					}
 				}
-				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-				w.WriteHeader(http.StatusOK)
-				resp.UUId = vars["objId"]
-				js, err := json.Marshal(resp)
-				if err != nil {
-					logger.Println("Error in marshalling JSON in update for object ", resource, resp.UUId, err)
-					http.Error(w, "Config delete successful. Failed to marshal response", http.StatusInternalServerError)
-					return
-				}
-				w.Write(js)
 			} else {
-				http.Error(w, "Config delete failed by backend server ", http.StatusInternalServerError)
+				errCode = SRServerError
 				logger.Println("DeleteObject returned failure ", obj)
 			}
 		} else {
-			http.Error(w, "Config delete failed to get object handle", http.StatusInternalServerError)
+			errCode = SRObjHdlError
 			logger.Println("Failed to get object handle from http request ", objHdl, err)
 		}
 	} else {
-		http.Error(w, "Config delete failed to get object map", http.StatusInternalServerError)
+		errCode = SRObjMapError
 		logger.Println("Failed to get ObjectMap ", resource)
+	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
 	}
 	return
 }
 
 func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
+	var errCode int
 	var objKey string
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
@@ -257,8 +265,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		http.Error(w, "Config update failed to find entry", http.StatusNotFound)
-		logger.Println("Failure in getting objKey for Uuid ", resource, vars["objId"], err)
+		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -275,24 +282,27 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				resp.UUId = vars["objId"]
 				js, err := json.Marshal(resp)
 				if err != nil {
-					logger.Println("Error in marshalling JSON in update for object ", resource, resp.UUId, err)
-					http.Error(w, "Config update successful. Failed to marshal response", http.StatusInternalServerError)
-					return
+					errCode = SRRespMarshalErr
+				} else {
+					w.Write(js)
+					errCode = SRSuccess
 				}
-				w.Write(js)
 			} else {
-				http.Error(w, "Config update failed by backend server", http.StatusInternalServerError)
+				errCode = SRServerError
 				logger.Println("UpdateObject failed for resource ", updateKeys, resource)
 			}
 		} else {
-			http.Error(w, "Config update failed in finding object from internal key", http.StatusInternalServerError)
-			logger.Println("Config update failed in getting obj via objKeySqlStr ", objKey, gerr)
+			errCode = SRObjHdlError
+			logger.Println("Config update failed in getting obj via objKey ", objKey, gerr)
 		}
-
 	} else {
-		http.Error(w, "Config update failed to get object map", http.StatusInternalServerError)
+		errCode = SRObjMapError
 		logger.Println("Config update failed t get ObjectMap ", resource)
 	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	}
+	return
 }
 
 //func GetAPIDocs(w http.ResponseWriter, r *http.Request) {

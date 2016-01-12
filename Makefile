@@ -5,6 +5,7 @@ MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
 SRCS=apihandlers.go\
+	  apierrcodes.go\
 	  ipcutils.go\
 	  client.go\
 	  clientmap.go\
