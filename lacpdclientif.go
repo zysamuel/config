@@ -2,14 +2,14 @@ package main
 
 import (
 	"database/sql"
-	"lacpdServices"
+	"lacpd"
 	"models"
 	"utils/ipcutils"
 )
 
 type LACPDClient struct {
 	ipcutils.IPCClientBase
-	ClientHdl *lacpdServices.LACPDServicesClient
+	ClientHdl *lacpd.LACPDServicesClient
 }
 
 func (clnt *LACPDClient) Initialize(name string, address string) {
@@ -20,12 +20,17 @@ func (clnt *LACPDClient) ConnectToServer() bool {
 
 	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = lacpdServices.NewLACPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		clnt.ClientHdl = lacpd.NewLACPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *LACPDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
@@ -33,19 +38,8 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 
 	case models.EthernetConfig:
 		data := obj.(models.EthernetConfig)
-		conf := lacpdServices.NewEthernetConfig()
-		conf.MacAddress = string(data.MacAddress)
-		conf.Description = string(data.Description)
-		conf.AggregateId = string(data.AggregateId)
-		conf.NameKey = string(data.NameKey)
-		conf.Enabled = bool(data.Enabled)
-		conf.Speed = string(data.Speed)
-		conf.Mtu = int16(data.Mtu)
-		conf.DuplexMode = int32(data.DuplexMode)
-		conf.EnableFlowControl = bool(data.EnableFlowControl)
-		conf.Auto = bool(data.Auto)
-		conf.Type = string(data.Type)
-
+		conf := lacpd.NewEthernetConfig()
+		models.ConvertlacpdEthernetConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateEthernetConfig(conf)
 		if err != nil {
 			return int64(0), false
@@ -55,20 +49,8 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 
 	case models.AggregationLacpConfig:
 		data := obj.(models.AggregationLacpConfig)
-		conf := lacpdServices.NewAggregationLacpConfig()
-		conf.Description = string(data.Description)
-		conf.MinLinks = int16(data.MinLinks)
-		conf.SystemPriority = int16(data.SystemPriority)
-		conf.NameKey = string(data.NameKey)
-		conf.Interval = int32(data.Interval)
-		conf.Enabled = bool(data.Enabled)
-		conf.Mtu = int16(data.Mtu)
-		conf.SystemIdMac = string(data.SystemIdMac)
-		conf.LagType = int32(data.LagType)
-		conf.LagHash = int32(data.LagHash)
-		conf.Type = string(data.Type)
-		conf.LacpMode = int32(data.LacpMode)
-
+		conf := lacpd.NewAggregationLacpConfig()
+		models.ConvertlacpdAggregationLacpConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateAggregationLacpConfig(conf)
 		if err != nil {
 			return int64(0), false
@@ -87,19 +69,8 @@ func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 
 	case models.EthernetConfig:
 		data := obj.(models.EthernetConfig)
-		conf := lacpdServices.NewEthernetConfig()
-		conf.MacAddress = string(data.MacAddress)
-		conf.Description = string(data.Description)
-		conf.AggregateId = string(data.AggregateId)
-		conf.NameKey = string(data.NameKey)
-		conf.Enabled = bool(data.Enabled)
-		conf.Speed = string(data.Speed)
-		conf.Mtu = int16(data.Mtu)
-		conf.DuplexMode = int32(data.DuplexMode)
-		conf.EnableFlowControl = bool(data.EnableFlowControl)
-		conf.Auto = bool(data.Auto)
-		conf.Type = string(data.Type)
-
+		conf := lacpd.NewEthernetConfig()
+		models.ConvertlacpdEthernetConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteEthernetConfig(conf)
 		if err != nil {
 			return false
@@ -109,20 +80,8 @@ func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 
 	case models.AggregationLacpConfig:
 		data := obj.(models.AggregationLacpConfig)
-		conf := lacpdServices.NewAggregationLacpConfig()
-		conf.Description = string(data.Description)
-		conf.MinLinks = int16(data.MinLinks)
-		conf.SystemPriority = int16(data.SystemPriority)
-		conf.NameKey = string(data.NameKey)
-		conf.Interval = int32(data.Interval)
-		conf.Enabled = bool(data.Enabled)
-		conf.Mtu = int16(data.Mtu)
-		conf.SystemIdMac = string(data.SystemIdMac)
-		conf.LagType = int32(data.LagType)
-		conf.LagHash = int32(data.LagHash)
-		conf.Type = string(data.Type)
-		conf.LacpMode = int32(data.LacpMode)
-
+		conf := lacpd.NewAggregationLacpConfig()
+		models.ConvertlacpdAggregationLacpConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteAggregationLacpConfig(conf)
 		if err != nil {
 			return false
@@ -148,7 +107,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.AggregationLacpState
-			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpState(lacpdServices.Int(currMarker), lacpdServices.Int(count))
+			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpState(lacpd.Int(currMarker), lacpd.Int(count))
 			if bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
@@ -157,6 +116,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
+
 					ret_obj.Description = string(bulkInfo.AggregationLacpStateList[i].Description)
 					ret_obj.MinLinks = uint16(bulkInfo.AggregationLacpStateList[i].MinLinks)
 					ret_obj.SystemPriority = uint16(bulkInfo.AggregationLacpStateList[i].SystemPriority)
@@ -179,7 +139,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.AggregationLacpMemberStateCounters
-			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpMemberStateCounters(lacpdServices.Int(currMarker), lacpdServices.Int(count))
+			bulkInfo, _ := clnt.ClientHdl.GetBulkAggregationLacpMemberStateCounters(lacpd.Int(currMarker), lacpd.Int(count))
 			if bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
@@ -188,34 +148,52 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					ret_obj.LacpRxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpRxErrors)
-					ret_obj.SystemIdMac = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemIdMac)
+
+					ret_obj.PartnerCdsChurnMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerCdsChurnMachine)
 					ret_obj.MinLinks = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].MinLinks)
+					ret_obj.RxMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].RxMachine)
 					ret_obj.SystemPriority = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemPriority)
+					ret_obj.MuxMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].MuxMachine)
+					ret_obj.LacpRxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpRxErrors)
+					ret_obj.Distributing = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Distributing)
+					ret_obj.ActorCdsChurnMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorCdsChurnMachine)
+					ret_obj.SystemId = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemId)
+					ret_obj.ActorCdsChurnCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorCdsChurnCount)
+					ret_obj.Type = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Type)
+					ret_obj.PartnerSyncTransitionCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerSyncTransitionCount)
+					ret_obj.LacpErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpErrors)
+					ret_obj.Description = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Description)
+					ret_obj.PartnerChangeCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerChangeCount)
+					ret_obj.PartnerChurnCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerChurnCount)
+					ret_obj.LacpTxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpTxErrors)
+					ret_obj.LacpOutPkts = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpOutPkts)
+					ret_obj.Timeout = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Timeout)
+					ret_obj.Synchronization = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Synchronization)
+					ret_obj.PartnerId = string(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerId)
+					ret_obj.ActorChurnMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorChurnMachine)
+					ret_obj.NameKey = string(bulkInfo.AggregationLacpMemberStateCountersList[i].NameKey)
+					ret_obj.Interface = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Interface)
+					ret_obj.DebugId = uint32(bulkInfo.AggregationLacpMemberStateCountersList[i].DebugId)
+					ret_obj.Collecting = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Collecting)
+					ret_obj.MuxReason = string(bulkInfo.AggregationLacpMemberStateCountersList[i].MuxReason)
+					ret_obj.ActorChangeCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorChangeCount)
 					ret_obj.LacpUnknownErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpUnknownErrors)
 					ret_obj.Interval = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Interval)
 					ret_obj.Enabled = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Enabled)
-					ret_obj.Aggregatable = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Aggregatable)
+					ret_obj.PartnerCdsChurnCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerCdsChurnCount)
 					ret_obj.OperKey = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].OperKey)
-					ret_obj.Mtu = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].Mtu)
-					ret_obj.Distributing = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Distributing)
-					ret_obj.PartnerKey = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerKey)
-					ret_obj.LacpErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpErrors)
-					ret_obj.SystemId = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemId)
-					ret_obj.Timeout = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Timeout)
-					ret_obj.Activity = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Activity)
 					ret_obj.LagHash = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LagHash)
-					ret_obj.Type = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Type)
-					ret_obj.Collecting = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Collecting)
-					ret_obj.LagType = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LagType)
-					ret_obj.Description = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Description)
-					ret_obj.LacpTxErrors = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpTxErrors)
-					ret_obj.LacpOutPkts = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpOutPkts)
+					ret_obj.PartnerKey = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerKey)
+					ret_obj.SystemIdMac = string(bulkInfo.AggregationLacpMemberStateCountersList[i].SystemIdMac)
+					ret_obj.Activity = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Activity)
+					ret_obj.ActorChurnCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorChurnCount)
+					ret_obj.RxTime = uint32(bulkInfo.AggregationLacpMemberStateCountersList[i].RxTime)
+					ret_obj.PartnerChurnMachine = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerChurnMachine)
 					ret_obj.LacpInPkts = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpInPkts)
-					ret_obj.Synchronization = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].Synchronization)
-					ret_obj.PartnerId = string(bulkInfo.AggregationLacpMemberStateCountersList[i].PartnerId)
-					ret_obj.NameKey = string(bulkInfo.AggregationLacpMemberStateCountersList[i].NameKey)
-					ret_obj.Interface = string(bulkInfo.AggregationLacpMemberStateCountersList[i].Interface)
+					ret_obj.Mtu = uint16(bulkInfo.AggregationLacpMemberStateCountersList[i].Mtu)
+					ret_obj.ActorSyncTransitionCount = uint64(bulkInfo.AggregationLacpMemberStateCountersList[i].ActorSyncTransitionCount)
+					ret_obj.LagType = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LagType)
+					ret_obj.Aggregatable = bool(bulkInfo.AggregationLacpMemberStateCountersList[i].Aggregatable)
 					ret_obj.LacpMode = int32(bulkInfo.AggregationLacpMemberStateCountersList[i].LacpMode)
 					objs = append(objs, ret_obj)
 				}
@@ -240,33 +218,10 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		origdata := dbObj.(models.EthernetConfig)
 		updatedata := obj.(models.EthernetConfig)
 		// create new thrift objects
-		origconf := lacpdServices.NewEthernetConfig()
-		updateconf := lacpdServices.NewEthernetConfig()
-
-		origconf.MacAddress = string(origdata.MacAddress)
-		origconf.Description = string(origdata.Description)
-		origconf.AggregateId = string(origdata.AggregateId)
-		origconf.NameKey = string(origdata.NameKey)
-		origconf.Enabled = bool(origdata.Enabled)
-		origconf.Speed = string(origdata.Speed)
-		origconf.Mtu = int16(origdata.Mtu)
-		origconf.DuplexMode = int32(origdata.DuplexMode)
-		origconf.EnableFlowControl = bool(origdata.EnableFlowControl)
-		origconf.Auto = bool(origdata.Auto)
-		origconf.Type = string(origdata.Type)
-
-		updateconf.MacAddress = string(updatedata.MacAddress)
-		updateconf.Description = string(updatedata.Description)
-		updateconf.AggregateId = string(updatedata.AggregateId)
-		updateconf.NameKey = string(updatedata.NameKey)
-		updateconf.Enabled = bool(updatedata.Enabled)
-		updateconf.Speed = string(updatedata.Speed)
-		updateconf.Mtu = int16(updatedata.Mtu)
-		updateconf.DuplexMode = int32(updatedata.DuplexMode)
-		updateconf.EnableFlowControl = bool(updatedata.EnableFlowControl)
-		updateconf.Auto = bool(updatedata.Auto)
-		updateconf.Type = string(updatedata.Type)
-
+		origconf := lacpd.NewEthernetConfig()
+		updateconf := lacpd.NewEthernetConfig()
+		models.ConvertlacpdEthernetConfigObjToThrift(&origdata, origconf)
+		models.ConvertlacpdEthernetConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, attrSet)
 			if ok {
@@ -282,35 +237,10 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		origdata := dbObj.(models.AggregationLacpConfig)
 		updatedata := obj.(models.AggregationLacpConfig)
 		// create new thrift objects
-		origconf := lacpdServices.NewAggregationLacpConfig()
-		updateconf := lacpdServices.NewAggregationLacpConfig()
-
-		origconf.Description = string(origdata.Description)
-		origconf.MinLinks = int16(origdata.MinLinks)
-		origconf.SystemPriority = int16(origdata.SystemPriority)
-		origconf.NameKey = string(origdata.NameKey)
-		origconf.Interval = int32(origdata.Interval)
-		origconf.Enabled = bool(origdata.Enabled)
-		origconf.Mtu = int16(origdata.Mtu)
-		origconf.SystemIdMac = string(origdata.SystemIdMac)
-		origconf.LagType = int32(origdata.LagType)
-		origconf.LagHash = int32(origdata.LagHash)
-		origconf.Type = string(origdata.Type)
-		origconf.LacpMode = int32(origdata.LacpMode)
-
-		updateconf.Description = string(updatedata.Description)
-		updateconf.MinLinks = int16(updatedata.MinLinks)
-		updateconf.SystemPriority = int16(updatedata.SystemPriority)
-		updateconf.NameKey = string(updatedata.NameKey)
-		updateconf.Interval = int32(updatedata.Interval)
-		updateconf.Enabled = bool(updatedata.Enabled)
-		updateconf.Mtu = int16(updatedata.Mtu)
-		updateconf.SystemIdMac = string(updatedata.SystemIdMac)
-		updateconf.LagType = int32(updatedata.LagType)
-		updateconf.LagHash = int32(updatedata.LagHash)
-		updateconf.Type = string(updatedata.Type)
-		updateconf.LacpMode = int32(updatedata.LacpMode)
-
+		origconf := lacpd.NewAggregationLacpConfig()
+		updateconf := lacpd.NewAggregationLacpConfig()
+		models.ConvertlacpdAggregationLacpConfigObjToThrift(&origdata, origconf)
+		models.ConvertlacpdAggregationLacpConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, attrSet)
 			if ok {

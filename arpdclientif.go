@@ -1,15 +1,15 @@
 package main
 
 import (
-	"arpdServices"
+	"arpd"
 	"database/sql"
 	"models"
 	"utils/ipcutils"
 )
 
 type ARPDClient struct {
-	IPCClientBase
-	ClientHdl *arpdServices.ARPDServicesClient
+	ipcutils.IPCClientBase
+	ClientHdl *arpd.ARPDServicesClient
 }
 
 func (clnt *ARPDClient) Initialize(name string, address string) {
@@ -18,14 +18,19 @@ func (clnt *ARPDClient) Initialize(name string, address string) {
 }
 func (clnt *ARPDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = arpdServices.NewARPDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = arpd.NewARPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *ARPDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *ARPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
@@ -33,10 +38,8 @@ func (clnt *ARPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 
 	case models.ArpConfig:
 		data := obj.(models.ArpConfig)
-		conf := arpdServices.NewArpConfig()
-		conf.ArpConfigKey = string(data.ArpConfigKey)
-		conf.Timeout = int32(data.Timeout)
-
+		conf := arpd.NewArpConfig()
+		models.ConvertarpdArpConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateArpConfig(conf)
 		if err != nil {
 			return int64(0), false
@@ -55,10 +58,8 @@ func (clnt *ARPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 
 	case models.ArpConfig:
 		data := obj.(models.ArpConfig)
-		conf := arpdServices.NewArpConfig()
-		conf.ArpConfigKey = string(data.ArpConfigKey)
-		conf.Timeout = int32(data.Timeout)
-
+		conf := arpd.NewArpConfig()
+		models.ConvertarpdArpConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteArpConfig(conf)
 		if err != nil {
 			return false
@@ -84,7 +85,7 @@ func (clnt *ARPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.ArpEntry
-			bulkInfo, _ := clnt.ClientHdl.GetBulkArpEntry(arpdServices.Int(currMarker), arpdServices.Int(count))
+			bulkInfo, _ := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
 			if bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
@@ -93,6 +94,7 @@ func (clnt *ARPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
+
 					ret_obj.Intf = string(bulkInfo.ArpEntryList[i].Intf)
 					ret_obj.MacAddr = string(bulkInfo.ArpEntryList[i].MacAddr)
 					ret_obj.IpAddr = string(bulkInfo.ArpEntryList[i].IpAddr)
@@ -120,15 +122,10 @@ func (clnt *ARPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		origdata := dbObj.(models.ArpConfig)
 		updatedata := obj.(models.ArpConfig)
 		// create new thrift objects
-		origconf := arpdServices.NewArpConfig()
-		updateconf := arpdServices.NewArpConfig()
-
-		origconf.ArpConfigKey = string(origdata.ArpConfigKey)
-		origconf.Timeout = int32(origdata.Timeout)
-
-		updateconf.ArpConfigKey = string(updatedata.ArpConfigKey)
-		updateconf.Timeout = int32(updatedata.Timeout)
-
+		origconf := arpd.NewArpConfig()
+		updateconf := arpd.NewArpConfig()
+		models.ConvertarpdArpConfigObjToThrift(&origdata, origconf)
+		models.ConvertarpdArpConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateArpConfig(origconf, updateconf, attrSet)
 			if ok {

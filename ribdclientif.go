@@ -3,13 +3,13 @@ package main
 import (
 	"database/sql"
 	"models"
-	"ribdServices"
+	"ribd"
 	"utils/ipcutils"
 )
 
 type RIBDClient struct {
-	IPCClientBase
-	ClientHdl *ribdServices.RIBDServicesClient
+	ipcutils.IPCClientBase
+	ClientHdl *ribd.RIBDServicesClient
 }
 
 func (clnt *RIBDClient) Initialize(name string, address string) {
@@ -18,14 +18,19 @@ func (clnt *RIBDClient) Initialize(name string, address string) {
 }
 func (clnt *RIBDClient) ConnectToServer() bool {
 
-	clnt.Transport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	if clnt.Transport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = ribdServices.NewRIBDServicesClientFactory(clnt.Transport, clnt.PtrProtocolFactory)
+	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
+	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
+		clnt.ClientHdl = ribd.NewRIBDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		if clnt.ClientHdl != nil {
+			clnt.IsConnected = true
+		} else {
+			clnt.IsConnected = false
+		}
 	}
 	return true
 }
 func (clnt *RIBDClient) IsConnectedToServer() bool {
-	return true
+	return clnt.IsConnected
 }
 func (clnt *RIBDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
@@ -92,7 +97,7 @@ func (clnt *RIBDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.IPV4Route
-			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(ribdServices.Int(currMarker), ribdServices.Int(count))
+			bulkInfo, _ := clnt.ClientHdl.GetBulkIPV4Route(ribd.Int(currMarker), ribd.Int(count))
 			if bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)

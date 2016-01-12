@@ -240,7 +240,7 @@ func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj
 
 type AsicDClient struct {
 	ipcutils.IPCClientBase
-	ClientHdl *asicdServices.AsicdServiceClient
+	ClientHdl *asicdServices.ASICDServicesClient
 }
 
 func (clnt *AsicDClient) Initialize(name string, address string) {
@@ -253,7 +253,7 @@ func (clnt *AsicDClient) ConnectToServer() bool {
 		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = asicdServices.NewAsicdServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		clnt.ClientHdl = asicdServices.NewASICDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -523,7 +523,7 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 
 type ArpDClient struct {
 	ipcutils.IPCClientBase
-	ClientHdl *arpd.ARPServiceClient
+	ClientHdl *arpd.ARPDServicesClient
 }
 
 func (clnt *ArpDClient) Initialize(name string, address string) {
@@ -536,7 +536,7 @@ func (clnt *ArpDClient) ConnectToServer() bool {
 		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	}
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = arpd.NewARPServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		clnt.ClientHdl = arpd.NewARPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
