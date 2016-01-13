@@ -16,6 +16,8 @@ const (
 	SRServerError                                  = 7
 	SRObjHdlError                                  = 8
 	SRObjMapError                                  = 9
+	SRBulkGetTooLarge                              = 10
+	SRNoContent                                    = 11
 )
 
 // SR error strings
@@ -30,6 +32,8 @@ var ErrString = map[int]string {
 	SRServerError:                                 "Backend server failed to apply configuration.",
 	SRObjHdlError:                                 "Failed to get object handle.",
 	SRObjMapError:                                 "Failed to get object map.",
+	SRBulkGetTooLarge:                             "More than maximum number of objects requested in a bulkget.",
+	SRNoContent:                                   "Insufficient information.",
 }
 
 //Given a code reurn error string
