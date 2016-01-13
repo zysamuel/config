@@ -213,6 +213,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var objKey string
+	logger.Println("ObjectDelete enter")
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
