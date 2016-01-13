@@ -12,14 +12,12 @@ var logger *log.Logger
 var gMgr *ConfigMgr
 
 func main() {
-   logger = log.New(os.Stdout, "ConfigMgr:", log.Ldate|log.Ltime|log.Lshortfile)
-   syslogger, err := syslog.New(syslog.LOG_NOTICE|syslog.LOG_INFO|syslog.LOG_DAEMON, "ConfigMgr")                                               
+	logger = log.New(os.Stdout, "ConfigMgr:", log.Ldate|log.Ltime|log.Lshortfile)
+	syslogger, err := syslog.New(syslog.LOG_NOTICE|syslog.LOG_INFO|syslog.LOG_DAEMON, "ConfigMgr")
 	if err == nil {
-		 syslogger.Info("### CONF Mgr started")
-		 logger.SetOutput(syslogger)
+		syslogger.Info("### CONF Mgr started")
+		logger.SetOutput(syslogger)
 	}
-
-
 
 	paramsDir := flag.String("params", "", "Directory Location for config files")
 	flag.Parse()
@@ -27,7 +25,10 @@ func main() {
 	if gMgr == nil {
 		return
 	}
-	go gMgr.ConnectToAllClients()
+	clientsUp := make(chan bool, 1)
+	go gMgr.ConnectToAllClients(clientsUp)
+	go gMgr.DiscoverSystemObjects(clientsUp)
+	go gMgr.MonitorSystemStatus()
 	restRtr := gMgr.GetRestRtr()
 	http.ListenAndServe(":8080", restRtr)
 }

@@ -12,5 +12,11 @@
 	 "Port":5050},
 
 	{"Name":"arpd", 
-	 "Port":6000}
+	 "Port":6000},
+		
+	{"Name":"lacpd",
+	 "Port":6050},
+
+	{"Name":"ospfd",
+	 "Port":7000}
 ]

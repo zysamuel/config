@@ -18,7 +18,7 @@ func CreateIPCHandles(address string) (thrift.TTransport, *thrift.TBinaryProtoco
 	transport, err = thrift.NewTSocket(address)
 	transport = transportFactory.GetTransport(transport)
 	if err = transport.Open(); err != nil {
-		logger.Println("Failed to Open Transport", transport, protocolFactory)
+		//logger.Println("Failed to Open Transport", transport, protocolFactory)
 		return nil, nil
 	}
 	return transport, protocolFactory
