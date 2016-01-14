@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"models"
-	"golang.org/x/crypto/bcrypt"
+	"utils/crypto/bcrypt"
 )
 
 func CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
