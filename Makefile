@@ -18,6 +18,7 @@ SRCS=apihandlers.go\
 	  main.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
+	  usermgmt.go\
 #	  portdclientif.go\
 
 COMP_NAME=confd
