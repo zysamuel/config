@@ -14,6 +14,7 @@ import (
 	//"path"
 	"strconv"
 	"utils/dbutils"
+	"encoding/base64"
 )
 
 const (
@@ -76,7 +77,7 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		http.Error(w, "Show: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
 	logger.Println("####  ShowConfigObject called")
@@ -85,7 +86,7 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		http.Error(w, "GetBulk: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
@@ -167,8 +168,16 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
+
+fmt.Println("Create: ", *r)
+auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+payload, _ := base64.StdEncoding.DecodeString(auth[1])
+pair := strings.SplitN(string(payload), ":", 2)
+fmt.Println("UserName: %s Password: %s", pair[0], pair[1])
+return
+
 	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		http.Error(w, "Create: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
@@ -227,7 +236,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		http.Error(w, "Delete: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
@@ -288,7 +297,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		http.Error(w, "Update: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
