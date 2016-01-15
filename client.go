@@ -2,27 +2,12 @@ package main
 
 import (
 	"asicd/asicdConstDefs"
-	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"models"
 	"strconv"
 	"time"
 )
-
-type ClientIf interface {
-	Initialize(name string, address string)
-	ConnectToServer() bool
-	IsConnectedToServer() bool
-	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
-	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool
-	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
-		objcount int64,
-		nextMarker int64,
-		more bool,
-		objs []models.ConfigObj)
-	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool
-}
 
 type ClientJson struct {
 	Name string `json:Name`

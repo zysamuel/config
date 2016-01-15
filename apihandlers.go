@@ -22,7 +22,7 @@ const (
 )
 
 type ConfigResponse struct {
-	UUId    string        `json:"Id"`
+	UUId string `json:"Id"`
 }
 
 type GetBulkResponse struct {
@@ -160,6 +160,7 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
+	var success bool
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -172,7 +173,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				errCode = SRNoContent
 				logger.Println("Nothing to configure")
 			} else {
-				_, success := gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+				_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 				if success == true {
 					UUId, err := StoreUuidToKeyMapInDb(obj)
 					if err == nil {
@@ -213,6 +214,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var objKey string
+	var success bool
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -227,7 +229,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(nil, objHdl); err == nil {
 			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-			success := gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
+			success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
 			if success == true {
 				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
 				_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
@@ -268,6 +270,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var objKey string
+	var success bool
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -286,7 +289,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			success := gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+			success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
 			if success == true {
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(http.StatusOK)
