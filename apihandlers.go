@@ -14,7 +14,7 @@ import (
 	//"path"
 	"strconv"
 	"utils/dbutils"
-	"encoding/base64"
+	//"encoding/base64"
 )
 
 const (
@@ -162,14 +162,14 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
-
-fmt.Println("Create: ", *r)
-auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-payload, _ := base64.StdEncoding.DecodeString(auth[1])
-pair := strings.SplitN(string(payload), ":", 2)
-fmt.Println("UserName: %s Password: %s", pair[0], pair[1])
-return
-
+/*
+	fmt.Println("Create: ", *r)
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	fmt.Println("UserName: %s Password: %s", pair[0], pair[1])
+	return
+*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, "Create: "+SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -207,7 +207,7 @@ return
 			}
 		} else {
 			errCode = SRObjHdlError
-			logger.Println("Failed to get object handle from http request ", objHdl, err)
+			logger.Println("Failed to get object handle from http request ", objHdl, resource, err)
 		}
 	} else {
 		errCode = SRObjMapError

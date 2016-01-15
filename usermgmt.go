@@ -30,7 +30,7 @@ func (mgr *ConfigMgr)CreateDefaultUser() bool {
 		logger.Println("Creating default user")
 		hashedPassword, err := bcrypt.GenerateFromPassword(defaultPassword, bcrypt.DefaultCost)
 		user.UserName = "admin"
-		user.Password = hashedPassword
+		user.Password = string(hashedPassword)
 		user.Description = "administrator"
 		user.Previledge = "w"
 		if err != nil {
