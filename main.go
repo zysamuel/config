@@ -25,14 +25,11 @@ func main() {
 	if gMgr == nil {
 		return
 	}
-	if ok := CreateDefaultUser(gMgr.dbHdl); ok {
-		syslogger.Info("Default user created")
-		logger.SetOutput(syslogger)
-	}
 	clientsUp := make(chan bool, 1)
 	go gMgr.ConnectToAllClients(clientsUp)
 	go gMgr.DiscoverSystemObjects(clientsUp)
 	go gMgr.MonitorSystemStatus()
+	go gMgr.CreateDefaultUser()
 	restRtr := gMgr.GetRestRtr()
 	http.ListenAndServe(":8080", restRtr)
 }
