@@ -18,5 +18,9 @@
 	 "Port":6050},
 
 	{"Name":"ospfd",
-	 "Port":7000}
+	 "Port":7000},
+	
+	{"Name":"local",
+	  "Port":0
+	}
 ]

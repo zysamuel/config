@@ -23,7 +23,7 @@ const (
 )
 
 type ConfigResponse struct {
-	UUId    string        `json:"Id"`
+	UUId string `json:"Id"`
 }
 
 type GetBulkResponse struct {
@@ -103,16 +103,10 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resp.CurrentMarker = currentIndex
-		switch obj.(type) {
-		case models.UserConfig:
-			err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-				resp.StateObjects = GetBulkObject(obj, currentIndex, objCount)
-		default:
-			err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-				resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj,
-				currentIndex,
-				objCount)
-		}
+		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
+			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj,
+			currentIndex,
+			objCount)
 		js, err := json.Marshal(resp)
 		if err != nil {
 			errCode = SRRespMarshalErr
@@ -188,12 +182,7 @@ return
 				errCode = SRNoContent
 				logger.Println("Nothing to configure")
 			} else {
-				switch obj.(type) {
-				case models.UserConfig:
-					_, success = CreateObject(obj, gMgr.dbHdl)
-				default:
-					_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
-				}
+				_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
 				if success == true {
 					UUId, err := StoreUuidToKeyMapInDb(obj)
 					if err == nil {
@@ -249,12 +238,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(nil, objHdl); err == nil {
 			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-			switch obj.(type) {
-			case models.UserConfig:
-				success = DeleteObject(dbObj, objKey, gMgr.dbHdl)
-			default:
-				success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
-			}
+			success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
 			if success == true {
 				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
 				_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
@@ -314,12 +298,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			switch obj.(type) {
-			case models.UserConfig:
-				success = UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-			default:
-				success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-			}
+			success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
 			if success == true {
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(http.StatusOK)

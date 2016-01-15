@@ -16,25 +16,19 @@ import (
 	"utils/ipcutils"
 )
 
-/*type IPCClientBase struct {
-	Address            string
-	Transport          thrift.TTransport
-	PtrProtocolFactory *thrift.TBinaryProtocolFactory
-	IsConnected        bool
+type ClientIf interface {
+	Initialize(name string, address string)
+	ConnectToServer() bool
+	IsConnectedToServer() bool
+	CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool)
+	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool
+	GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+		objcount int64,
+		nextMarker int64,
+		more bool,
+		objs []models.ConfigObj)
+	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool
 }
-
-func (clnt *ipcutils.IPCClientBase) IsConnectedToServer() bool {
-	return clnt.IsConnected
-}
-
-func (clnt *ipcutils.IPCClientBase) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
-	objCount int64,
-	nextMarker int64,
-	more bool,
-	objs []models.ConfigObj) {
-	//logger.Println("### Get Bulk request called with", currMarker, count)
-	return nil, 0, 0, false, make([]models.ConfigObj, 0)
-}*/
 
 type PortDClient struct {
 	ipcutils.IPCClientBase
@@ -75,30 +69,30 @@ func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 				logger.Println("failed creating ipv4intf, err = ", err)
 				return int64(0), false
 			}
-		objId, err := v4Intf.StoreObjectInDb(dbHdl)
-		return objId, true
+			objId, err := v4Intf.StoreObjectInDb(dbHdl)
+			return objId, true
 		case models.IPv4Neighbor: //IPv4Neighbor
 			v4Nbr := obj.(models.IPv4Neighbor)
 			_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
 			if err != nil {
 				return int64(0), false
 			}
-		objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
-		return objId, true
+			objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
+			return objId, true
 		case models.Vlan: //Vlan
 			vlanObj := obj.(models.Vlan)
 			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
 			if err != nil {
 				return int64(0), false
 			}
-		objId, _ = vlanObj.StoreObjectInDb(dbHdl)
-		return objId, true
+			objId, _ = vlanObj.StoreObjectInDb(dbHdl)
+			return objId, true
 		default:
 			break
 		}
 	}
 
-		return int64(0), true
+	return int64(0), true
 }
 
 func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
