@@ -36,6 +36,39 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	var objId int64
 	switch obj.(type) {
 
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateVlan(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := asicdServices.NewIPv4Neighbor()
+		models.ConvertasicdIPv4NeighborObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateIPv4Neighbor(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
 	case models.PortIntfConfig:
 		data := obj.(models.PortIntfConfig)
 		conf := asicdServices.NewPortIntfConfig()
@@ -55,6 +88,39 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 
 	switch obj.(type) {
+
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteVlan(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Neighbor:
+		data := obj.(models.IPv4Neighbor)
+		conf := asicdServices.NewIPv4Neighbor()
+		models.ConvertasicdIPv4NeighborObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteIPv4Neighbor(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
 
 	case models.PortIntfConfig:
 		data := obj.(models.PortIntfConfig)
@@ -116,6 +182,63 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	logger.Println("### Update Object called ASICD", attrSet, objKey)
 	ok := false
 	switch obj.(type) {
+
+	case models.Vlan:
+		// cast original object
+		origdata := dbObj.(models.Vlan)
+		updatedata := obj.(models.Vlan)
+		// create new thrift objects
+		origconf := asicdServices.NewVlan()
+		updateconf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&origdata, origconf)
+		models.ConvertasicdVlanObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.IPv4Intf:
+		// cast original object
+		origdata := dbObj.(models.IPv4Intf)
+		updatedata := obj.(models.IPv4Intf)
+		// create new thrift objects
+		origconf := asicdServices.NewIPv4Intf()
+		updateconf := asicdServices.NewIPv4Intf()
+		models.ConvertasicdIPv4IntfObjToThrift(&origdata, origconf)
+		models.ConvertasicdIPv4IntfObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateIPv4Intf(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.IPv4Neighbor:
+		// cast original object
+		origdata := dbObj.(models.IPv4Neighbor)
+		updatedata := obj.(models.IPv4Neighbor)
+		// create new thrift objects
+		origconf := asicdServices.NewIPv4Neighbor()
+		updateconf := asicdServices.NewIPv4Neighbor()
+		models.ConvertasicdIPv4NeighborObjToThrift(&origdata, origconf)
+		models.ConvertasicdIPv4NeighborObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateIPv4Neighbor(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
 
 	case models.PortIntfConfig:
 		// cast original object
