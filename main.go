@@ -26,10 +26,12 @@ func main() {
 		return
 	}
 	clientsUp := make(chan bool, 1)
+	go gMgr.CreateDefaultUser()
+	go gMgr.ReadConfiguredUsersFromDb()
 	go gMgr.ConnectToAllClients(clientsUp)
 	go gMgr.DiscoverSystemObjects(clientsUp)
 	go gMgr.MonitorSystemStatus()
-	go gMgr.CreateDefaultUser()
+	go gMgr.StartUserSessionHandler()
 	restRtr := gMgr.GetRestRtr()
 	http.ListenAndServe(":8080", restRtr)
 }

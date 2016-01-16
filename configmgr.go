@@ -7,20 +7,26 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
+	//"strings"
+	//"encoding/base64"
+	//"fmt"
 )
 
 type ConfigMgr struct {
-	clients        map[string]ClientIf
-	apiVer         string
-	apiBase        string
-	basePath       string
-	fullPath       string
-	pRestRtr       *mux.Router
-	dbHdl          *sql.DB
-	restRoutes     []ApiRoute
-	reconncetTimer *time.Ticker
-	objHdlMap      map[string]ConfigObjInfo
-	systemReady    bool
+	clients            map[string]ClientIf
+	apiVer             string
+	apiBase            string
+	basePath           string
+	fullPath           string
+	pRestRtr           *mux.Router
+	dbHdl              *sql.DB
+	restRoutes         []ApiRoute
+	reconncetTimer     *time.Ticker
+	objHdlMap          map[string]ConfigObjInfo
+	systemReady        bool
+	users              []UserData
+	sessionId          uint32
+	sessionChan        chan uint32
 }
 
 //
@@ -34,42 +40,93 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 		rt = ApiRoute{key + "Show",
 			"GET",
 			mgr.apiBase + key,
-			ShowConfigObject,
+			HandleRestRouteShowConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Create",
 			"POST",
 			mgr.apiBase + key,
-			ConfigObjectCreate,
+			HandleRestRouteCreate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Delete",
 			"DELETE",
 			mgr.apiBase + key + "/" + "{objId}",
-			ConfigObjectDelete,
+			HandleRestRouteDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 		rt = ApiRoute{key + "s",
 			"GET",
 			mgr.apiBase + key + "s/" + "{objId}",
-			ConfigObjectsBulkGet,
+			HandleRestRouteGet,
 		}
 		rt = ApiRoute{key + "s",
 			"GET",
 			mgr.apiBase + key + "s",
-			ConfigObjectsBulkGet,
+			HandleRestRouteGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
 			"PATCH",
 			mgr.apiBase + key + "/" + "{objId}",
-			ConfigObjectUpdate,
+			HandleRestRouteUpdate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 	}
 	return true
+}
+
+func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ShowConfigObject(w, r)
+}
+
+func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
+/*
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+	fmt.Println("Create: ", *r)
+	fmt.Println("Resource: ", resource)
+	fmt.Println("URL: ", r.URL.String())
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	fmt.Printf("UserName: %s Password: %s\n", pair[0], pair[1])
+	return
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectCreate(w, r)
+}
+
+func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectDelete(w, r)
+}
+
+func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectUpdate(w, r)
+}
+
+func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectsBulkGet(w, r)
 }
 
 //
