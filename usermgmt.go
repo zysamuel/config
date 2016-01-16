@@ -76,7 +76,7 @@ func (mgr *ConfigMgr)ReadConfiguredUsersFromDb() (status bool) {
 
 func (mgr *ConfigMgr)CreateUser(userName string) (status bool) {
 	var userData UserData
-	_, found := mgr.GetUserByUserName(userName)
+	_, _, found := mgr.GetUserByUserName(userName)
 	if found {
 		logger.Printf("User %s already exists\n", userName)
 		return false
@@ -87,11 +87,24 @@ func (mgr *ConfigMgr)CreateUser(userName string) (status bool) {
 	return true
 }
 
+func (mgr *ConfigMgr)DeleteUser(userName string) (status bool) {
+	var userData UserData
+	_, idx, found := mgr.GetUserByUserName(userName)
+	if found == false {
+		logger.Printf("User %s does not exists\n", userName)
+		return false
+	}
+	userData.userName = userName
+	userData.sessionId = 0
+	mgr.users = append(mgr.users[:idx], mgr.users[idx+1:]...)
+	return true
+}
+
 func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
 	logger.Println("Starting SessionHandler thread")
 	for {
 		sessionId := <-mgr.sessionChan
-		user, found := mgr.GetUserBySessionId(sessionId)
+		user, _, found := mgr.GetUserBySessionId(sessionId)
 		if found {
 			go user.StartSessionTimer()
 		}
@@ -99,22 +112,22 @@ func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint32) (user UserData, found bool) {
-	for _, user = range mgr.users {
+func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint32) (user UserData, idx int, found bool) {
+	for i, user := range mgr.users {
 		if user.sessionId == sessionId {
-			return user, true
+			return user, i, true
 		}
 	}
-	return user, false
+	return user, 0, false
 }
 
-func (mgr *ConfigMgr)GetUserByUserName(userName string) (user UserData, found bool) {
-	for _, user = range mgr.users {
+func (mgr *ConfigMgr)GetUserByUserName(userName string) (user UserData, idx int, found bool) {
+	for i, user := range mgr.users {
 		if user.userName == userName {
-			return user, true
+			return user, i, true
 		}
 	}
-	return user, false
+	return user, 0, false
 }
 
 func (user UserData)StartSessionTimer() (err error) {
@@ -125,7 +138,7 @@ func (user UserData)StartSessionTimer() (err error) {
 	return nil
 }
 
-func Loginuser(userName, password string) (sessionId uint32, status bool) {
+func LoginUser(userName, password string) (sessionId uint32, status bool) {
 	var found bool
 	var user models.UserConfig
 	rows, err := gMgr.dbHdl.Query("select * from UserConfig where UserName=?", userName)
@@ -145,15 +158,18 @@ func Loginuser(userName, password string) (sessionId uint32, status bool) {
 		// Comparing the password with the hash
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 		if err != nil {
-			fmt.Println("Password didn't match for ", userName, err)
+			logger.Println("Password didn't match for ", userName, err)
+			return 0, false
 		} else {
 			gMgr.sessionId = gMgr.sessionId + 1
-			userData, found := gMgr.GetUserByUserName(userName)
+			userData, _, found := gMgr.GetUserByUserName(userName)
 			if found {
 				userData.sessionId = gMgr.sessionId
 				fmt.Printf("Password matched for %s: sessionId is %d\n", userData.userName, userData.sessionId)
 				gMgr.sessionChan <-userData.sessionId
 				return userData.sessionId, true
+			} else {
+				logger.Println("Didn't find user in configmgr's users table")
 			}
 		}
 	}
@@ -161,7 +177,7 @@ func Loginuser(userName, password string) (sessionId uint32, status bool) {
 }
 
 func LogoutUser(userName string, sessionId uint32) (status bool) {
-	user, found := gMgr.GetUserByUserName(userName)
+	user, _, found := gMgr.GetUserByUserName(userName)
 	if found {
 		if user.sessionId != sessionId {
 			logger.Println("Logout: Failed due to session handle mismatch - ", sessionId, user.sessionId)
@@ -174,7 +190,7 @@ func LogoutUser(userName string, sessionId uint32) (status bool) {
 }
 
 func AuthenticateSessionId(sessionId uint32) (status bool) {
-	user, found := gMgr.GetUserBySessionId(sessionId)
+	user, _, found := gMgr.GetUserBySessionId(sessionId)
 	if found {
 		user.sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
 		return true

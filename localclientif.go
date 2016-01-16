@@ -47,7 +47,10 @@ func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	switch obj.(type) {
 	case models.UserConfig:
 		data := obj.(models.UserConfig)
-		data.DeleteObjectFromDb(objKey, dbHdl)
+		// Delete user from configmgr's users table
+		if ok := gMgr.DeleteUser(data.UserName); ok {
+			data.DeleteObjectFromDb(objKey, dbHdl)
+		}
 		break
 	default:
 		break
