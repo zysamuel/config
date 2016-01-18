@@ -36,7 +36,6 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 
 	for key, _ := range models.ConfigObjectMap {
-		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Show",
 			"GET",
 			mgr.apiBase + key,
