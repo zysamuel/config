@@ -161,7 +161,7 @@ func LoginUser(userName, password string) (sessionId uint32, status bool) {
 			logger.Println("Password didn't match for ", userName, err)
 			return 0, false
 		} else {
-			gMgr.sessionId = gMgr.sessionId + 1
+			gMgr.sessionId += 1
 			userData, _, found := gMgr.GetUserByUserName(userName)
 			if found {
 				userData.sessionId = gMgr.sessionId

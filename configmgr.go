@@ -7,9 +7,18 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
-	//"strings"
-	//"encoding/base64"
-	//"fmt"
+	"os"
+	"net"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"strings"
+	"encoding/base64"
+	"fmt"
 )
 
 type ConfigMgr struct {
@@ -77,6 +86,110 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	return true
 }
 
+func ConfigMgrCheck(certPath string, keyPath string) error {
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		return err
+	} else if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func publicKey(priv interface{}) interface{} {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &k.PublicKey
+	case *ecdsa.PrivateKey:
+		return &k.PublicKey
+	default:
+		return nil
+	}
+}
+
+func pemBlockForKey(priv interface{}) *pem.Block {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
+	case *ecdsa.PrivateKey:
+		b, err := x509.MarshalECPrivateKey(k)
+		if err != nil {
+			logger.Printf("Unable to marshal ECDSA private key: %v", err)
+			return nil
+		}
+		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	default:
+		return nil
+	}
+}
+
+func ConfigMgrGenerate(certPath string, keyPath string) error {
+	var priv interface{}
+	var err error
+	validFor := 365 * 24 * time.Hour
+	priv, err = rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		logger.Printf("failed to generate private key: %s\n", err)
+		return err
+	}
+
+	var notBefore time.Time
+	notBefore = time.Now()
+	notAfter := notBefore.Add(validFor)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		logger.Printf("failed to generate serial number: %s\n", err)
+		return err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"SnapRoute"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	addrs, _ := net.InterfaceAddrs()
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if  ipnet.IP.To4() != nil {
+				template.IPAddresses = append(template.IPAddresses, ipnet.IP)
+			}
+		}
+	}
+	template.IsCA = true
+	template.KeyUsage |= x509.KeyUsageCertSign
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
+	if err != nil {
+		logger.Printf("Failed to create certificate: %s\n", err)
+		return err
+	}
+
+	certOut, err := os.Create(certPath)
+	if err != nil {
+		logger.Printf("failed to open "+certPath+" for writing: %s\n", err)
+		return err
+	}
+	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	certOut.Close()
+
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		logger.Println("failed to open "+keyPath+" for writing:", err)
+		return err
+	}
+	pem.Encode(keyOut, pemBlockForKey(priv))
+	keyOut.Close()
+	return nil
+}
+
 func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
@@ -86,22 +199,24 @@ func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
-/*
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
-	fmt.Println("Create: ", *r)
-	fmt.Println("Resource: ", resource)
+	fmt.Println("Request: ", r)
 	fmt.Println("URL: ", r.URL.String())
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
-	fmt.Printf("UserName: %s Password: %s\n", pair[0], pair[1])
-	return
-*/
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
+	switch resource {
+	case "Login":
+		fmt.Println("Login: ", pair[0])
+	case "Logout":
+		fmt.Println("Logout: ", pair[0])
+	default:
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectCreate(w, r)
 	}
-	ConfigObjectCreate(w, r)
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
