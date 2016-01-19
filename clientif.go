@@ -114,6 +114,44 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
+	case models.PolicyDefinitionSetsPrefixSet:
+	    logger.Println("PolicyDefinitionSetsPrefixSet")
+		inCfg := obj.(models.PolicyDefinitionSetsPrefixSet)
+		var cfg ribd.PolicyDefinitionSetsPrefixSet
+		//cfg.PrefixSetName = inCfg.PrefixSetName
+		//ipPrefixList := strings.Split(inCfg.IpPrefix, ",")
+		logger.Println("ipPrefixList len = ", len(inCfg.IpPrefixList))
+		cfgIpPrefixList := make([]*ribd.PolicyDefinitionSetsPrefix, 0)
+		cfgIpPrefix := make([] ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList)) 
+		for i:=0 ; i < len(inCfg.IpPrefixList);i++ {
+			cfgIpPrefix[i].IpPrefix = inCfg.IpPrefixList[i].IpPrefix
+			cfgIpPrefix[i].MasklengthRange = inCfg.IpPrefixList[i].MaskLengthRange
+			cfgIpPrefixList = append(cfgIpPrefixList, &cfgIpPrefix[i])
+		}
+		cfg.IpPrefixList = cfgIpPrefixList
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.CreatePolicyDefinitionSetsPrefixSet(&cfg)
+		}
+		break
+	case models.PolicyDefinitionStatement:
+	    logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStatement) 
+		var cfg ribd.PolicyDefinitionStatement
+		cfg.Name = inCfg.Name
+		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
+		matchprefixSetInfo.PrefixSet = inCfg.MatchPrefixSet.PrefixSet
+		matchprefixSetInfo.MatchSetOptions = inCfg.MatchPrefixSet.MatchSetOptions
+		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
+		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
+		cfg.AcceptRoute = inCfg.AcceptRoute
+		cfg.RejectRoute = inCfg.RejectRoute
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
+		}
+		break
+	case models.PolicyDefinition:
+	    logger.Println("PolicyDefinition")
+		break
 	default:
 		break
 	}
