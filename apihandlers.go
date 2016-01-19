@@ -75,19 +75,11 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 }
 
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	logger.Println("####  ShowConfigObject called")
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	var errCode int
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
@@ -161,10 +153,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
@@ -198,7 +186,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			errCode = SRObjHdlError
-			logger.Println("Failed to get object handle from http request ", objHdl, err)
+			logger.Println("Failed to get object handle from http request ", objHdl, resource, err)
 		}
 	} else {
 		errCode = SRObjMapError
@@ -215,10 +203,6 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var objKey string
 	var success bool
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -271,10 +255,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var objKey string
 	var success bool
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
 	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)

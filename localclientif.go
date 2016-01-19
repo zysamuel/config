@@ -30,16 +30,12 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		if err != nil {
 			logger.Println("Failed to encrypt password for user ", data.UserName)
 		}
-		// Comparing the password with the hash
-		/*err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(data.Password))
-		if err != nil {
-			fmt.Println("Password didn't match ", err)
-		} else {
-			fmt.Println("Password matched ")
-		}*/
-		// Store the encrypted password in DB
-		data.Password = string(hashedPassword)
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		// Create user in configmgr's users table
+		if ok := gMgr.CreateUser(data.UserName); ok {
+			// Store the encrypted password in DB
+			data.Password = string(hashedPassword)
+			objId, _ = data.StoreObjectInDb(dbHdl)
+		}
 		break
 	default:
 		break
@@ -51,7 +47,10 @@ func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	switch obj.(type) {
 	case models.UserConfig:
 		data := obj.(models.UserConfig)
-		data.DeleteObjectFromDb(objKey, dbHdl)
+		// Delete user from configmgr's users table
+		if ok := gMgr.DeleteUser(data.UserName); ok {
+			data.DeleteObjectFromDb(objKey, dbHdl)
+		}
 		break
 	default:
 		break
