@@ -16,6 +16,9 @@ type UserData struct {
 	userName        string
 	sessionId       uint64
 	sessionTimer   *time.Timer
+	lastLoginTime   time.Time
+	lastLoginIp     string
+	numAPICalled    uint32
 }
 
 func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
