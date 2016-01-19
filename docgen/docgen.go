@@ -120,7 +120,7 @@ func main() {
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					switch typ.Name.Name {
-					case "BGPNeighborConfig", "IPv4Intf", "Vlan", "PortIntfConfig":
+					case "BGPNeighborConfig", "IPv4Intf", "Vlan", "PortIntfConfig", "BGPGlobalConfig", "IPV4Route", "AggregationConfig","AggregationLacpConfig":
 						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							writeResourceHdr(typ.Name.Name, docJsFile)
