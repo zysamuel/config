@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"database/sql"
 	"github.com/gorilla/mux"
 	"models"
@@ -9,6 +10,7 @@ import (
 	"time"
 	"os"
 	"net"
+	"strconv"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -34,8 +36,12 @@ type ConfigMgr struct {
 	objHdlMap          map[string]ConfigObjInfo
 	systemReady        bool
 	users              []UserData
-	sessionId          uint32
-	sessionChan        chan uint32
+	sessionId          uint64
+	sessionChan        chan uint64
+}
+
+type LoginResponse struct {
+	SessionId     uint64     `json: "SessionId"`
 }
 
 //
@@ -191,11 +197,20 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 }
 
 func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("URL: ", r.URL.String())
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+	if ok:= AuthenticateSessionId(sessionId); ok == false {
+		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+		return
+	}
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ShowConfigObject(w, r)
+	ShowConfigObject(w, r, sessionId)
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
@@ -205,42 +220,120 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
+	fmt.Println(pair[0], pair[1])
+	// When a user logs in - pair[0] contains username and pair[1] contains password
+	// when a user logs out -  pair[0] contains username and pair[1] contains session ID
+	// All other configurations - pair[0] contains session ID
 	switch resource {
 	case "Login":
-		fmt.Println("Login: ", pair[0])
+		userName := pair[0]
+		password := pair[1]
+		fmt.Println("Login: ", userName)
+		if sessionId, ok := LoginUser(userName, password); ok {
+			var resp ConfigResponse
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusOK)
+			resp.SessionId = sessionId
+			js, err := json.Marshal(resp)
+			if err != nil {
+				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusUnauthorized)
+			} else {
+				w.Write(js)
+			}
+			logger.Printf("User %s logged in. Session id %d\n", userName, sessionId)
+		} else {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			logger.Println("Login failed for user ", userName)
+		}
+		return
 	case "Logout":
-		fmt.Println("Logout: ", pair[0])
+		userName := pair[0]
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		fmt.Println("Logout: ", userName)
+		if ok := LogoutUser(userName, sessionId); ok {
+			var resp ConfigResponse
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(http.StatusOK)
+			resp.SessionId = sessionId
+			js, err := json.Marshal(resp)
+			if err != nil {
+				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusUnauthorized)
+			} else {
+				w.Write(js)
+			}
+			logger.Printf("Logout: User %s Session %d\n", userName, sessionId)
+		} else {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			logger.Println("Logout failed for user ", userName)
+		}
+		return
 	default:
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
 		if CheckIfSystemIsReady(w) != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		ConfigObjectCreate(w, r)
+		ConfigObjectCreate(w, r, sessionId)
 	}
+	return
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("URL: ", r.URL.String())
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+	if ok:= AuthenticateSessionId(sessionId); ok == false {
+		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+		return
+	}
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectDelete(w, r)
+	ConfigObjectDelete(w, r, sessionId)
+	return
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("URL: ", r.URL.String())
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+	if ok:= AuthenticateSessionId(sessionId); ok == false {
+		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+		return
+	}
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectUpdate(w, r)
+	ConfigObjectUpdate(w, r, sessionId)
+	return
 }
 
 func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("URL: ", r.URL.String())
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+	if ok:= AuthenticateSessionId(sessionId); ok == false {
+		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+		return
+	}
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectsBulkGet(w, r)
+	ConfigObjectsBulkGet(w, r, sessionId)
+	return
 }
 
 //

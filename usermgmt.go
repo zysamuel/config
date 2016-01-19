@@ -14,7 +14,7 @@ const (
 
 type UserData struct {
 	userName        string
-	sessionId       uint32
+	sessionId       uint64
 	sessionTimer   *time.Timer
 }
 
@@ -112,7 +112,7 @@ func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint32) (user UserData, idx int, found bool) {
+func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint64) (user UserData, idx int, found bool) {
 	for i, user := range mgr.users {
 		if user.sessionId == sessionId {
 			return user, i, true
@@ -138,7 +138,7 @@ func (user UserData)StartSessionTimer() (err error) {
 	return nil
 }
 
-func LoginUser(userName, password string) (sessionId uint32, status bool) {
+func LoginUser(userName, password string) (sessionId uint64, status bool) {
 	var found bool
 	var user models.UserConfig
 	rows, err := gMgr.dbHdl.Query("select * from UserConfig where UserName=?", userName)
@@ -176,7 +176,7 @@ func LoginUser(userName, password string) (sessionId uint32, status bool) {
 	return 0, false
 }
 
-func LogoutUser(userName string, sessionId uint32) (status bool) {
+func LogoutUser(userName string, sessionId uint64) (status bool) {
 	user, _, found := gMgr.GetUserByUserName(userName)
 	if found {
 		if user.sessionId != sessionId {
@@ -189,7 +189,7 @@ func LogoutUser(userName string, sessionId uint32) (status bool) {
 	return true
 }
 
-func AuthenticateSessionId(sessionId uint32) (status bool) {
+func AuthenticateSessionId(sessionId uint64) (status bool) {
 	user, _, found := gMgr.GetUserBySessionId(sessionId)
 	if found {
 		user.sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
