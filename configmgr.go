@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"database/sql"
 	"github.com/gorilla/mux"
 	"models"
@@ -10,7 +9,6 @@ import (
 	"time"
 	"os"
 	"net"
-	"strconv"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -18,8 +16,10 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
-	"strings"
-	"encoding/base64"
+	//"strings"
+	//"strconv"
+	//"encoding/json"
+	//"encoding/base64"
 )
 
 type ConfigMgr struct {
@@ -196,6 +196,8 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 }
 
 func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
+/*
+	// TODO: this will be uncommented for session authentication
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -209,9 +211,17 @@ func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ShowConfigObject(w, r, sessionId)
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ShowConfigObject(w, r, 0)
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
+/*
+	// TODO: this will be uncommented for session authentication
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
@@ -278,10 +288,18 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		ConfigObjectCreate(w, r, sessionId)
 	}
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectCreate(w, r, 0)
 	return
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
+/*
+	// TODO: this will be uncommented for session authentication
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -295,10 +313,18 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ConfigObjectDelete(w, r, sessionId)
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectDelete(w, r, 0)
 	return
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
+/*
+	// TODO: this will be uncommented for session authentication
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -312,10 +338,18 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ConfigObjectUpdate(w, r, sessionId)
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectUpdate(w, r, 0)
 	return
 }
 
 func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+/*
+	// TODO: this will be uncommented for session authentication
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -329,6 +363,12 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ConfigObjectsBulkGet(w, r, sessionId)
+*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectsBulkGet(w, r, 0)
 	return
 }
 

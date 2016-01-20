@@ -206,7 +206,6 @@ func AuthenticateSessionId(sessionId uint64) (status bool) {
 	_, idx, found := gMgr.GetUserBySessionId(sessionId)
 	if found {
 		gMgr.users[idx].sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
-		//user.sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
 		return true
 	}
 	return false
