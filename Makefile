@@ -19,6 +19,7 @@ SRCS=apihandlers.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
 	  localclientif.go\
+	  dhcprelaydclientif.go\
 	  usermgmt.go
 #	  portdclientif.go\
 
