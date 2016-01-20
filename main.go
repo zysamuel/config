@@ -33,6 +33,8 @@ func main() {
 	go gMgr.MonitorSystemStatus()
 	go gMgr.StartUserSessionHandler()
 	restRtr := gMgr.GetRestRtr()
+/*
+	// TODO: uncomment this section for https server
 	certFile := *paramsDir+"/cert.pem"
 	keyFile := *paramsDir+"/key.pem"
 	err = ConfigMgrCheck(certFile, keyFile)
@@ -43,5 +45,6 @@ func main() {
 		}
 	}
 	http.ListenAndServeTLS(":8080", certFile, keyFile, restRtr)
-	//http.ListenAndServe(":8080", restRtr)
+*/
+	http.ListenAndServe(":8080", restRtr)
 }
