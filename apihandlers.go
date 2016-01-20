@@ -153,6 +153,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
+	logger.Println("Create Object Called")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
@@ -193,7 +194,10 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 		logger.Println("Failed to get ObjectMap ", resource)
 	}
 	if errCode != SRSuccess {
+		logger.Println("returning error as http request failed")
 		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	} else {
+		logger.Println("Create Object Request Processed successfully")
 	}
 	return
 }
