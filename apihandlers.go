@@ -22,7 +22,7 @@ const (
 )
 
 type ConfigResponse struct {
-	UUId string `json:"Id"`
+	UUId          string     `json:"Id"`
 }
 
 type GetBulkResponse struct {

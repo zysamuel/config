@@ -18,6 +18,7 @@ const (
 	SRObjMapError                                  = 9
 	SRBulkGetTooLarge                              = 10
 	SRNoContent                                    = 11
+	SRAuthFailed                                   = 12
 )
 
 // SR error strings
@@ -34,6 +35,7 @@ var ErrString = map[int]string {
 	SRObjMapError:                                 "Failed to get object map.",
 	SRBulkGetTooLarge:                             "More than maximum number of objects requested in a bulkget.",
 	SRNoContent:                                   "Insufficient information.",
+	SRAuthFailed:                                  "User authentication failed.",
 }
 
 //Given a code reurn error string
