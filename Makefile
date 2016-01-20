@@ -18,7 +18,8 @@ SRCS=apihandlers.go\
 	  main.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
-	  localclientif.go
+	  localclientif.go\
+          ospfdclientif.go
 #	  usermgmt.go\
 #	  portdclientif.go\
 
