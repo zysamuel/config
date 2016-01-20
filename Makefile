@@ -1,6 +1,6 @@
 RM=rm -f
 DESTDIR=$(SR_CODE_BASE)/snaproute/src/out/bin
-PARAMSDIR=$(DESTDIR)/params
+PARAMSDIR=$(DESTDIR)/../params
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
@@ -20,6 +20,8 @@ SRCS=apihandlers.go\
 	  lacpdclientif.go\
 	  localclientif.go\
 	  dhcprelaydclientif.go\
+          ospfdclientif.go
+	  ipblockmgr.go\
 	  usermgmt.go
 #	  portdclientif.go\
 
@@ -32,8 +34,8 @@ exe: $(SRCS)
 install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 @$(RSYNC) docsui $(PARAMSDIR)
-	 @install params/clients.json $(PARAMSDIR)/
-	 @install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
+	 install params/clients.json $(PARAMSDIR)/
+	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
