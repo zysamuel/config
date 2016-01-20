@@ -37,6 +37,10 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			objId, _ = data.StoreObjectInDb(dbHdl)
 		}
 		break
+
+	case models.IPV4AddressBlock:
+		GetIpBlockMgr().CreateObject(obj, dbHdl)
+
 	default:
 		break
 	}
@@ -52,6 +56,10 @@ func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 			data.DeleteObjectFromDb(objKey, dbHdl)
 		}
 		break
+
+	case models.IPV4AddressBlock:
+		GetIpBlockMgr().DeleteObject(obj, objKey, dbHdl)
+
 	default:
 		break
 	}
@@ -82,6 +90,9 @@ func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		updatedata := obj.(models.UserConfig)
 		updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 		break
+
+	case models.IPV4AddressBlock:
+		GetIpBlockMgr().UpdateObject(dbObj, obj, attrSet, objKey, dbHdl)
 
 	default:
 		break
