@@ -2,18 +2,14 @@ package main
 
 import (
 	"arpd"
-	"asicdServices"
 	"bgpd"
-	"portdServices"
-	//"encoding/binary"
-	//"git.apache.org/thrift.git/lib/go/thrift"
-	"infra/portd/portdCommonDefs"
-	"models"
-	//"net"
-	"database/sql"
 	"ribd"
+	"models"
 	"strconv"
+	"database/sql"
+	"asicdServices"
 	"utils/ipcutils"
+    "utils/commonDefs"
 )
 
 type ClientIf interface {
@@ -28,79 +24,6 @@ type ClientIf interface {
 		more bool,
 		objs []models.ConfigObj)
 	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool
-}
-
-type PortDClient struct {
-	ipcutils.IPCClientBase
-	ClientHdl *portdServices.PortServiceClient
-}
-
-func (clnt *PortDClient) Initialize(name string, address string) {
-	clnt.Address = address
-	return
-}
-
-func (clnt *PortDClient) ConnectToServer() bool {
-
-	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	}
-	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = portdServices.NewPortServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
-		if clnt.ClientHdl != nil {
-			clnt.IsConnected = true
-		} else {
-			clnt.IsConnected = false
-		}
-	}
-	return true
-}
-
-func (clnt *PortDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-	var objId int64
-	logger.Println("in create object")
-	if clnt.ClientHdl != nil {
-		switch obj.(type) {
-
-		case models.IPv4Intf: //IPv4Intf
-			v4Intf := obj.(models.IPv4Intf)
-			_, err := clnt.ClientHdl.CreateV4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
-			if err != nil {
-				logger.Println("failed creating ipv4intf, err = ", err)
-				return int64(0), false
-			}
-			objId, err := v4Intf.StoreObjectInDb(dbHdl)
-			return objId, true
-		case models.IPv4Neighbor: //IPv4Neighbor
-			v4Nbr := obj.(models.IPv4Neighbor)
-			_, err := clnt.ClientHdl.CreateV4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
-			if err != nil {
-				return int64(0), false
-			}
-			objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
-			return objId, true
-		case models.Vlan: //Vlan
-			vlanObj := obj.(models.Vlan)
-			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
-			if err != nil {
-				return int64(0), false
-			}
-			objId, _ = vlanObj.StoreObjectInDb(dbHdl)
-			return objId, true
-		default:
-			break
-		}
-	}
-
-	return int64(0), true
-}
-
-func (clnt *PortDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
-	return true
-}
-
-func (clnt *PortDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
-	return true
 }
 
 type RibClient struct {
@@ -152,8 +75,8 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
-					if routesInfo.RouteList[i].NextHopIfType == portdCommonDefs.VLAN {
+					ret_obj.Protocol = ""
+					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
 						ret_obj.OutgoingIntfType = "PHY"
@@ -174,10 +97,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		var outIntfType ribd.Int
 		if v4Route.OutgoingIntfType == "VLAN" {
-			outIntfType = portdCommonDefs.VLAN
+			outIntfType = commonDefs.L2RefTypeVlan
 		} else {
-			outIntfType = portdCommonDefs.PHY
-		}
+			outIntfType = commonDefs.L2RefTypePort
+        }
 		proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreateV4Route(
@@ -191,6 +114,44 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
+	case models.PolicyDefinitionSetsPrefixSet:
+	    logger.Println("PolicyDefinitionSetsPrefixSet")
+		inCfg := obj.(models.PolicyDefinitionSetsPrefixSet)
+		var cfg ribd.PolicyDefinitionSetsPrefixSet
+		//cfg.PrefixSetName = inCfg.PrefixSetName
+		//ipPrefixList := strings.Split(inCfg.IpPrefix, ",")
+		logger.Println("ipPrefixList len = ", len(inCfg.IpPrefixList))
+		cfgIpPrefixList := make([]*ribd.PolicyDefinitionSetsPrefix, 0)
+		cfgIpPrefix := make([] ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList)) 
+		for i:=0 ; i < len(inCfg.IpPrefixList);i++ {
+			cfgIpPrefix[i].IpPrefix = inCfg.IpPrefixList[i].IpPrefix
+			cfgIpPrefix[i].MasklengthRange = inCfg.IpPrefixList[i].MaskLengthRange
+			cfgIpPrefixList = append(cfgIpPrefixList, &cfgIpPrefix[i])
+		}
+		cfg.IpPrefixList = cfgIpPrefixList
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.CreatePolicyDefinitionSetsPrefixSet(&cfg)
+		}
+		break
+	case models.PolicyDefinitionStatement:
+	    logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStatement) 
+		var cfg ribd.PolicyDefinitionStatement
+		cfg.Name = inCfg.Name
+		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
+		matchprefixSetInfo.PrefixSet = inCfg.MatchPrefixSet.PrefixSet
+		matchprefixSetInfo.MatchSetOptions = inCfg.MatchPrefixSet.MatchSetOptions
+		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
+		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
+		cfg.AcceptRoute = inCfg.AcceptRoute
+		cfg.RejectRoute = inCfg.RejectRoute
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
+		}
+		break
+	case models.PolicyDefinition:
+	    logger.Println("PolicyDefinition")
+		break
 	default:
 		break
 	}
@@ -266,6 +227,7 @@ func (clnt *AsicDClient) ConnectToServer() bool {
 }
 
 func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+    var objId int64
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
 		case models.Vlan: //Vlan
@@ -274,6 +236,24 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			if err != nil {
 				return int64(0), false
 			}
+            objId, _ = vlanObj.StoreObjectInDb(dbHdl)
+            return objId, true
+		case models.IPv4Intf: //IPv4Intf
+			v4Intf := obj.(models.IPv4Intf)
+			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
+			if err != nil {
+				return int64(0), false
+			}
+            objId, _ = v4Intf.StoreObjectInDb(dbHdl)
+            return objId, true
+		case models.IPv4Neighbor: //IPv4Neighbor
+			v4Nbr := obj.(models.IPv4Neighbor)
+			_, err := clnt.ClientHdl.CreateIPv4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
+			if err != nil {
+				return int64(0), false
+			}
+            objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
+            return objId, true
 		}
 	}
 	return int64(0), true

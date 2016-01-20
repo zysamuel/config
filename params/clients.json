@@ -8,9 +8,6 @@
 	{"Name":"ribd",  
 	 "Port":5000},
 	
-	{"Name":"portd", 
-	 "Port":5050},
-
 	{"Name":"arpd", 
 	 "Port":6000},
 		
@@ -19,7 +16,10 @@
 
 	{"Name":"ospfd",
 	 "Port":7000},
-	
+        
+        {"Name":"dhcprelay",
+         "Port": 9000},
+         
 	{"Name":"local",
 	  "Port":0
 	}
