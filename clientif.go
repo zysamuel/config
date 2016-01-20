@@ -106,7 +106,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					}
 					ret_obj.MatchPrefixSet.PrefixSet = tempMatchPrefixSet.PrefixSet
 					ret_obj.MatchPrefixSet.MatchSetOptions = tempMatchPrefixSet.MatchSetOptions
-					ret_obj.InstallProtocolEq = int(getBulkInfo.PolicyDefinitionStatementList[i].InstallProtocolEq)
+					ret_obj.InstallProtocolEq = getBulkInfo.PolicyDefinitionStatementList[i].InstallProtocolEq
 					ret_obj.RouteDisposition = (getBulkInfo.PolicyDefinitionStatementList[i].RouteDisposition)
 					objs = append(objs, ret_obj)
 				}
@@ -169,7 +169,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		matchprefixSetInfo.PrefixSet = inCfg.MatchPrefixSet.PrefixSet
 		matchprefixSetInfo.MatchSetOptions = inCfg.MatchPrefixSet.MatchSetOptions
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
-		cfg.InstallProtocolEq = ribd.Int(inCfg.InstallProtocolEq)
+		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
 		cfg.RouteDisposition = inCfg.RouteDisposition
 		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
