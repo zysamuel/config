@@ -230,43 +230,48 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 		password := pair[1]
 		fmt.Println("Login: ", userName)
 		if sessionId, ok := LoginUser(userName, password); ok {
-			var resp ConfigResponse
+			var resp LoginResponse
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
 			resp.SessionId = sessionId
 			js, err := json.Marshal(resp)
 			if err != nil {
-				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusUnauthorized)
+				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
+				return
 			} else {
 				w.Write(js)
 			}
 			logger.Printf("User %s logged in. Session id %d\n", userName, sessionId)
+			return
 		} else {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			logger.Println("Login failed for user ", userName)
+			return
 		}
-		return
 	case "Logout":
 		userName := pair[0]
 		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
 		fmt.Println("Logout: ", userName)
 		if ok := LogoutUser(userName, sessionId); ok {
-			var resp ConfigResponse
+			var resp LoginResponse
+			logger.Printf("Logout1: User %s Session %d\n", userName, sessionId)
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
 			resp.SessionId = sessionId
 			js, err := json.Marshal(resp)
 			if err != nil {
-				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusUnauthorized)
+				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
+				return
 			} else {
 				w.Write(js)
 			}
 			logger.Printf("Logout: User %s Session %d\n", userName, sessionId)
+			return
 		} else {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			logger.Println("Logout failed for user ", userName)
+			return
 		}
-		return
 	default:
 		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
 		if ok:= AuthenticateSessionId(sessionId); ok == false {

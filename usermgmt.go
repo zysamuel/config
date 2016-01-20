@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	MAX_NUM_SESSIONS = 100
+	MAX_NUM_SESSIONS = 10
 	SESSION_TIMEOUT = 300
 )
 
@@ -50,6 +50,9 @@ func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
 		user.Previledge = "w"
 		if err != nil {
 			logger.Println("Failed to encrypt password for ", user.UserName)
+		}
+		if ok := mgr.CreateUser(user.UserName); ok == false {
+			logger.Println("Failed to create default user")
 		}
 		_, _ = user.StoreObjectInDb(mgr.dbHdl)
 	}
@@ -105,11 +108,17 @@ func (mgr *ConfigMgr)DeleteUser(userName string) (status bool) {
 
 func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
 	logger.Println("Starting SessionHandler thread")
+	mgr.sessionChan = make(chan uint64, MAX_NUM_SESSIONS)
 	for {
-		sessionId := <-mgr.sessionChan
-		user, _, found := mgr.GetUserBySessionId(sessionId)
-		if found {
-			go user.StartSessionTimer()
+		select {
+		case sessionId := <-mgr.sessionChan:
+			logger.Println("SessionHandler - received sessionid ", sessionId)
+			_, idx, found := mgr.GetUserBySessionId(sessionId)
+			if found {
+				logger.Println("SessionHandler - starting session timer for ", sessionId)
+				gMgr.users[idx].sessionTimer = time.NewTimer(time.Second * SESSION_TIMEOUT)
+				go gMgr.users[idx].WaitOnSessionTimer()
+			}
 		}
 	}
 	return true
@@ -133,8 +142,7 @@ func (mgr *ConfigMgr)GetUserByUserName(userName string) (user UserData, idx int,
 	return user, 0, false
 }
 
-func (user UserData)StartSessionTimer() (err error) {
-	user.sessionTimer = time.NewTimer(time.Second * SESSION_TIMEOUT)
+func (user UserData)WaitOnSessionTimer() (err error) {
 	<-user.sessionTimer.C
 	logger.Printf("Session timeout for user %s session %d\n", user.userName, user.sessionId)
 	LogoutUser(user.userName, user.sessionId)
@@ -164,12 +172,14 @@ func LoginUser(userName, password string) (sessionId uint64, status bool) {
 			logger.Println("Password didn't match for ", userName, err)
 			return 0, false
 		} else {
-			gMgr.sessionId += 1
-			userData, _, found := gMgr.GetUserByUserName(userName)
+			userData, idx, found := gMgr.GetUserByUserName(userName)
 			if found {
+				gMgr.sessionId += 1
 				userData.sessionId = gMgr.sessionId
+				gMgr.users[idx].sessionId = gMgr.sessionId
 				fmt.Printf("Password matched for %s: sessionId is %d\n", userData.userName, userData.sessionId)
 				gMgr.sessionChan <-userData.sessionId
+				fmt.Printf("SessionId is %d is sent over chan\n", userData.sessionId)
 				return userData.sessionId, true
 			} else {
 				logger.Println("Didn't find user in configmgr's users table")
@@ -180,22 +190,23 @@ func LoginUser(userName, password string) (sessionId uint64, status bool) {
 }
 
 func LogoutUser(userName string, sessionId uint64) (status bool) {
-	user, _, found := gMgr.GetUserByUserName(userName)
+	user, idx, found := gMgr.GetUserByUserName(userName)
 	if found {
 		if user.sessionId != sessionId {
 			logger.Println("Logout: Failed due to session handle mismatch - ", sessionId, user.sessionId)
 			return false
 		}
-		user.sessionTimer.Stop()
-		user.sessionId = 0
+		gMgr.users[idx].sessionTimer.Stop()
+		gMgr.users[idx].sessionId = 0
 	}
 	return true
 }
 
 func AuthenticateSessionId(sessionId uint64) (status bool) {
-	user, _, found := gMgr.GetUserBySessionId(sessionId)
+	_, idx, found := gMgr.GetUserBySessionId(sessionId)
 	if found {
-		user.sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
+		gMgr.users[idx].sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
+		//user.sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
 		return true
 	}
 	return false
