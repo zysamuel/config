@@ -23,11 +23,9 @@ const (
 
 type ConfigResponse struct {
 	UUId          string     `json:"Id"`
-	SessionId     uint64     `json: "SessionId"`
 }
 
 type GetBulkResponse struct {
-	SessionId     uint64             `json: "SessionId"`
 	MoreExist     bool               `json:"MoreExist"`
 	ObjCount      int64              `json:"ObjCount"`
 	CurrentMarker int64              `json:"CurrentMarker"`
@@ -76,11 +74,11 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 	return gMgr.IsReady()
 }
 
-func ShowConfigObject(w http.ResponseWriter, r *http.Request, sessionId uint64) {
+func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 	logger.Println("####  ShowConfigObject called")
 }
 
-func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request, sessionId uint64) {
+func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	resource = strings.Split(resource, "?")[0]
@@ -88,7 +86,6 @@ func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request, sessionId uint
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var resp GetBulkResponse
 		var err error
-		resp.SessionId = sessionId
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
 		if objCount > MAX_OBJECTS_IN_GETBULK {
@@ -152,7 +149,7 @@ func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
 	return UUId, err
 }
 
-func ConfigObjectCreate(w http.ResponseWriter, r *http.Request, sessionId uint64) {
+func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
@@ -171,7 +168,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request, sessionId uint64
 						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 						w.WriteHeader(http.StatusCreated)
 						resp.UUId = UUId.String()
-						resp.SessionId = sessionId
 						js, err := json.Marshal(resp)
 						if err != nil {
 							errCode = SRRespMarshalErr
@@ -202,7 +198,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request, sessionId uint64
 	return
 }
 
-func ConfigObjectDelete(w http.ResponseWriter, r *http.Request, sessionId uint64) {
+func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var objKey string
@@ -228,7 +224,6 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request, sessionId uint64
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusGone)
 					resp.UUId = vars["objId"]
-					resp.SessionId = sessionId
 					js, err := json.Marshal(resp)
 					if err != nil {
 						errCode = SRRespMarshalErr
@@ -255,7 +250,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request, sessionId uint64
 	return
 }
 
-func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request, sessionId uint64) {
+func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var objKey string
@@ -279,7 +274,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request, sessionId uint64
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(http.StatusOK)
 				resp.UUId = vars["objId"]
-				resp.SessionId = sessionId
 				js, err := json.Marshal(resp)
 				if err != nil {
 					errCode = SRRespMarshalErr

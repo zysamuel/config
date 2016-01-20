@@ -210,13 +210,13 @@ func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ShowConfigObject(w, r, sessionId)
+	ShowConfigObject(w, r)
 */
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ShowConfigObject(w, r, 0)
+	ShowConfigObject(w, r)
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
@@ -286,14 +286,14 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		ConfigObjectCreate(w, r, sessionId)
+		ConfigObjectCreate(w, r)
 	}
 */
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectCreate(w, r, 0)
+	ConfigObjectCreate(w, r)
 	return
 }
 
@@ -312,13 +312,13 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectDelete(w, r, sessionId)
+	ConfigObjectDelete(w, r)
 */
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectDelete(w, r, 0)
+	ConfigObjectDelete(w, r)
 	return
 }
 
@@ -337,13 +337,13 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectUpdate(w, r, sessionId)
+	ConfigObjectUpdate(w, r)
 */
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectUpdate(w, r, 0)
+	ConfigObjectUpdate(w, r)
 	return
 }
 
@@ -362,13 +362,13 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectsBulkGet(w, r, sessionId)
+	ConfigObjectsBulkGet(w, r)
 */
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectsBulkGet(w, r, 0)
+	ConfigObjectsBulkGet(w, r)
 	return
 }
 
