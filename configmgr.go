@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"strings"
 	"encoding/base64"
-	"fmt"
 )
 
 type ConfigMgr struct {
@@ -197,7 +196,6 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 }
 
 func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("URL: ", r.URL.String())
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -214,13 +212,10 @@ func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Request: ", r)
-	fmt.Println("URL: ", r.URL.String())
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
-	fmt.Println(pair[0], pair[1])
 	// When a user logs in - pair[0] contains username and pair[1] contains password
 	// when a user logs out -  pair[0] contains username and pair[1] contains session ID
 	// All other configurations - pair[0] contains session ID
@@ -228,7 +223,6 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 	case "Login":
 		userName := pair[0]
 		password := pair[1]
-		fmt.Println("Login: ", userName)
 		if sessionId, ok := LoginUser(userName, password); ok {
 			var resp LoginResponse
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -251,10 +245,8 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 	case "Logout":
 		userName := pair[0]
 		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
-		fmt.Println("Logout: ", userName)
 		if ok := LogoutUser(userName, sessionId); ok {
 			var resp LoginResponse
-			logger.Printf("Logout1: User %s Session %d\n", userName, sessionId)
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusOK)
 			resp.SessionId = sessionId
@@ -274,9 +266,11 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
-		if ok:= AuthenticateSessionId(sessionId); ok == false {
-			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-			return
+		if sessionId != 0 {
+			if ok:= AuthenticateSessionId(sessionId); ok == false {
+				http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+				return
+			}
 		}
 		if CheckIfSystemIsReady(w) != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
@@ -288,7 +282,6 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("URL: ", r.URL.String())
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -306,7 +299,6 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("URL: ", r.URL.String())
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
@@ -324,7 +316,6 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("URL: ", r.URL.String())
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
