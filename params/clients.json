@@ -16,7 +16,10 @@
 
 	{"Name":"ospfd",
 	 "Port":7000},
-	
+        
+        {"Name":"dhcprelay",
+         "Port": 9000},
+         
 	{"Name":"local",
 	  "Port":0
 	}
