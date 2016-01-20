@@ -20,7 +20,7 @@ SRCS=apihandlers.go\
 	  lacpdclientif.go\
 	  localclientif.go\
 	  dhcprelaydclientif.go\
-          ospfdclientif.go
+          ospfdclientif.go\
 	  ipblockmgr.go\
 	  usermgmt.go
 #	  portdclientif.go\
