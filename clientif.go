@@ -108,6 +108,8 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.MatchPrefixSet.MatchSetOptions = tempMatchPrefixSet.MatchSetOptions
 					ret_obj.InstallProtocolEq = getBulkInfo.PolicyDefinitionStatementList[i].InstallProtocolEq
 					ret_obj.RouteDisposition = (getBulkInfo.PolicyDefinitionStatementList[i].RouteDisposition)
+                     ret_obj.Redistribute = getBulkInfo.PolicyDefinitionStatementList[i].Redistribute
+                     ret_obj.RedistributeTargetProtocol = getBulkInfo.PolicyDefinitionStatementList[i].RedistributeTargetProtocol
 					objs = append(objs, ret_obj)
 				}
 			}
@@ -171,6 +173,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
 		cfg.RouteDisposition = inCfg.RouteDisposition
+		cfg.Redistribute = inCfg.Redistribute
+		cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
 		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
@@ -198,6 +202,17 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 				ribd.Int(outIntf))
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyDefinitionStatement:
+	    logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStatement) 
+		var cfg ribd.PolicyDefinitionStatement
+		cfg.Name = inCfg.Name
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.DeletePolicyDefinitionStatement(&cfg)
+		}
+		break
+		
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
