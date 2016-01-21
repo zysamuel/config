@@ -58,10 +58,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	more bool,
 	objs []models.ConfigObj) {
 	logger.Println("### Get Bulk request called with", currMarker, count)
-	var ret_obj models.IPV4Route
 	switch obj.(type) {
 	case models.IPV4Route:
 		if clnt.ClientHdl != nil {
+	        var ret_obj models.IPV4Route
 			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
@@ -75,7 +75,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = ""
+					ret_obj.Protocol = strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
@@ -86,6 +86,33 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
+	  break
+	case models.PolicyDefinitionStatement:
+	    if clnt.ClientHdl != nil {
+	    var ret_obj models.PolicyDefinitionStatement
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmts(ribd.Int(currMarker), ribd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					var tempMatchPrefixSet ribd.PolicyDefinitionStatementMatchPrefixSet
+					ret_obj.Name = getBulkInfo.PolicyDefinitionStatementList[i].Name
+					if getBulkInfo.PolicyDefinitionStatementList[i].MatchPrefixSetInfo != nil {
+						tempMatchPrefixSet = *(getBulkInfo.PolicyDefinitionStatementList[i].MatchPrefixSetInfo)
+					}
+					ret_obj.MatchPrefixSet.PrefixSet = tempMatchPrefixSet.PrefixSet
+					ret_obj.MatchPrefixSet.MatchSetOptions = tempMatchPrefixSet.MatchSetOptions
+					ret_obj.InstallProtocolEq = getBulkInfo.PolicyDefinitionStatementList[i].InstallProtocolEq
+					ret_obj.RouteDisposition = (getBulkInfo.PolicyDefinitionStatementList[i].RouteDisposition)
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+	  break
 	}
 	return nil, objCount, nextMarker, more, objs
 }
@@ -143,8 +170,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		matchprefixSetInfo.MatchSetOptions = inCfg.MatchPrefixSet.MatchSetOptions
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
-		cfg.AcceptRoute = inCfg.AcceptRoute
-		cfg.RejectRoute = inCfg.RejectRoute
+		cfg.RouteDisposition = inCfg.RouteDisposition
 		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
