@@ -73,7 +73,7 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 					mgr.reconncetTimer.Stop()
 					break
 				}
-				if len(unconnectedClients) < i  {
+				if len(unconnectedClients) < i {
 					if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
@@ -111,7 +111,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 	logger.Println("Waiting for PortConfig server")
 	serverUp := <-clientsUp
 	logger.Println("PortConfig server is up? ", serverUp)
-	resource := "PortIntfConfig"
+	resource := "PortConfig"
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var resp GetBulkResponse
 		var err error
@@ -122,10 +122,10 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(resp.StateObjects); i++ {
-				portConfig := resp.StateObjects[i].(models.PortIntfConfig)
+				portConfig := resp.StateObjects[i].(models.PortConfig)
 				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
 				if err != nil {
-					logger.Println("Failed to store PortIntfConfig in DB ", i, portConfig, err)
+					logger.Println("Failed to store PortConfig in DB ", i, portConfig, err)
 				}
 			}
 		}
