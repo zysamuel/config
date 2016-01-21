@@ -1,8 +1,11 @@
 package main
 
-var ClientInterfaces = map[string]ClientIf{"ribd": &RibClient{},
+var ClientInterfaces = map[string]ClientIf{
+	"ribd":  &RibClient{},
 	"asicd": &AsicDClient{},
 	"arpd":  &ArpDClient{},
 	"bgpd":  &BgpDClient{},
 	"lacpd": &LACPDClient{},
-	"local": &LocalClient{}}
+	"local": &LocalClient{},
+	"stpd":  &STPDClient{},
+}
