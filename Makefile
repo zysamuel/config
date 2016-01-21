@@ -19,6 +19,7 @@ SRCS=apihandlers.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
 	  localclientif.go\
+	  stpdclientif.go\
 	  dhcprelaydclientif.go\
           ospfdclientif.go\
 	  ipblockmgr.go\

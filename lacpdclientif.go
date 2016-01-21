@@ -127,6 +127,7 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.Mtu = uint16(bulkInfo.AggregationLacpStateList[i].Mtu)
 					ret_obj.SystemIdMac = string(bulkInfo.AggregationLacpStateList[i].SystemIdMac)
 					ret_obj.LagType = int32(bulkInfo.AggregationLacpStateList[i].LagType)
+					ret_obj.Ifindex = uint32(bulkInfo.AggregationLacpStateList[i].Ifindex)
 					ret_obj.LagHash = int32(bulkInfo.AggregationLacpStateList[i].LagHash)
 					ret_obj.Type = string(bulkInfo.AggregationLacpStateList[i].Type)
 					ret_obj.LacpMode = int32(bulkInfo.AggregationLacpStateList[i].LacpMode)
