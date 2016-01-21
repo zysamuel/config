@@ -3,6 +3,7 @@ package main
 import (
 	"bgpd"
 	"database/sql"
+	"fmt"
 	"models"
 	"utils/ipcutils"
 )
@@ -107,8 +108,8 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.BGPGlobalState
-			bulkInfo, _ := clnt.ClientHdl.GetBulkBGPGlobalState(bgpd.Int(currMarker), bgpd.Int(count))
-			if bulkInfo.Count != 0 {
+			bulkInfo, err := clnt.ClientHdl.GetBulkBGPGlobalState(bgpd.Int(currMarker), bgpd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
 				nextMarker = int64(bulkInfo.EndIdx)
@@ -123,6 +124,9 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					ret_obj.TotalPrefixes = uint32(bulkInfo.BGPGlobalStateList[i].TotalPrefixes)
 					objs = append(objs, ret_obj)
 				}
+
+			} else {
+				fmt.Println(err)
 			}
 		}
 		break
@@ -131,8 +135,8 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		if clnt.ClientHdl != nil {
 			var ret_obj models.BGPNeighborState
-			bulkInfo, _ := clnt.ClientHdl.GetBulkBGPNeighborState(bgpd.Int(currMarker), bgpd.Int(count))
-			if bulkInfo.Count != 0 {
+			bulkInfo, err := clnt.ClientHdl.GetBulkBGPNeighborState(bgpd.Int(currMarker), bgpd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
 				nextMarker = int64(bulkInfo.EndIdx)
@@ -142,15 +146,20 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					}
 
 					ret_obj.RouteReflectorClusterId = uint32(bulkInfo.BGPNeighborStateList[i].RouteReflectorClusterId)
+					ret_obj.MultiHopEnable = bool(bulkInfo.BGPNeighborStateList[i].MultiHopEnable)
 					ret_obj.RouteReflectorClient = bool(bulkInfo.BGPNeighborStateList[i].RouteReflectorClient)
 					ret_obj.Description = string(bulkInfo.BGPNeighborStateList[i].Description)
 					ret_obj.SessionState = uint32(bulkInfo.BGPNeighborStateList[i].SessionState)
 					ret_obj.NeighborAddress = string(bulkInfo.BGPNeighborStateList[i].NeighborAddress)
 					ret_obj.PeerAS = uint32(bulkInfo.BGPNeighborStateList[i].PeerAS)
+					ret_obj.MultiHopTTL = uint8(bulkInfo.BGPNeighborStateList[i].MultiHopTTL)
 					ret_obj.LocalAS = uint32(bulkInfo.BGPNeighborStateList[i].LocalAS)
 					ret_obj.AuthPassword = string(bulkInfo.BGPNeighborStateList[i].AuthPassword)
 					objs = append(objs, ret_obj)
 				}
+
+			} else {
+				fmt.Println(err)
 			}
 		}
 		break

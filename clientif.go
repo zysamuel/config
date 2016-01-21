@@ -398,21 +398,23 @@ func (clnt *BgpDClient) ConnectToServer() bool {
 	return true
 }
 
-func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd.BGPGlobal {
-	gConf := bgpd.NewBGPGlobal()
-	gConf.AS = int32(bgpGlobalConf.ASNum)
+func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd.BGPGlobalConfig {
+	gConf := bgpd.NewBGPGlobalConfig()
+	gConf.ASNum = int32(bgpGlobalConf.ASNum)
 	gConf.RouterId = bgpGlobalConf.RouterId
 	return gConf
 }
 
-func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig) *bgpd.BGPNeighbor {
-	nConf := bgpd.NewBGPNeighbor()
+func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig) *bgpd.BGPNeighborConfig {
+	nConf := bgpd.NewBGPNeighborConfig()
 	nConf.PeerAS = int32(bgpNeighborConf.PeerAS)
 	nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
 	nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
 	nConf.Description = bgpNeighborConf.Description
 	nConf.RouteReflectorClusterId = int32(bgpNeighborConf.RouteReflectorClusterId)
 	nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
+	nConf.MultiHopEnable = bgpNeighborConf.MultiHopEnable
+	nConf.MultiHopTTL = int8(bgpNeighborConf.MultiHopTTL)
 	return nConf
 }
 
@@ -461,13 +463,17 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		for _, item := range bgpNeighborStateBulk.StateList {
 			bgpNeighborState := models.BGPNeighborState{
-				PeerAS:          uint32(item.PeerAS),
-				LocalAS:         uint32(item.LocalAS),
-				PeerType:        models.PeerType(item.PeerType),
-				AuthPassword:    item.AuthPassword,
-				Description:     item.Description,
-				NeighborAddress: item.NeighborAddress,
-				SessionState:    uint32(item.SessionState),
+				PeerAS:                  uint32(item.PeerAS),
+				LocalAS:                 uint32(item.LocalAS),
+				PeerType:                models.PeerType(item.PeerType),
+				AuthPassword:            item.AuthPassword,
+				Description:             item.Description,
+				NeighborAddress:         item.NeighborAddress,
+				SessionState:            uint32(item.SessionState),
+				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
+				RouteReflectorClient:    item.RouteReflectorClient,
+				MultiHopEnable:          item.MultiHopEnable,
+				MultiHopTTL:             uint8(item.MultiHopTTL),
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
@@ -482,8 +488,6 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					Input:  uint32(item.Queues.Input),
 					Output: uint32(item.Queues.Output),
 				},
-				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
-				RouteReflectorClient:    item.RouteReflectorClient,
 			}
 			objs = append(objs, bgpNeighborState)
 		}
