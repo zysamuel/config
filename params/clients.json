@@ -17,11 +17,8 @@
 	{"Name":"ospfd",
 	 "Port":7000},
 	
-	{"Name":"stpd",
-	 "Port":7050},
-        
-        {"Name":"dhcprelayd",
-         "Port": 9000},
+   {"Name":"dhcprelayd",
+    "Port": 9000},
          
 	{"Name":"local",
 	  "Port":0
