@@ -2,14 +2,14 @@ package main
 
 import (
 	"arpd"
-	"bgpd"
-	"ribd"
-	"models"
-	"strconv"
-	"database/sql"
 	"asicdServices"
+	"bgpd"
+	"database/sql"
+	"models"
+	"ribd"
+	"strconv"
+	"utils/commonDefs"
 	"utils/ipcutils"
-    "utils/commonDefs"
 )
 
 type ClientIf interface {
@@ -61,7 +61,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	switch obj.(type) {
 	case models.IPV4Route:
 		if clnt.ClientHdl != nil {
-	        var ret_obj models.IPV4Route
+			var ret_obj models.IPV4Route
 			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
@@ -86,10 +86,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-	  break
+		break
 	case models.PolicyDefinitionStatement:
-	    if clnt.ClientHdl != nil {
-	    var ret_obj models.PolicyDefinitionStatement
+		if clnt.ClientHdl != nil {
+			var ret_obj models.PolicyDefinitionStatement
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmts(ribd.Int(currMarker), ribd.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
@@ -112,7 +112,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-	  break
+		break
 	}
 	return nil, objCount, nextMarker, more, objs
 }
@@ -127,7 +127,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			outIntfType = commonDefs.L2RefTypeVlan
 		} else {
 			outIntfType = commonDefs.L2RefTypePort
-        }
+		}
 		proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreateV4Route(
@@ -142,27 +142,27 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
 	case models.PolicyDefinitionSetsPrefixSet:
-	    logger.Println("PolicyDefinitionSetsPrefixSet")
+		logger.Println("PolicyDefinitionSetsPrefixSet")
 		inCfg := obj.(models.PolicyDefinitionSetsPrefixSet)
 		var cfg ribd.PolicyDefinitionSetsPrefixSet
 		//cfg.PrefixSetName = inCfg.PrefixSetName
 		//ipPrefixList := strings.Split(inCfg.IpPrefix, ",")
 		logger.Println("ipPrefixList len = ", len(inCfg.IpPrefixList))
 		cfgIpPrefixList := make([]*ribd.PolicyDefinitionSetsPrefix, 0)
-		cfgIpPrefix := make([] ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList)) 
-		for i:=0 ; i < len(inCfg.IpPrefixList);i++ {
+		cfgIpPrefix := make([]ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList))
+		for i := 0; i < len(inCfg.IpPrefixList); i++ {
 			cfgIpPrefix[i].IpPrefix = inCfg.IpPrefixList[i].IpPrefix
 			cfgIpPrefix[i].MasklengthRange = inCfg.IpPrefixList[i].MaskLengthRange
 			cfgIpPrefixList = append(cfgIpPrefixList, &cfgIpPrefix[i])
 		}
 		cfg.IpPrefixList = cfgIpPrefixList
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionSetsPrefixSet(&cfg)
 		}
 		break
 	case models.PolicyDefinitionStatement:
-	    logger.Println("PolicyDefinitionStatement")
-		inCfg := obj.(models.PolicyDefinitionStatement) 
+		logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStatement)
 		var cfg ribd.PolicyDefinitionStatement
 		cfg.Name = inCfg.Name
 		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
@@ -171,12 +171,12 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
 		cfg.RouteDisposition = inCfg.RouteDisposition
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
 		break
 	case models.PolicyDefinition:
-	    logger.Println("PolicyDefinition")
+		logger.Println("PolicyDefinition")
 		break
 	default:
 		break
@@ -253,7 +253,7 @@ func (clnt *AsicDClient) ConnectToServer() bool {
 }
 
 func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-    var objId int64
+	var objId int64
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
 		case models.Vlan: //Vlan
@@ -262,24 +262,24 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			if err != nil {
 				return int64(0), false
 			}
-            objId, _ = vlanObj.StoreObjectInDb(dbHdl)
-            return objId, true
+			objId, _ = vlanObj.StoreObjectInDb(dbHdl)
+			return objId, true
 		case models.IPv4Intf: //IPv4Intf
 			v4Intf := obj.(models.IPv4Intf)
 			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
 			if err != nil {
 				return int64(0), false
 			}
-            objId, _ = v4Intf.StoreObjectInDb(dbHdl)
-            return objId, true
+			objId, _ = v4Intf.StoreObjectInDb(dbHdl)
+			return objId, true
 		case models.IPv4Neighbor: //IPv4Neighbor
 			v4Nbr := obj.(models.IPv4Neighbor)
 			_, err := clnt.ClientHdl.CreateIPv4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
 			if err != nil {
 				return int64(0), false
 			}
-            objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
-            return objId, true
+			objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
+			return objId, true
 		}
 	}
 	return int64(0), true
@@ -376,21 +376,23 @@ func (clnt *BgpDClient) ConnectToServer() bool {
 	return true
 }
 
-func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd.BGPGlobal {
-	gConf := bgpd.NewBGPGlobal()
-	gConf.AS = int32(bgpGlobalConf.ASNum)
+func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd.BGPGlobalConfig {
+	gConf := bgpd.NewBGPGlobalConfig()
+	gConf.ASNum = int32(bgpGlobalConf.ASNum)
 	gConf.RouterId = bgpGlobalConf.RouterId
 	return gConf
 }
 
-func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig) *bgpd.BGPNeighbor {
-	nConf := bgpd.NewBGPNeighbor()
+func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig) *bgpd.BGPNeighborConfig {
+	nConf := bgpd.NewBGPNeighborConfig()
 	nConf.PeerAS = int32(bgpNeighborConf.PeerAS)
 	nConf.LocalAS = int32(bgpNeighborConf.LocalAS)
 	nConf.NeighborAddress = bgpNeighborConf.NeighborAddress
 	nConf.Description = bgpNeighborConf.Description
 	nConf.RouteReflectorClusterId = int32(bgpNeighborConf.RouteReflectorClusterId)
 	nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
+	nConf.MultiHopEnable = bgpNeighborConf.MultiHopEnable
+	nConf.MultiHopTTL = int8(bgpNeighborConf.MultiHopTTL)
 	return nConf
 }
 
@@ -439,13 +441,17 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 		for _, item := range bgpNeighborStateBulk.StateList {
 			bgpNeighborState := models.BGPNeighborState{
-				PeerAS:          uint32(item.PeerAS),
-				LocalAS:         uint32(item.LocalAS),
-				PeerType:        models.PeerType(item.PeerType),
-				AuthPassword:    item.AuthPassword,
-				Description:     item.Description,
-				NeighborAddress: item.NeighborAddress,
-				SessionState:    uint32(item.SessionState),
+				PeerAS:                  uint32(item.PeerAS),
+				LocalAS:                 uint32(item.LocalAS),
+				PeerType:                models.PeerType(item.PeerType),
+				AuthPassword:            item.AuthPassword,
+				Description:             item.Description,
+				NeighborAddress:         item.NeighborAddress,
+				SessionState:            uint32(item.SessionState),
+				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
+				RouteReflectorClient:    item.RouteReflectorClient,
+				MultiHopEnable:          item.MultiHopEnable,
+				MultiHopTTL:             uint8(item.MultiHopTTL),
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
@@ -460,8 +466,6 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					Input:  uint32(item.Queues.Input),
 					Output: uint32(item.Queues.Output),
 				},
-				RouteReflectorClusterId: uint32(item.RouteReflectorClusterId),
-				RouteReflectorClient:    item.RouteReflectorClient,
 			}
 			objs = append(objs, bgpNeighborState)
 		}
