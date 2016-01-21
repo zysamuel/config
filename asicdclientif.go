@@ -141,7 +141,9 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					}
 
 					ret_obj.IfIndex = int32(bulkInfo.VlanStateList[i].IfIndex)
+					ret_obj.VlanName = string(bulkInfo.VlanStateList[i].VlanName)
 					ret_obj.OperState = string(bulkInfo.VlanStateList[i].OperState)
+					ret_obj.VlanId = int32(bulkInfo.VlanStateList[i].VlanId)
 					objs = append(objs, ret_obj)
 				}
 
