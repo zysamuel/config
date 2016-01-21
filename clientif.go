@@ -2,14 +2,14 @@ package main
 
 import (
 	"arpd"
-	"bgpd"
-	"ribd"
-	"models"
-	"strconv"
-	"database/sql"
 	"asicdServices"
+	"bgpd"
+	"database/sql"
+	"models"
+	"ribd"
+	"strconv"
+	"utils/commonDefs"
 	"utils/ipcutils"
-    "utils/commonDefs"
 )
 
 type ClientIf interface {
@@ -61,7 +61,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	switch obj.(type) {
 	case models.IPV4Route:
 		if clnt.ClientHdl != nil {
-	        var ret_obj models.IPV4Route
+			var ret_obj models.IPV4Route
 			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
@@ -86,10 +86,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-	  break
+		break
 	case models.PolicyDefinitionStatement:
-	    if clnt.ClientHdl != nil {
-	    var ret_obj models.PolicyDefinitionStatement
+		if clnt.ClientHdl != nil {
+			var ret_obj models.PolicyDefinitionStatement
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmts(ribd.Int(currMarker), ribd.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
@@ -112,7 +112,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-	  break
+		break
 	}
 	return nil, objCount, nextMarker, more, objs
 }
@@ -127,7 +127,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			outIntfType = commonDefs.L2RefTypeVlan
 		} else {
 			outIntfType = commonDefs.L2RefTypePort
-        }
+		}
 		proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreateV4Route(
@@ -142,27 +142,27 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
 	case models.PolicyDefinitionSetsPrefixSet:
-	    logger.Println("PolicyDefinitionSetsPrefixSet")
+		logger.Println("PolicyDefinitionSetsPrefixSet")
 		inCfg := obj.(models.PolicyDefinitionSetsPrefixSet)
 		var cfg ribd.PolicyDefinitionSetsPrefixSet
 		//cfg.PrefixSetName = inCfg.PrefixSetName
 		//ipPrefixList := strings.Split(inCfg.IpPrefix, ",")
 		logger.Println("ipPrefixList len = ", len(inCfg.IpPrefixList))
 		cfgIpPrefixList := make([]*ribd.PolicyDefinitionSetsPrefix, 0)
-		cfgIpPrefix := make([] ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList)) 
-		for i:=0 ; i < len(inCfg.IpPrefixList);i++ {
+		cfgIpPrefix := make([]ribd.PolicyDefinitionSetsPrefix, len(inCfg.IpPrefixList))
+		for i := 0; i < len(inCfg.IpPrefixList); i++ {
 			cfgIpPrefix[i].IpPrefix = inCfg.IpPrefixList[i].IpPrefix
 			cfgIpPrefix[i].MasklengthRange = inCfg.IpPrefixList[i].MaskLengthRange
 			cfgIpPrefixList = append(cfgIpPrefixList, &cfgIpPrefix[i])
 		}
 		cfg.IpPrefixList = cfgIpPrefixList
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionSetsPrefixSet(&cfg)
 		}
 		break
 	case models.PolicyDefinitionStatement:
-	    logger.Println("PolicyDefinitionStatement")
-		inCfg := obj.(models.PolicyDefinitionStatement) 
+		logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStatement)
 		var cfg ribd.PolicyDefinitionStatement
 		cfg.Name = inCfg.Name
 		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
@@ -171,12 +171,12 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
 		cfg.RouteDisposition = inCfg.RouteDisposition
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
 		break
 	case models.PolicyDefinition:
-	    logger.Println("PolicyDefinition")
+		logger.Println("PolicyDefinition")
 		break
 	default:
 		break
@@ -253,33 +253,25 @@ func (clnt *AsicDClient) ConnectToServer() bool {
 }
 
 func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-    var objId int64
+	var objId int64
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
-		case models.Vlan: //Vlan
-			vlanObj := obj.(models.Vlan)
-			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
+		case models.VlanConfig: //Vlan
+			vlanObj := obj.(models.VlanConfig)
+			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.IfIndexList, vlanObj.UntagIfIndexList)
 			if err != nil {
 				return int64(0), false
 			}
-            objId, _ = vlanObj.StoreObjectInDb(dbHdl)
-            return objId, true
+			objId, _ = vlanObj.StoreObjectInDb(dbHdl)
+			return objId, true
 		case models.IPv4Intf: //IPv4Intf
 			v4Intf := obj.(models.IPv4Intf)
-			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
+			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.IfIndex)
 			if err != nil {
 				return int64(0), false
 			}
-            objId, _ = v4Intf.StoreObjectInDb(dbHdl)
-            return objId, true
-		case models.IPv4Neighbor: //IPv4Neighbor
-			v4Nbr := obj.(models.IPv4Neighbor)
-			_, err := clnt.ClientHdl.CreateIPv4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
-			if err != nil {
-				return int64(0), false
-			}
-            objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
-            return objId, true
+			objId, _ = v4Intf.StoreObjectInDb(dbHdl)
+			return objId, true
 		}
 	}
 	return int64(0), true
@@ -305,14 +297,14 @@ func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 	switch obj.(type) {
-	case models.PortIntfConfig:
+	case models.PortConfig:
 		portConfigBulk, err := clnt.ClientHdl.GetBulkPortConfig(currMarker, count)
 		if err != nil {
 			break
 		}
 		for _, elem := range portConfigBulk.PortConfigList {
-			portConfig := models.PortIntfConfig{
-				PortNum:     elem.PortNum,
+			portConfig := models.PortConfig{
+				IfIndex:     elem.IfIndex,
 				Name:        elem.Name,
 				Description: elem.Description,
 				Type:        elem.Type,
@@ -331,14 +323,14 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		nextMarker = portConfigBulk.NextMarker
 		more = portConfigBulk.More
 
-	case models.PortIntfState:
+	case models.PortState:
 		portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
 		if err != nil {
 			break
 		}
 		for _, elem := range portStateBulk.PortStateList {
-			portState := models.PortIntfState{
-				PortNum:   elem.PortNum,
+			portState := models.PortState{
+				IfIndex:   elem.IfIndex,
 				PortStats: elem.Stats,
 			}
 			objs = append(objs, portState)
@@ -347,6 +339,21 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		nextMarker = portStateBulk.NextMarker
 		more = portStateBulk.More
 
+	case models.VlanState:
+		vlanBulk, err := clnt.ClientHdl.GetBulkVlan(currMarker, count)
+		if err != nil {
+			break
+		}
+		for _, elem := range vlanBulk.VlanObjList {
+			vlanState := models.VlanState{
+				IfIndex:   elem.IfIndex,
+				OperState: elem.OperState,
+			}
+			objs = append(objs, vlanState)
+		}
+		objCount = vlanBulk.ObjCount
+		nextMarker = vlanBulk.NextMarker
+		more = vlanBulk.More
 	}
 	return err, objCount, nextMarker, more, objs
 }
