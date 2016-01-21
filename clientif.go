@@ -256,9 +256,9 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	var objId int64
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
-		case models.Vlan: //Vlan
-			vlanObj := obj.(models.Vlan)
-			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.Ports, vlanObj.PortTagType)
+		case models.VlanConfig: //Vlan
+			vlanObj := obj.(models.VlanConfig)
+			_, err := clnt.ClientHdl.CreateVlan(vlanObj.VlanId, vlanObj.IfIndexList, vlanObj.UntagIfIndexList)
 			if err != nil {
 				return int64(0), false
 			}
@@ -266,19 +266,11 @@ func (clnt *AsicDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 			return objId, true
 		case models.IPv4Intf: //IPv4Intf
 			v4Intf := obj.(models.IPv4Intf)
-			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.RouterIf, v4Intf.IfType)
+			_, err := clnt.ClientHdl.CreateIPv4Intf(v4Intf.IpAddr, v4Intf.IfIndex)
 			if err != nil {
 				return int64(0), false
 			}
 			objId, _ = v4Intf.StoreObjectInDb(dbHdl)
-			return objId, true
-		case models.IPv4Neighbor: //IPv4Neighbor
-			v4Nbr := obj.(models.IPv4Neighbor)
-			_, err := clnt.ClientHdl.CreateIPv4Neighbor(v4Nbr.IpAddr, v4Nbr.MacAddr, v4Nbr.VlanId, v4Nbr.RouterIf)
-			if err != nil {
-				return int64(0), false
-			}
-			objId, _ = v4Nbr.StoreObjectInDb(dbHdl)
 			return objId, true
 		}
 	}
@@ -305,14 +297,14 @@ func (clnt *AsicDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
 	nextMarker int64, more bool, objs []models.ConfigObj) {
 	switch obj.(type) {
-	case models.PortIntfConfig:
+	case models.PortConfig:
 		portConfigBulk, err := clnt.ClientHdl.GetBulkPortConfig(currMarker, count)
 		if err != nil {
 			break
 		}
 		for _, elem := range portConfigBulk.PortConfigList {
-			portConfig := models.PortIntfConfig{
-				PortNum:     elem.PortNum,
+			portConfig := models.PortConfig{
+				IfIndex:     elem.IfIndex,
 				Name:        elem.Name,
 				Description: elem.Description,
 				Type:        elem.Type,
@@ -331,14 +323,14 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		nextMarker = portConfigBulk.NextMarker
 		more = portConfigBulk.More
 
-	case models.PortIntfState:
+	case models.PortState:
 		portStateBulk, err := clnt.ClientHdl.GetBulkPortState(currMarker, count)
 		if err != nil {
 			break
 		}
 		for _, elem := range portStateBulk.PortStateList {
-			portState := models.PortIntfState{
-				PortNum:   elem.PortNum,
+			portState := models.PortState{
+				IfIndex:   elem.IfIndex,
 				PortStats: elem.Stats,
 			}
 			objs = append(objs, portState)
@@ -347,6 +339,21 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		nextMarker = portStateBulk.NextMarker
 		more = portStateBulk.More
 
+	case models.VlanState:
+		vlanBulk, err := clnt.ClientHdl.GetBulkVlan(currMarker, count)
+		if err != nil {
+			break
+		}
+		for _, elem := range vlanBulk.VlanObjList {
+			vlanState := models.VlanState{
+				IfIndex:   elem.IfIndex,
+				OperState: elem.OperState,
+			}
+			objs = append(objs, vlanState)
+		}
+		objCount = vlanBulk.ObjCount
+		nextMarker = vlanBulk.NextMarker
+		more = vlanBulk.More
 	}
 	return err, objCount, nextMarker, more, objs
 }
