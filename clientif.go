@@ -366,7 +366,9 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		}
 		for _, elem := range vlanBulk.VlanObjList {
 			vlanState := models.VlanState{
+				VlanId:    elem.VlanId,
 				IfIndex:   elem.IfIndex,
+				VlanName:  elem.VlanName,
 				OperState: elem.OperState,
 			}
 			objs = append(objs, vlanState)
