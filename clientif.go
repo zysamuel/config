@@ -87,9 +87,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
-	case models.PolicyDefinitionStatement:
+	case models.PolicyDefinitionStmt:
 		if clnt.ClientHdl != nil {
-			var ret_obj models.PolicyDefinitionStatement
+			var ret_obj models.PolicyDefinitionStmt
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmts(ribd.Int(currMarker), ribd.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
@@ -108,6 +108,8 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.MatchPrefixSet.MatchSetOptions = tempMatchPrefixSet.MatchSetOptions
 					ret_obj.InstallProtocolEq = getBulkInfo.PolicyDefinitionStatementList[i].InstallProtocolEq
 					ret_obj.RouteDisposition = (getBulkInfo.PolicyDefinitionStatementList[i].RouteDisposition)
+                     ret_obj.Redistribute = getBulkInfo.PolicyDefinitionStatementList[i].Redistribute
+                     ret_obj.RedistributeTargetProtocol = getBulkInfo.PolicyDefinitionStatementList[i].RedistributeTargetProtocol
 					objs = append(objs, ret_obj)
 				}
 			}
@@ -159,10 +161,11 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionSetsPrefixSet(&cfg)
 		}
-		break
-	case models.PolicyDefinitionStatement:
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.PolicyDefinitionStmt:
 		logger.Println("PolicyDefinitionStatement")
-		inCfg := obj.(models.PolicyDefinitionStatement)
+		inCfg := obj.(models.PolicyDefinitionStmt)
 		var cfg ribd.PolicyDefinitionStatement
 		cfg.Name = inCfg.Name
 		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
@@ -171,10 +174,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
 		cfg.RouteDisposition = inCfg.RouteDisposition
-		if clnt.ClientHdl != nil {
+		cfg.Redistribute = inCfg.Redistribute
+		cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
-		break
+		objId, _ :=inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
 	case models.PolicyDefinition:
 		logger.Println("PolicyDefinition")
 		break
@@ -198,6 +204,20 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 				ribd.Int(outIntf))
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyDefinitionStmt:
+	    logger.Println("PolicyDefinitionStatement")
+		inCfg := obj.(models.PolicyDefinitionStmt) 
+		var cfg ribd.PolicyDefinitionStatement
+		cfg.Name = inCfg.Name
+		var matchprefixSetInfo ribd.PolicyDefinitionStatementMatchPrefixSet
+		cfg.MatchPrefixSetInfo = &matchprefixSetInfo
+		if(clnt.ClientHdl != nil) {
+			clnt.ClientHdl.DeletePolicyDefinitionStatement(&cfg)
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
+		break
+		
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
