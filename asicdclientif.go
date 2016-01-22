@@ -3,6 +3,7 @@ package main
 import (
 	"asicdServices"
 	"database/sql"
+	"fmt"
 	"models"
 	"utils/ipcutils"
 )
@@ -36,11 +37,11 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	var objId int64
 	switch obj.(type) {
 
-	case models.Vlan:
-		data := obj.(models.Vlan)
-		conf := asicdServices.NewVlan()
-		models.ConvertasicdVlanObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateVlan(conf)
+	case models.VlanConfig:
+		data := obj.(models.VlanConfig)
+		conf := asicdServices.NewVlanConfig()
+		models.ConvertasicdVlanConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateVlanConfig(conf)
 		if err != nil {
 			return int64(0), false
 		}
@@ -58,22 +59,11 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
 
-	case models.IPv4Neighbor:
-		data := obj.(models.IPv4Neighbor)
-		conf := asicdServices.NewIPv4Neighbor()
-		models.ConvertasicdIPv4NeighborObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateIPv4Neighbor(conf)
-		if err != nil {
-			return int64(0), false
-		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
-		break
-
-	case models.PortIntfConfig:
-		data := obj.(models.PortIntfConfig)
-		conf := asicdServices.NewPortIntfConfig()
-		models.ConvertasicdPortIntfConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreatePortIntfConfig(conf)
+	case models.PortConfig:
+		data := obj.(models.PortConfig)
+		conf := asicdServices.NewPortConfig()
+		models.ConvertasicdPortConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreatePortConfig(conf)
 		if err != nil {
 			return int64(0), false
 		}
@@ -89,11 +79,11 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 
 	switch obj.(type) {
 
-	case models.Vlan:
-		data := obj.(models.Vlan)
-		conf := asicdServices.NewVlan()
-		models.ConvertasicdVlanObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteVlan(conf)
+	case models.VlanConfig:
+		data := obj.(models.VlanConfig)
+		conf := asicdServices.NewVlanConfig()
+		models.ConvertasicdVlanConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteVlanConfig(conf)
 		if err != nil {
 			return false
 		}
@@ -111,22 +101,11 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		data.DeleteObjectFromDb(objKey, dbHdl)
 		break
 
-	case models.IPv4Neighbor:
-		data := obj.(models.IPv4Neighbor)
-		conf := asicdServices.NewIPv4Neighbor()
-		models.ConvertasicdIPv4NeighborObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteIPv4Neighbor(conf)
-		if err != nil {
-			return false
-		}
-		data.DeleteObjectFromDb(objKey, dbHdl)
-		break
-
-	case models.PortIntfConfig:
-		data := obj.(models.PortIntfConfig)
-		conf := asicdServices.NewPortIntfConfig()
-		models.ConvertasicdPortIntfConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeletePortIntfConfig(conf)
+	case models.PortConfig:
+		data := obj.(models.PortConfig)
+		conf := asicdServices.NewPortConfig()
+		models.ConvertasicdPortConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeletePortConfig(conf)
 		if err != nil {
 			return false
 		}
@@ -147,12 +126,12 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
 
-	case models.PortIntfState:
+	case models.VlanState:
 
 		if clnt.ClientHdl != nil {
-			var ret_obj models.PortIntfState
-			bulkInfo, _ := clnt.ClientHdl.GetBulkPortIntfState(asicdServices.Int(currMarker), asicdServices.Int(count))
-			if bulkInfo.Count != 0 {
+			var ret_obj models.VlanState
+			bulkInfo, err := clnt.ClientHdl.GetBulkVlanState(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
 				nextMarker = int64(bulkInfo.EndIdx)
@@ -160,13 +139,69 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					for _, data := range bulkInfo.PortIntfStateList[i].PortStats {
+
+					ret_obj.IfIndex = int32(bulkInfo.VlanStateList[i].IfIndex)
+					ret_obj.VlanName = string(bulkInfo.VlanStateList[i].VlanName)
+					ret_obj.OperState = string(bulkInfo.VlanStateList[i].OperState)
+					ret_obj.VlanId = int32(bulkInfo.VlanStateList[i].VlanId)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.PortState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.PortState
+			bulkInfo, err := clnt.ClientHdl.GetBulkPortState(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.IfIndex = int32(bulkInfo.PortStateList[i].IfIndex)
+					for _, data := range bulkInfo.PortStateList[i].PortStats {
 						ret_obj.PortStats = int64(data)
 					}
 
-					ret_obj.PortNum = int32(bulkInfo.PortIntfStateList[i].PortNum)
 					objs = append(objs, ret_obj)
 				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.OspfHostEntryState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.OspfHostEntryState
+			bulkInfo, err := clnt.ClientHdl.GetBulkOspfHostEntryState(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.HostIpAddressKey = string(bulkInfo.OspfHostEntryStateList[i].HostIpAddressKey)
+					ret_obj.HostAreaID = string(bulkInfo.OspfHostEntryStateList[i].HostAreaID)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
 			}
 		}
 		break
@@ -183,17 +218,17 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	ok := false
 	switch obj.(type) {
 
-	case models.Vlan:
+	case models.VlanConfig:
 		// cast original object
-		origdata := dbObj.(models.Vlan)
-		updatedata := obj.(models.Vlan)
+		origdata := dbObj.(models.VlanConfig)
+		updatedata := obj.(models.VlanConfig)
 		// create new thrift objects
-		origconf := asicdServices.NewVlan()
-		updateconf := asicdServices.NewVlan()
-		models.ConvertasicdVlanObjToThrift(&origdata, origconf)
-		models.ConvertasicdVlanObjToThrift(&updatedata, updateconf)
+		origconf := asicdServices.NewVlanConfig()
+		updateconf := asicdServices.NewVlanConfig()
+		models.ConvertasicdVlanConfigObjToThrift(&origdata, origconf)
+		models.ConvertasicdVlanConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
+			ok, err := clnt.ClientHdl.UpdateVlanConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -221,36 +256,17 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		}
 		break
 
-	case models.IPv4Neighbor:
+	case models.PortConfig:
 		// cast original object
-		origdata := dbObj.(models.IPv4Neighbor)
-		updatedata := obj.(models.IPv4Neighbor)
+		origdata := dbObj.(models.PortConfig)
+		updatedata := obj.(models.PortConfig)
 		// create new thrift objects
-		origconf := asicdServices.NewIPv4Neighbor()
-		updateconf := asicdServices.NewIPv4Neighbor()
-		models.ConvertasicdIPv4NeighborObjToThrift(&origdata, origconf)
-		models.ConvertasicdIPv4NeighborObjToThrift(&updatedata, updateconf)
+		origconf := asicdServices.NewPortConfig()
+		updateconf := asicdServices.NewPortConfig()
+		models.ConvertasicdPortConfigObjToThrift(&origdata, origconf)
+		models.ConvertasicdPortConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPv4Neighbor(origconf, updateconf, attrSet)
-			if ok {
-				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
-			} else {
-				panic(err)
-			}
-		}
-		break
-
-	case models.PortIntfConfig:
-		// cast original object
-		origdata := dbObj.(models.PortIntfConfig)
-		updatedata := obj.(models.PortIntfConfig)
-		// create new thrift objects
-		origconf := asicdServices.NewPortIntfConfig()
-		updateconf := asicdServices.NewPortIntfConfig()
-		models.ConvertasicdPortIntfConfigObjToThrift(&origdata, origconf)
-		models.ConvertasicdPortIntfConfigObjToThrift(&updatedata, updateconf)
-		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdatePortIntfConfig(origconf, updateconf, attrSet)
+			ok, err := clnt.ClientHdl.UpdatePortConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {

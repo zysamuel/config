@@ -1,6 +1,6 @@
 RM=rm -f
 DESTDIR=$(SR_CODE_BASE)/snaproute/src/out/bin
-PARAMSDIR=$(DESTDIR)/../params
+PARAMSDIR=$(DESTDIR)/params
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
@@ -19,6 +19,7 @@ SRCS=apihandlers.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
 	  localclientif.go\
+	  stpdclientif.go\
 	  dhcprelaydclientif.go\
           ospfdclientif.go\
 	  ipblockmgr.go\
