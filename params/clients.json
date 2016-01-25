@@ -19,10 +19,13 @@
 	
 	{"Name":"stpd",
 	 "Port":7050},
+
+	{"Name":"dhcprelayd",
+	 "Port": 9000},
 	
-   	{"Name":"dhcprelayd",
-     "Port": 9000},
-         
+	{"Name":"bfdd",
+	 "Port":9050},
+
 	{"Name":"local",
 	  "Port":0
 	}
