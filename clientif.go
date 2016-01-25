@@ -427,7 +427,9 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		}
 		for _, elem := range vlanBulk.VlanObjList {
 			vlanState := models.VlanState{
+				VlanId:    elem.VlanId,
 				IfIndex:   elem.IfIndex,
+				VlanName:  elem.VlanName,
 				OperState: elem.OperState,
 			}
 			objs = append(objs, vlanState)
@@ -481,6 +483,9 @@ func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig)
 	nConf.RouteReflectorClient = bgpNeighborConf.RouteReflectorClient
 	nConf.MultiHopEnable = bgpNeighborConf.MultiHopEnable
 	nConf.MultiHopTTL = int8(bgpNeighborConf.MultiHopTTL)
+	nConf.ConnectRetryTime = int32(bgpNeighborConf.ConnectRetryTime)
+	nConf.HoldTime = int32(bgpNeighborConf.HoldTime)
+	nConf.KeepaliveTime = int32(bgpNeighborConf.KeepaliveTime)
 	return nConf
 }
 
@@ -540,6 +545,9 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 				RouteReflectorClient:    item.RouteReflectorClient,
 				MultiHopEnable:          item.MultiHopEnable,
 				MultiHopTTL:             uint8(item.MultiHopTTL),
+				ConnectRetryTime:        uint32(item.ConnectRetryTime),
+				HoldTime:                uint32(item.HoldTime),
+				KeepaliveTime:           uint32(item.KeepaliveTime),
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
