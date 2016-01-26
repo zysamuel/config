@@ -75,11 +75,47 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 }
 
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
-	logger.Println("####  ShowConfigObject called")
+	var objKey string
+	var errCode int
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	vars := mux.Vars(r)
+	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	if err != nil {
+		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
+		return
+	}
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
+			if dbObj, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl); err == nil {
+				js, err := json.Marshal(dbObj)
+				if err != nil {
+					errCode = SRRespMarshalErr
+				} else {
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					w.Write(js)
+					errCode = SRSuccess
+				}
+			}
+		}
+	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	}
+	return
 }
 
-func ConfigObjectGet(w http.ResponseWriter, r *http.Request) {
-	logger.Println("####  ConfigObjectsGet called")
+func GetStateObject(w http.ResponseWriter, r *http.Request) {
+	logger.Println("####  StateObjectGet called")
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	logger.Println("ObjectGet: resource ", resource)
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		logger.Println("ObjectGet: objHdl ", objHdl)
+		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
+			logger.Println("ObjectGet: obj ", obj)
+		}
+	}
+	http.Error(w, "TBD", http.StatusNotImplemented)
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {

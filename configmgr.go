@@ -52,7 +52,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
-			mgr.apiBase + key,
+			mgr.apiBase + key + "/" + "{objId}",
 			HandleRestRouteShowConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -70,7 +70,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Get",
 			"GET",
-			mgr.apiBase + key + "/" + "{objId}",
+			mgr.apiBase + key,
 			HandleRestRouteGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -362,13 +362,13 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		ConfigObjectGet(w, r)
+		GetStateObject(w, r)
 	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectGet(w, r)
+	GetStateObject(w, r)
 	return
 }
 
