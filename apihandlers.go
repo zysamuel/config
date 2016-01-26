@@ -78,6 +78,10 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 	logger.Println("####  ShowConfigObject called")
 }
 
+func ConfigObjectGet(w http.ResponseWriter, r *http.Request) {
+	logger.Println("####  ConfigObjectsGet called")
+}
+
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
