@@ -106,16 +106,34 @@ func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStateObject(w http.ResponseWriter, r *http.Request) {
-	logger.Println("####  StateObjectGet called")
+	var errCode int
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
-	logger.Println("ObjectGet: resource ", resource)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		logger.Println("ObjectGet: objHdl ", objHdl)
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
-			logger.Println("ObjectGet: obj ", obj)
+			stateObj, success := gMgr.objHdlMap[resource].owner.GetObject(obj)
+			if success == true {
+				js, err := json.Marshal(stateObj)
+				if err != nil {
+					errCode = SRRespMarshalErr
+				} else {
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					w.Write(js)
+					errCode = SRSuccess
+				}
+			} else {
+				errCode = SRServerError
+			}
+		} else {
+			errCode = SRObjHdlError
 		}
+	} else {
+		errCode = SRObjMapError
 	}
-	http.Error(w, "TBD", http.StatusNotImplemented)
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	}
+	return
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
