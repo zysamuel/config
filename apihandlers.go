@@ -215,32 +215,39 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
-			updateKeys, _ := GetUpdateKeys(body)
-			if len(updateKeys) == 0 {
-				errCode = SRNoContent
-				logger.Println("Nothing to configure")
+			objKey, _ := obj.GetKey()
+			_, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+			if err == nil {
+				errCode = SRAlreadyConfigured
+				logger.Println("Config object is present")
 			} else {
-				_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
-				if success == true {
-					UUId, err := StoreUuidToKeyMapInDb(obj)
-					if err == nil {
-						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-						w.WriteHeader(http.StatusCreated)
-						resp.UUId = UUId.String()
-						js, err := json.Marshal(resp)
-						if err != nil {
-							errCode = SRRespMarshalErr
+				updateKeys, _ := GetUpdateKeys(body)
+				if len(updateKeys) == 0 {
+					errCode = SRNoContent
+					logger.Println("Nothing to configure")
+				} else {
+					_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+					if success == true {
+						UUId, err := StoreUuidToKeyMapInDb(obj)
+						if err == nil {
+							w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+							w.WriteHeader(http.StatusCreated)
+							resp.UUId = UUId.String()
+							js, err := json.Marshal(resp)
+							if err != nil {
+								errCode = SRRespMarshalErr
+							} else {
+								w.Write(js)
+								errCode = SRSuccess
+							}
 						} else {
-							w.Write(js)
-							errCode = SRSuccess
+							errCode = SRIdStoreFail
+							logger.Println("Failed to store UuidToKey map ", obj, err)
 						}
 					} else {
-						errCode = SRIdStoreFail
-						logger.Println("Failed to store UuidToKey map ", obj, err)
+						errCode = SRServerError
+						logger.Println("Failed to create object ", obj)
 					}
-				} else {
-					errCode = SRServerError
-					logger.Println("Failed to create object ", obj)
 				}
 			}
 		} else {
