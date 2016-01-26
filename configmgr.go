@@ -52,7 +52,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
-			mgr.apiBase + key,
+			mgr.apiBase + key + "/" + "{objId}",
 			HandleRestRouteShowConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -68,16 +68,16 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			HandleRestRouteDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-
-		rt = ApiRoute{key + "s",
+		rt = ApiRoute{key + "Get",
 			"GET",
-			mgr.apiBase + key + "s/" + "{objId}",
+			mgr.apiBase + key,
 			HandleRestRouteGet,
 		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
 			"GET",
 			mgr.apiBase + key + "s",
-			HandleRestRouteGet,
+			HandleRestRouteBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
@@ -348,6 +348,31 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetStateObject(w, r)
+	*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	GetStateObject(w, r)
+	return
+}
+
+func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
