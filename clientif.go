@@ -308,7 +308,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtMatchProtocolCondition(&cfg)
 		}
-		break
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
 	case models.PolicyDefinitionStmtRedistributionAction:
 		logger.Println("PolicyDefinitionStmtRedistributionAction")
 		inCfg := obj.(models.PolicyDefinitionStmtRedistributionAction)
@@ -318,7 +319,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
 		}
-	    break
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
 	case models.PolicyDefinitionStmtConfig:
 		logger.Println("PolicyDefinitionStmtConfig")
 		var i int
