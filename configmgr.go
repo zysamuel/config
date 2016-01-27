@@ -1,21 +1,21 @@
 package main
 
 import (
-	"database/sql"
-	"github.com/gorilla/mux"
-	"models"
-	"net/http"
-	"path/filepath"
-	"time"
-	"os"
-	"net"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"database/sql"
 	"encoding/pem"
+	"github.com/gorilla/mux"
 	"math/big"
+	"models"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 	//"strings"
 	//"strconv"
 	//"encoding/json"
@@ -23,24 +23,24 @@ import (
 )
 
 type ConfigMgr struct {
-	clients            map[string]ClientIf
-	apiVer             string
-	apiBase            string
-	basePath           string
-	fullPath           string
-	pRestRtr           *mux.Router
-	dbHdl              *sql.DB
-	restRoutes         []ApiRoute
-	reconncetTimer     *time.Ticker
-	objHdlMap          map[string]ConfigObjInfo
-	systemReady        bool
-	users              []UserData
-	sessionId          uint64
-	sessionChan        chan uint64
+	clients        map[string]ClientIf
+	apiVer         string
+	apiBase        string
+	basePath       string
+	fullPath       string
+	pRestRtr       *mux.Router
+	dbHdl          *sql.DB
+	restRoutes     []ApiRoute
+	reconncetTimer *time.Ticker
+	objHdlMap      map[string]ConfigObjInfo
+	systemReady    bool
+	users          []UserData
+	sessionId      uint64
+	sessionChan    chan uint64
 }
 
 type LoginResponse struct {
-	SessionId     uint64     `json: "SessionId"`
+	SessionId uint64 `json: "SessionId"`
 }
 
 //
@@ -52,7 +52,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Show",
 			"GET",
-			mgr.apiBase + key,
+			mgr.apiBase + key + "/" + "{objId}",
 			HandleRestRouteShowConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -68,16 +68,16 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			HandleRestRouteDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-
-		rt = ApiRoute{key + "s",
+		rt = ApiRoute{key + "Get",
 			"GET",
-			mgr.apiBase + key + "s/" + "{objId}",
+			mgr.apiBase + key,
 			HandleRestRouteGet,
 		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
 			"GET",
 			mgr.apiBase + key + "s",
-			HandleRestRouteGet,
+			HandleRestRouteBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
@@ -163,7 +163,7 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 	addrs, _ := net.InterfaceAddrs()
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if  ipnet.IP.To4() != nil {
+			if ipnet.IP.To4() != nil {
 				template.IPAddresses = append(template.IPAddresses, ipnet.IP)
 			}
 		}
@@ -196,22 +196,22 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 }
 
 func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
-/*
-	// TODO: this will be uncommented for session authentication
-	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
-	pair := strings.SplitN(string(payload), ":", 2)
-	sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
-	if ok:= AuthenticateSessionId(sessionId); ok == false {
-		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-		return
-	}
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
-	ShowConfigObject(w, r)
-*/
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ShowConfigObject(w, r)
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -220,75 +220,75 @@ func HandleRestRouteShowConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
-/*
-	// TODO: this will be uncommented for session authentication
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
-	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
-	pair := strings.SplitN(string(payload), ":", 2)
-	// When a user logs in - pair[0] contains username and pair[1] contains password
-	// when a user logs out -  pair[0] contains username and pair[1] contains session ID
-	// All other configurations - pair[0] contains session ID
-	switch resource {
-	case "Login":
-		userName := pair[0]
-		password := pair[1]
-		if sessionId, ok := LoginUser(userName, password); ok {
-			var resp LoginResponse
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			resp.SessionId = sessionId
-			js, err := json.Marshal(resp)
-			if err != nil {
-				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
+	/*
+		// TODO: this will be uncommented for session authentication
+		resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		// When a user logs in - pair[0] contains username and pair[1] contains password
+		// when a user logs out -  pair[0] contains username and pair[1] contains session ID
+		// All other configurations - pair[0] contains session ID
+		switch resource {
+		case "Login":
+			userName := pair[0]
+			password := pair[1]
+			if sessionId, ok := LoginUser(userName, password); ok {
+				var resp LoginResponse
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(http.StatusOK)
+				resp.SessionId = sessionId
+				js, err := json.Marshal(resp)
+				if err != nil {
+					http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
+					return
+				} else {
+					w.Write(js)
+				}
+				logger.Printf("User %s logged in. Session id %d\n", userName, sessionId)
 				return
 			} else {
-				w.Write(js)
-			}
-			logger.Printf("User %s logged in. Session id %d\n", userName, sessionId)
-			return
-		} else {
-			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-			logger.Println("Login failed for user ", userName)
-			return
-		}
-	case "Logout":
-		userName := pair[0]
-		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
-		if ok := LogoutUser(userName, sessionId); ok {
-			var resp LoginResponse
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			resp.SessionId = sessionId
-			js, err := json.Marshal(resp)
-			if err != nil {
-				http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
-				return
-			} else {
-				w.Write(js)
-			}
-			logger.Printf("Logout: User %s Session %d\n", userName, sessionId)
-			return
-		} else {
-			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-			logger.Println("Logout failed for user ", userName)
-			return
-		}
-	default:
-		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
-		if sessionId != 0 {
-			if ok:= AuthenticateSessionId(sessionId); ok == false {
 				http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+				logger.Println("Login failed for user ", userName)
 				return
 			}
+		case "Logout":
+			userName := pair[0]
+			sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+			if ok := LogoutUser(userName, sessionId); ok {
+				var resp LoginResponse
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(http.StatusOK)
+				resp.SessionId = sessionId
+				js, err := json.Marshal(resp)
+				if err != nil {
+					http.Error(w, SRErrString(SRRespMarshalErr), http.StatusInternalServerError)
+					return
+				} else {
+					w.Write(js)
+				}
+				logger.Printf("Logout: User %s Session %d\n", userName, sessionId)
+				return
+			} else {
+				http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+				logger.Println("Logout failed for user ", userName)
+				return
+			}
+		default:
+			sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+			if sessionId != 0 {
+				if ok:= AuthenticateSessionId(sessionId); ok == false {
+					http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+					return
+				}
+			}
+			if CheckIfSystemIsReady(w) != true {
+				http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+				return
+			}
+			ConfigObjectCreate(w, r)
 		}
-		if CheckIfSystemIsReady(w) != true {
-			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-			return
-		}
-		ConfigObjectCreate(w, r)
-	}
-*/
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -298,22 +298,22 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
-/*
-	// TODO: this will be uncommented for session authentication
-	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
-	pair := strings.SplitN(string(payload), ":", 2)
-	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
-	if ok:= AuthenticateSessionId(sessionId); ok == false {
-		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-		return
-	}
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
-	ConfigObjectDelete(w, r)
-*/
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectDelete(w, r)
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -323,22 +323,22 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
-/*
-	// TODO: this will be uncommented for session authentication
-	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
-	pair := strings.SplitN(string(payload), ":", 2)
-	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
-	if ok:= AuthenticateSessionId(sessionId); ok == false {
-		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-		return
-	}
-	if CheckIfSystemIsReady(w) != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
-	ConfigObjectUpdate(w, r)
-*/
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectUpdate(w, r)
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
@@ -348,22 +348,47 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
-/*
-	// TODO: this will be uncommented for session authentication
-	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
-	pair := strings.SplitN(string(payload), ":", 2)
-	sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
-	if ok:= AuthenticateSessionId(sessionId); ok == false {
-		http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
-		return
-	}
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetStateObject(w, r)
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	ConfigObjectsBulkGet(w, r)
-*/
+	GetStateObject(w, r)
+	return
+}
+
+func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectsBulkGet(w, r)
+	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return

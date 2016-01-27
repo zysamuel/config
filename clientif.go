@@ -24,6 +24,7 @@ type ClientIf interface {
 		more bool,
 		objs []models.ConfigObj)
 	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool
+	GetObject(obj models.ConfigObj) (models.ConfigObj, bool)
 }
 
 type RibClient struct {
@@ -50,6 +51,35 @@ func (clnt *RibClient) ConnectToServer() bool {
 		}
 	}
 	return true
+}
+
+func (clnt *RibClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+
+	switch obj.(type) {
+
+	case models.IPV4Route:
+		var retObj models.IPV4Route
+		data := obj.(models.IPV4Route)
+		routeInfo, err := clnt.ClientHdl.GetRoute(data.DestinationNw, data.NetworkMask)
+		if err == nil {
+			retObj.DestinationNw = routeInfo.Ipaddr
+			retObj.NetworkMask = routeInfo.Mask
+			retObj.NextHopIp = routeInfo.NextHopIp
+			retObj.Cost = uint32(routeInfo.Metric)
+			retObj.Protocol = strconv.Itoa(int(routeInfo.Prototype))
+			if routeInfo.NextHopIfType == commonDefs.L2RefTypeVlan {
+				retObj.OutgoingIntfType = "VLAN"
+			} else {
+				retObj.OutgoingIntfType = "PHY"
+			}
+			retObj.OutgoingInterface = strconv.Itoa(int(routeInfo.IfIndex))
+			return retObj, true
+		}
+		break
+	default:
+		break
+	}
+	return nil, false
 }
 
 func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
@@ -269,23 +299,23 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
-    case models.PolicyDefinitionStmtMatchProtocolCondition:
-	    logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
+	case models.PolicyDefinitionStmtMatchProtocolCondition:
+		logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
 		inCfg := obj.(models.PolicyDefinitionStmtMatchProtocolCondition)
 		var cfg ribd.PolicyDefinitionStmtMatchProtocolCondition
 		cfg.Name = inCfg.Name
 		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtMatchProtocolCondition(&cfg)
 		}
-	    break
+		break
 	case models.PolicyDefinitionStmtRedistributionAction:
-	    logger.Println("PolicyDefinitionStmtRedistributionAction")
+		logger.Println("PolicyDefinitionStmtRedistributionAction")
 		inCfg := obj.(models.PolicyDefinitionStmtRedistributionAction)
 		var cfg ribd.PolicyDefinitionStmtRedistributionAction
 		cfg.Name = inCfg.Name
 		cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
 		}
 	    break
@@ -297,13 +327,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Name = inCfg.Name
 		logger.Println("Number of conditons = ", len(inCfg.Conditions))
 		conditions := make([]string, 0)
-		for i = 0;i<len(inCfg.Conditions);i++ {
+		for i = 0; i < len(inCfg.Conditions); i++ {
 			conditions = append(conditions, inCfg.Conditions[i])
 		}
 		cfg.Conditions = conditions
 		logger.Println("Number of actions = ", len(inCfg.Actions))
 		actions := make([]string, 0)
-		for i = 0;i<len(inCfg.Actions);i++ {
+		for i = 0; i < len(inCfg.Actions); i++ {
 			actions = append(actions, inCfg.Actions[i])
 		}
 		cfg.Actions = actions
@@ -312,7 +342,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
-		objId, _ :=inCfg.StoreObjectInDb(dbHdl)
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
 	case models.PolicyDefinition:
 		logger.Println("PolicyDefinition")
@@ -343,12 +373,12 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		inCfg := obj.(models.PolicyDefinitionStmtConfig) 
 		var cfg ribd.PolicyDefinitionStmtConfig
 		cfg.Name = inCfg.Name
-		if(clnt.ClientHdl != nil) {
+		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.DeletePolicyDefinitionStatement(&cfg)
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
-		
+
 		//default:
 		//	logger.Println("OBJECT Type is ", obj.(type))
 	}
@@ -780,4 +810,40 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		}
 	}
 	return nil, objCount, nextMarker, more, objs
+}
+
+func (clnt *ArpDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *AsicDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *BgpDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *LACPDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *DHCPRELAYDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *LocalClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *OSPFDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *STPDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
+}
+
+func (clnt *BFDDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+	return nil, false
 }

@@ -23,7 +23,8 @@ SRCS=apihandlers.go\
 	  dhcprelaydclientif.go\
           ospfdclientif.go\
 	  ipblockmgr.go\
-	  usermgmt.go
+	  usermgmt.go\
+	  bfddclientif.go
 #	  portdclientif.go\
 
 COMP_NAME=confd

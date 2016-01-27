@@ -75,7 +75,65 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 }
 
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
-	logger.Println("####  ShowConfigObject called")
+	var objKey string
+	var errCode int
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	vars := mux.Vars(r)
+	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	if err != nil {
+		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
+		return
+	}
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
+			if dbObj, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl); err == nil {
+				js, err := json.Marshal(dbObj)
+				if err != nil {
+					errCode = SRRespMarshalErr
+				} else {
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					w.Write(js)
+					errCode = SRSuccess
+				}
+			}
+		}
+	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	}
+	return
+}
+
+func GetStateObject(w http.ResponseWriter, r *http.Request) {
+	var errCode int
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
+			stateObj, success := gMgr.objHdlMap[resource].owner.GetObject(obj)
+			if success == true {
+				js, err := json.Marshal(stateObj)
+				if err != nil {
+					errCode = SRRespMarshalErr
+				} else {
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					w.Write(js)
+					errCode = SRSuccess
+				}
+			} else {
+				errCode = SRServerError
+			}
+		} else {
+			errCode = SRObjHdlError
+		}
+	} else {
+		errCode = SRObjMapError
+	}
+	if errCode != SRSuccess {
+		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+	}
+	return
 }
 
 func ConfigObjectsBulkGet(w http.ResponseWriter, r *http.Request) {
@@ -157,32 +215,39 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
-			updateKeys, _ := GetUpdateKeys(body)
-			if len(updateKeys) == 0 {
-				errCode = SRNoContent
-				logger.Println("Nothing to configure")
+			objKey, _ := obj.GetKey()
+			_, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+			if err == nil {
+				errCode = SRAlreadyConfigured
+				logger.Println("Config object is present")
 			} else {
-				_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
-				if success == true {
-					UUId, err := StoreUuidToKeyMapInDb(obj)
-					if err == nil {
-						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-						w.WriteHeader(http.StatusCreated)
-						resp.UUId = UUId.String()
-						js, err := json.Marshal(resp)
-						if err != nil {
-							errCode = SRRespMarshalErr
+				updateKeys, _ := GetUpdateKeys(body)
+				if len(updateKeys) == 0 {
+					errCode = SRNoContent
+					logger.Println("Nothing to configure")
+				} else {
+					_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+					if success == true {
+						UUId, err := StoreUuidToKeyMapInDb(obj)
+						if err == nil {
+							w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+							w.WriteHeader(http.StatusCreated)
+							resp.UUId = UUId.String()
+							js, err := json.Marshal(resp)
+							if err != nil {
+								errCode = SRRespMarshalErr
+							} else {
+								w.Write(js)
+								errCode = SRSuccess
+							}
 						} else {
-							w.Write(js)
-							errCode = SRSuccess
+							errCode = SRIdStoreFail
+							logger.Println("Failed to store UuidToKey map ", obj, err)
 						}
 					} else {
-						errCode = SRIdStoreFail
-						logger.Println("Failed to store UuidToKey map ", obj, err)
+						errCode = SRServerError
+						logger.Println("Failed to create object ", obj)
 					}
-				} else {
-					errCode = SRServerError
-					logger.Println("Failed to create object ", obj)
 				}
 			}
 		} else {
