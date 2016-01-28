@@ -117,6 +117,29 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
+	case models.IPV4RouteState:
+		if clnt.ClientHdl != nil {
+			var ret_obj models.IPV4RouteState
+			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
+			if routesInfo.Count != 0 {
+				objCount = int64(routesInfo.Count)
+				more = bool(routesInfo.More)
+				nextMarker = int64(routesInfo.EndIdx)
+				for i := 0; i < int(routesInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
+					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+					ret_obj.PolicyList = make([]string,0)
+					for j:=0;j<len(routesInfo.RouteList[i].PolicyList);j++ {
+						ret_obj.PolicyList = append(ret_obj.PolicyList, routesInfo.RouteList[i].PolicyList[j])
+					}
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
 		
 /*    case models.PolicyDefinitionStmtMatchProtocolCondition:
 	    logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
@@ -221,6 +244,8 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.Name = getBulkInfo.PolicyDefinitionStmtStateList[i].Name
 					ret_obj.Import = getBulkInfo.PolicyDefinitionStmtStateList[i].Import
 					ret_obj.Export = getBulkInfo.PolicyDefinitionStmtStateList[i].Export
+					ret_obj.HitCounter = int(getBulkInfo.PolicyDefinitionStmtStateList[i].HitCounter)
+					ret_obj.MatchConditions = getBulkInfo.PolicyDefinitionStmtStateList[i].MatchConditions
                      ret_obj.Conditions = make([]string,0)
 					for j = 0;j<len(getBulkInfo.PolicyDefinitionStmtStateList[i].Conditions);j++ {
 						ret_obj.Conditions = append(ret_obj.Conditions,getBulkInfo.PolicyDefinitionStmtStateList[i].Conditions[j])
@@ -228,6 +253,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
                      ret_obj.Actions = make([]string,0)
 					for j = 0;j<len(getBulkInfo.PolicyDefinitionStmtStateList[i].Actions);j++ {
 						ret_obj.Actions = append(ret_obj.Actions,getBulkInfo.PolicyDefinitionStmtStateList[i].Actions[j])
+					}
+                     ret_obj.IpPrefixList = make([]string,0)
+					for j = 0;j<len(getBulkInfo.PolicyDefinitionStmtStateList[i].IpPrefixList);j++ {
+						ret_obj.IpPrefixList = append(ret_obj.IpPrefixList,getBulkInfo.PolicyDefinitionStmtStateList[i].IpPrefixList[j])
 					}
 					objs = append(objs, ret_obj)
 				}
@@ -316,6 +345,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var cfg ribd.PolicyDefinitionStmtRedistributionAction
 		cfg.Name = inCfg.Name
 		cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+		cfg.Redistribute = inCfg.Redistribute
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
 		}
@@ -341,6 +371,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Actions = actions
 		cfg.Export = inCfg.Export
 		cfg.Import = inCfg.Import
+		cfg.MatchConditions = inCfg.MatchConditions
 		if(clnt.ClientHdl != nil) {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
 		}
