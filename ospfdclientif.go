@@ -594,6 +594,44 @@ func (clnt *OSPFDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 		}
 		break
 
+	case models.OspfGlobalState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.OspfGlobalState
+			bulkInfo, err := clnt.ClientHdl.GetBulkOspfGlobalState(ospfd.Int(currMarker), ospfd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.DiscontinuityTime = uint32(bulkInfo.OspfGlobalStateList[i].DiscontinuityTime)
+					ret_obj.RestartStatus = int32(bulkInfo.OspfGlobalStateList[i].RestartStatus)
+					ret_obj.RestartAge = uint32(bulkInfo.OspfGlobalStateList[i].RestartAge)
+					ret_obj.StubRouterSupport = bool(bulkInfo.OspfGlobalStateList[i].StubRouterSupport)
+					ret_obj.AsLsaCount = uint32(bulkInfo.OspfGlobalStateList[i].AsLsaCount)
+					ret_obj.OpaqueLsaSupport = bool(bulkInfo.OspfGlobalStateList[i].OpaqueLsaSupport)
+					ret_obj.OriginateNewLsas = uint32(bulkInfo.OspfGlobalStateList[i].OriginateNewLsas)
+					ret_obj.VersionNumber = int32(bulkInfo.OspfGlobalStateList[i].VersionNumber)
+					ret_obj.RestartExitReason = int32(bulkInfo.OspfGlobalStateList[i].RestartExitReason)
+					ret_obj.RouterIdKey = string(bulkInfo.OspfGlobalStateList[i].RouterIdKey)
+					ret_obj.AreaBdrRtrStatus = bool(bulkInfo.OspfGlobalStateList[i].AreaBdrRtrStatus)
+					ret_obj.ExternLsaCount = uint32(bulkInfo.OspfGlobalStateList[i].ExternLsaCount)
+					ret_obj.RxNewLsas = uint32(bulkInfo.OspfGlobalStateList[i].RxNewLsas)
+					ret_obj.AsLsaCksumSum = uint32(bulkInfo.OspfGlobalStateList[i].AsLsaCksumSum)
+					ret_obj.ExternLsaCksumSum = int32(bulkInfo.OspfGlobalStateList[i].ExternLsaCksumSum)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
 	default:
 		break
 	}
