@@ -308,6 +308,25 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
+	case models.PolicyDefinitionStmtMatchPrefixSetCondition:
+	    logger.Println("PolicyDefinitionStmtMatchPrefixSetCondition")
+		inCfg := obj.(models.PolicyDefinitionStmtMatchPrefixSetCondition)
+        var cfg ribd.PolicyDefinitionStmtMatchPrefixSetCondition
+		if len(inCfg.PrefixSet) > 0 && len(inCfg.Prefix.IpPrefix) > 0 {
+			logger.Println("cannot set both prefix set name and a prefix")
+			return int64(0), true
+		}
+		cfg.Name = inCfg.Name
+		cfg.PrefixSet = inCfg.PrefixSet
+		var cfgIpPrefix ribd.PolicyDefinitionSetsPrefix
+		cfgIpPrefix.IpPrefix = inCfg.Prefix.IpPrefix
+		cfgIpPrefix.MasklengthRange = inCfg.Prefix.MaskLengthRange
+		cfg.Prefix = &cfgIpPrefix
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreatePolicyDefinitionStmtMatchPrefixSetCondition(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
 	case models.PolicyDefinitionSetsPrefixSet:
 		logger.Println("PolicyDefinitionSetsPrefixSet")
 		inCfg := obj.(models.PolicyDefinitionSetsPrefixSet)
@@ -348,6 +367,17 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Redistribute = inCfg.Redistribute
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.PolicyDefinitionStmtRouteDispositionAction:
+		logger.Println("PolicyDefinitionStmtRouteDispositionAction")
+		inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
+		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction
+		cfg.Name = inCfg.Name
+		cfg.RouteDisposition = inCfg.RouteDisposition
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreatePolicyDefinitionStmtRouteDispositionAction(&cfg)
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
