@@ -119,9 +119,10 @@ func (clnt *BFDDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					}
 
 					ret_obj.NumUpSessions = uint32(bulkInfo.BfdGlobalStateList[i].NumUpSessions)
-					ret_obj.NumAdminDownSessions = uint32(bulkInfo.BfdGlobalStateList[i].NumAdminDownSessions)
 					ret_obj.Enable = bool(bulkInfo.BfdGlobalStateList[i].Enable)
 					ret_obj.NumDownSessions = uint32(bulkInfo.BfdGlobalStateList[i].NumDownSessions)
+					ret_obj.NumAdminDownSessions = uint32(bulkInfo.BfdGlobalStateList[i].NumAdminDownSessions)
+					ret_obj.NumInterfaces = uint32(bulkInfo.BfdGlobalStateList[i].NumInterfaces)
 					ret_obj.NumTotalSessions = uint32(bulkInfo.BfdGlobalStateList[i].NumTotalSessions)
 					objs = append(objs, ret_obj)
 				}
