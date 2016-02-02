@@ -831,6 +831,16 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			}
 			bgpNeighborConf.DeleteObjectFromDb(objKey, dbHdl)
 
+		case models.BGPPeerGroup:
+			logger.Println("BgpDClient: BGPPeerGroup delete")
+			bgpPeerGroup := obj.(models.BGPPeerGroup)
+			logger.Println("BgpDClient: BGPPeerGroup delete - %s", bgpPeerGroup)
+			_, err := clnt.ClientHdl.DeleteBGPPeerGroup(bgpPeerGroup.Name)
+			if err != nil {
+				return false
+			}
+			bgpPeerGroup.DeleteObjectFromDb(objKey, dbHdl)
+
 		default:
 			return false
 		}
@@ -864,6 +874,18 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 				return false
 			}
 			origBgpNeighborConf.UpdateObjectInDb(obj, attrSet, dbHdl)
+
+		case models.BGPPeerGroup:
+			logger.Println("BgpDClient: BGPPeerGroup update")
+			origBgpPeerGroup := obj.(models.BGPPeerGroup)
+			origGroup := convertBGPPeerGroupToThriftObj(origBgpPeerGroup)
+			updatedBgpPeerGroup := obj.(models.BGPPeerGroup)
+			updatedGroup := convertBGPPeerGroupToThriftObj(updatedBgpPeerGroup)
+			_, err := clnt.ClientHdl.UpdateBGPPeerGroup(origGroup, updatedGroup, attrSet)
+			if err != nil {
+				return false
+			}
+			origBgpPeerGroup.UpdateObjectInDb(obj, attrSet, dbHdl)
 
 		default:
 			return false
