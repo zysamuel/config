@@ -21,11 +21,11 @@ SRCS=apihandlers.go\
 	  localclientif.go\
 	  stpdclientif.go\
 	  dhcprelaydclientif.go\
-          ospfdclientif.go\
+      ospfdclientif.go\
 	  ipblockmgr.go\
 	  usermgmt.go\
-	  bfddclientif.go
-#	  portdclientif.go\
+	  bfddclientif.go\
+	  asicdclientif.go
 
 COMP_NAME=confd
 all: exe install 

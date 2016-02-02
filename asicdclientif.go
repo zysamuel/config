@@ -37,11 +37,11 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	var objId int64
 	switch obj.(type) {
 
-	case models.VlanConfig:
-		data := obj.(models.VlanConfig)
-		conf := asicdServices.NewVlanConfig()
-		models.ConvertasicdVlanConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateVlanConfig(conf)
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateVlan(conf)
 		if err != nil {
 			return int64(0), false
 		}
@@ -79,11 +79,11 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 
 	switch obj.(type) {
 
-	case models.VlanConfig:
-		data := obj.(models.VlanConfig)
-		conf := asicdServices.NewVlanConfig()
-		models.ConvertasicdVlanConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteVlanConfig(conf)
+	case models.Vlan:
+		data := obj.(models.Vlan)
+		conf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteVlan(conf)
 		if err != nil {
 			return false
 		}
@@ -123,14 +123,14 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	more bool,
 	objs []models.ConfigObj) {
 
-	logger.Println("### Get Bulk request called with", currMarker, count)
+	logger.Println("### Get Bulk request called with", currMarker, count, obj)
 	switch obj.(type) {
 
-	case models.VlanState:
+	case models.Vlan:
 
 		if clnt.ClientHdl != nil {
-			var ret_obj models.VlanState
-			bulkInfo, err := clnt.ClientHdl.GetBulkVlanState(asicdServices.Int(currMarker), asicdServices.Int(count))
+			var ret_obj models.Vlan
+			bulkInfo, err := clnt.ClientHdl.GetBulkVlan(asicdServices.Int(currMarker), asicdServices.Int(count))
 			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
@@ -140,10 +140,70 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 						objs = make([]models.ConfigObj, 0)
 					}
 
-					ret_obj.IfIndex = int32(bulkInfo.VlanStateList[i].IfIndex)
-					ret_obj.VlanName = string(bulkInfo.VlanStateList[i].VlanName)
-					ret_obj.OperState = string(bulkInfo.VlanStateList[i].OperState)
-					ret_obj.VlanId = int32(bulkInfo.VlanStateList[i].VlanId)
+					ret_obj.IfIndexList = string(bulkInfo.VlanList[i].IfIndexList)
+					ret_obj.VlanName = string(bulkInfo.VlanList[i].VlanName)
+					ret_obj.UntagIfIndexList = string(bulkInfo.VlanList[i].UntagIfIndexList)
+					ret_obj.IfIndex = int32(bulkInfo.VlanList[i].IfIndex)
+					ret_obj.OperState = string(bulkInfo.VlanList[i].OperState)
+					ret_obj.VlanId = int32(bulkInfo.VlanList[i].VlanId)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.IPv4Intf:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.IPv4Intf
+			bulkInfo, err := clnt.ClientHdl.GetBulkIPv4Intf(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.IfIndex = int32(bulkInfo.IPv4IntfList[i].IfIndex)
+					ret_obj.IpAddr = string(bulkInfo.IPv4IntfList[i].IpAddr)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.PortConfig:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.PortConfig
+			bulkInfo, err := clnt.ClientHdl.GetBulkPortConfig(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.PhyIntfType = string(bulkInfo.PortConfigList[i].PhyIntfType)
+					ret_obj.AdminState = string(bulkInfo.PortConfigList[i].AdminState)
+					ret_obj.MacAddr = string(bulkInfo.PortConfigList[i].MacAddr)
+					ret_obj.PortNum = int32(bulkInfo.PortConfigList[i].PortNum)
+					ret_obj.Description = string(bulkInfo.PortConfigList[i].Description)
+					ret_obj.Duplex = string(bulkInfo.PortConfigList[i].Duplex)
+					ret_obj.Autoneg = string(bulkInfo.PortConfigList[i].Autoneg)
+					ret_obj.Speed = int32(bulkInfo.PortConfigList[i].Speed)
+					ret_obj.MediaType = string(bulkInfo.PortConfigList[i].MediaType)
+					ret_obj.Mtu = int32(bulkInfo.PortConfigList[i].Mtu)
 					objs = append(objs, ret_obj)
 				}
 
@@ -167,36 +227,19 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 						objs = make([]models.ConfigObj, 0)
 					}
 
+					ret_obj.IfInDiscards = int64(bulkInfo.PortStateList[i].IfInDiscards)
+					ret_obj.OperState = string(bulkInfo.PortStateList[i].OperState)
+					ret_obj.IfInErrors = int64(bulkInfo.PortStateList[i].IfInErrors)
+					ret_obj.PortNum = int32(bulkInfo.PortStateList[i].PortNum)
+					ret_obj.Name = string(bulkInfo.PortStateList[i].Name)
+					ret_obj.IfInOctets = int64(bulkInfo.PortStateList[i].IfInOctets)
+					ret_obj.IfInUcastPkts = int64(bulkInfo.PortStateList[i].IfInUcastPkts)
+					ret_obj.IfOutUcastPkts = int64(bulkInfo.PortStateList[i].IfOutUcastPkts)
+					ret_obj.IfOutOctets = int64(bulkInfo.PortStateList[i].IfOutOctets)
+					ret_obj.IfOutErrors = int64(bulkInfo.PortStateList[i].IfOutErrors)
+					ret_obj.IfInUnknownProtos = int64(bulkInfo.PortStateList[i].IfInUnknownProtos)
 					ret_obj.IfIndex = int32(bulkInfo.PortStateList[i].IfIndex)
-					for _, data := range bulkInfo.PortStateList[i].PortStats {
-						ret_obj.PortStats = int64(data)
-					}
-
-					objs = append(objs, ret_obj)
-				}
-
-			} else {
-				fmt.Println(err)
-			}
-		}
-		break
-
-	case models.OspfHostEntryState:
-
-		if clnt.ClientHdl != nil {
-			var ret_obj models.OspfHostEntryState
-			bulkInfo, err := clnt.ClientHdl.GetBulkOspfHostEntryState(asicdServices.Int(currMarker), asicdServices.Int(count))
-			if bulkInfo != nil && bulkInfo.Count != 0 {
-				objCount = int64(bulkInfo.Count)
-				more = bool(bulkInfo.More)
-				nextMarker = int64(bulkInfo.EndIdx)
-				for i := 0; i < int(bulkInfo.Count); i++ {
-					if len(objs) == 0 {
-						objs = make([]models.ConfigObj, 0)
-					}
-
-					ret_obj.HostIpAddressKey = string(bulkInfo.OspfHostEntryStateList[i].HostIpAddressKey)
-					ret_obj.HostAreaID = string(bulkInfo.OspfHostEntryStateList[i].HostAreaID)
+					ret_obj.IfOutDiscards = int64(bulkInfo.PortStateList[i].IfOutDiscards)
 					objs = append(objs, ret_obj)
 				}
 
@@ -218,17 +261,17 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	ok := false
 	switch obj.(type) {
 
-	case models.VlanConfig:
+	case models.Vlan:
 		// cast original object
-		origdata := dbObj.(models.VlanConfig)
-		updatedata := obj.(models.VlanConfig)
+		origdata := dbObj.(models.Vlan)
+		updatedata := obj.(models.Vlan)
 		// create new thrift objects
-		origconf := asicdServices.NewVlanConfig()
-		updateconf := asicdServices.NewVlanConfig()
-		models.ConvertasicdVlanConfigObjToThrift(&origdata, origconf)
-		models.ConvertasicdVlanConfigObjToThrift(&updatedata, updateconf)
+		origconf := asicdServices.NewVlan()
+		updateconf := asicdServices.NewVlan()
+		models.ConvertasicdVlanObjToThrift(&origdata, origconf)
+		models.ConvertasicdVlanObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateVlanConfig(origconf, updateconf, attrSet)
+			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
