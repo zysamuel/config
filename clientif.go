@@ -131,12 +131,45 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					}
 					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
+					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
+					ret_obj.PolicyList = make([]string,0)
+			        routePolicyListInfo := ""
+			        if routesInfo.RouteList[i].PolicyList != nil {
+			          for k,v := range routesInfo.RouteList[i].PolicyList {
+				        routePolicyListInfo = k+":"
+			            for vv:=0;vv<len(v);vv++ {
+			              routePolicyListInfo = routePolicyListInfo + v[vv]+"," 	
+			            }
+			            ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
+			          }	
+			        }
+					/*for j:=0;j<len(routesInfo.RouteList[i].PolicyList);j++ {
 					ret_obj.PolicyList = make([]string, 0)
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					for j := 0; j < len(routesInfo.RouteList[i].PolicyList); j++ {
 						ret_obj.PolicyList = append(ret_obj.PolicyList, routesInfo.RouteList[i].PolicyList[j])
+					}*/
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
+	case models.IPV4EventState:
+		if clnt.ClientHdl != nil {
+			var ret_obj models.IPV4EventState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkIPV4EventState(ribd.Int(currMarker), ribd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
 					}
+					ret_obj.TimeStamp = getBulkInfo.IPV4EventStateList[i].TimeStamp
+					ret_obj.EventInfo = getBulkInfo.IPV4EventStateList[i].EventInfo
 					objs = append(objs, ret_obj)
 				}
 			}
@@ -489,6 +522,16 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.DeletePolicyDefinitionStatement(&cfg)
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyDefinitionConfig:
+	    logger.Println("PolicyDefinition")
+		inCfg := obj.(models.PolicyDefinitionConfig) 
+		var cfg ribd.PolicyDefinitionConfig
+		cfg.Name = inCfg.Name
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.DeletePolicyDefinition(&cfg)
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
