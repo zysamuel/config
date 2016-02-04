@@ -133,7 +133,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
-					ret_obj.PolicyList = make([]string,0)
+					/*ret_obj.PolicyList = make([]string,0)
 			        routePolicyListInfo := ""
 			        if routesInfo.RouteList[i].PolicyList != nil {
 			          for k,v := range routesInfo.RouteList[i].PolicyList {
@@ -143,14 +143,11 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			            }
 			            ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
 			          }	
-			        }
-					/*for j:=0;j<len(routesInfo.RouteList[i].PolicyList);j++ {
+			        }*/
 					ret_obj.PolicyList = make([]string, 0)
-					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
-					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					for j := 0; j < len(routesInfo.RouteList[i].PolicyList); j++ {
 						ret_obj.PolicyList = append(ret_obj.PolicyList, routesInfo.RouteList[i].PolicyList[j])
-					}*/
+					}
 					objs = append(objs, ret_obj)
 				}
 			}
