@@ -742,7 +742,24 @@ func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig)
 	nConf.ConnectRetryTime = int32(bgpNeighborConf.ConnectRetryTime)
 	nConf.HoldTime = int32(bgpNeighborConf.HoldTime)
 	nConf.KeepaliveTime = int32(bgpNeighborConf.KeepaliveTime)
+	nConf.PeerGroup = bgpNeighborConf.PeerGroup
 	return nConf
+}
+
+func convertBGPPeerGroupToThriftObj(bgpPeerGroup models.BGPPeerGroup) *bgpd.BGPPeerGroup {
+	peerGroup := bgpd.NewBGPPeerGroup()
+	peerGroup.PeerAS = int32(bgpPeerGroup.PeerAS)
+	peerGroup.LocalAS = int32(bgpPeerGroup.LocalAS)
+	peerGroup.Name = bgpPeerGroup.Name
+	peerGroup.Description = bgpPeerGroup.Description
+	peerGroup.RouteReflectorClusterId = int32(bgpPeerGroup.RouteReflectorClusterId)
+	peerGroup.RouteReflectorClient = bgpPeerGroup.RouteReflectorClient
+	peerGroup.MultiHopEnable = bgpPeerGroup.MultiHopEnable
+	peerGroup.MultiHopTTL = int8(bgpPeerGroup.MultiHopTTL)
+	peerGroup.ConnectRetryTime = int32(bgpPeerGroup.ConnectRetryTime)
+	peerGroup.HoldTime = int32(bgpPeerGroup.HoldTime)
+	peerGroup.KeepaliveTime = int32(bgpPeerGroup.KeepaliveTime)
+	return peerGroup
 }
 
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
@@ -769,6 +786,16 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 				return int64(0), false
 			}
 			objId, _ = bgpNeighborConf.StoreObjectInDb(dbHdl)
+			retVal = true
+
+		case models.BGPPeerGroup:
+			bgpPeerGroup := obj.(models.BGPPeerGroup)
+			peerGroup := convertBGPPeerGroupToThriftObj(bgpPeerGroup)
+			_, err := clnt.ClientHdl.CreateBGPPeerGroup(peerGroup)
+			if err != nil {
+				return int64(0), false
+			}
+			objId, _ = bgpPeerGroup.StoreObjectInDb(dbHdl)
 			retVal = true
 		}
 	}
@@ -844,6 +871,16 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			}
 			bgpNeighborConf.DeleteObjectFromDb(objKey, dbHdl)
 
+		case models.BGPPeerGroup:
+			logger.Println("BgpDClient: BGPPeerGroup delete")
+			bgpPeerGroup := obj.(models.BGPPeerGroup)
+			logger.Println("BgpDClient: BGPPeerGroup delete - %s", bgpPeerGroup)
+			_, err := clnt.ClientHdl.DeleteBGPPeerGroup(bgpPeerGroup.Name)
+			if err != nil {
+				return false
+			}
+			bgpPeerGroup.DeleteObjectFromDb(objKey, dbHdl)
+
 		default:
 			return false
 		}
@@ -877,6 +914,18 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 				return false
 			}
 			origBgpNeighborConf.UpdateObjectInDb(obj, attrSet, dbHdl)
+
+		case models.BGPPeerGroup:
+			logger.Println("BgpDClient: BGPPeerGroup update")
+			origBgpPeerGroup := obj.(models.BGPPeerGroup)
+			origGroup := convertBGPPeerGroupToThriftObj(origBgpPeerGroup)
+			updatedBgpPeerGroup := obj.(models.BGPPeerGroup)
+			updatedGroup := convertBGPPeerGroupToThriftObj(updatedBgpPeerGroup)
+			_, err := clnt.ClientHdl.UpdateBGPPeerGroup(origGroup, updatedGroup, attrSet)
+			if err != nil {
+				return false
+			}
+			origBgpPeerGroup.UpdateObjectInDb(obj, attrSet, dbHdl)
 
 		default:
 			return false
