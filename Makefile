@@ -15,15 +15,15 @@ SRCS=apihandlers.go\
 	  restroutes.go\
 	  configmgr.go\
 	  dbif.go\
+	  ipblockmgr.go\
+	  usermgmt.go\
 	  main.go\
 	  remotebgppeer.go\
 	  lacpdclientif.go\
 	  localclientif.go\
 	  stpdclientif.go\
 	  dhcprelaydclientif.go\
-      ospfdclientif.go\
-	  ipblockmgr.go\
-	  usermgmt.go\
+	  ospfdclientif.go\
 	  bfddclientif.go\
 	  asicdclientif.go
 
