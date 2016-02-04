@@ -58,6 +58,17 @@ func (clnt *BGPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
+
+	case models.BGPPeerGroup:
+		data := obj.(models.BGPPeerGroup)
+		conf := bgpd.NewBGPPeerGroup()
+		models.ConvertbgpdBGPPeerGroupObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateBGPPeerGroup(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
 	default:
 		break
 	}
@@ -84,6 +95,17 @@ func (clnt *BGPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 		conf := bgpd.NewBGPNeighborConfig()
 		models.ConvertbgpdBGPNeighborConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteBGPNeighborConfig(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.BGPPeerGroup:
+		data := obj.(models.BGPPeerGroup)
+		conf := bgpd.NewBGPPeerGroup()
+		models.ConvertbgpdBGPPeerGroupObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteBGPPeerGroup(conf)
 		if err != nil {
 			return false
 		}
@@ -146,15 +168,18 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					}
 
 					ret_obj.RouteReflectorClusterId = uint32(bulkInfo.BGPNeighborStateList[i].RouteReflectorClusterId)
-					ret_obj.MultiHopEnable = bool(bulkInfo.BGPNeighborStateList[i].MultiHopEnable)
 					ret_obj.RouteReflectorClient = bool(bulkInfo.BGPNeighborStateList[i].RouteReflectorClient)
 					ret_obj.Description = string(bulkInfo.BGPNeighborStateList[i].Description)
+					ret_obj.MultiHopTTL = uint8(bulkInfo.BGPNeighborStateList[i].MultiHopTTL)
+					ret_obj.PeerAS = uint32(bulkInfo.BGPNeighborStateList[i].PeerAS)
+					ret_obj.KeepaliveTime = uint32(bulkInfo.BGPNeighborStateList[i].KeepaliveTime)
+					ret_obj.AuthPassword = string(bulkInfo.BGPNeighborStateList[i].AuthPassword)
+					ret_obj.MultiHopEnable = bool(bulkInfo.BGPNeighborStateList[i].MultiHopEnable)
 					ret_obj.SessionState = uint32(bulkInfo.BGPNeighborStateList[i].SessionState)
 					ret_obj.NeighborAddress = string(bulkInfo.BGPNeighborStateList[i].NeighborAddress)
-					ret_obj.PeerAS = uint32(bulkInfo.BGPNeighborStateList[i].PeerAS)
-					ret_obj.MultiHopTTL = uint8(bulkInfo.BGPNeighborStateList[i].MultiHopTTL)
+					ret_obj.HoldTime = uint32(bulkInfo.BGPNeighborStateList[i].HoldTime)
 					ret_obj.LocalAS = uint32(bulkInfo.BGPNeighborStateList[i].LocalAS)
-					ret_obj.AuthPassword = string(bulkInfo.BGPNeighborStateList[i].AuthPassword)
+					ret_obj.ConnectRetryTime = uint32(bulkInfo.BGPNeighborStateList[i].ConnectRetryTime)
 					objs = append(objs, ret_obj)
 				}
 
@@ -206,6 +231,25 @@ func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbgpdBGPNeighborConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateBGPNeighborConfig(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.BGPPeerGroup:
+		// cast original object
+		origdata := dbObj.(models.BGPPeerGroup)
+		updatedata := obj.(models.BGPPeerGroup)
+		// create new thrift objects
+		origconf := bgpd.NewBGPPeerGroup()
+		updateconf := bgpd.NewBGPPeerGroup()
+		models.ConvertbgpdBGPPeerGroupObjToThrift(&origdata, origconf)
+		models.ConvertbgpdBGPPeerGroupObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateBGPPeerGroup(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
