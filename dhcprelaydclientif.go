@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"dhcprelayd"
+	"fmt"
 	"models"
 	"utils/ipcutils"
 )
@@ -102,6 +103,95 @@ func (clnt *DHCPRELAYDClient) GetBulkObject(obj models.ConfigObj, currMarker int
 
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
+
+	case models.DhcpRelayHostDhcpState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.DhcpRelayHostDhcpState
+			bulkInfo, err := clnt.ClientHdl.GetBulkDhcpRelayHostDhcpState(dhcprelayd.Int(currMarker), dhcprelayd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.ClientResponse = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientResponse)
+					ret_obj.ServerRequest = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerRequest)
+					ret_obj.OfferedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].OfferedIp)
+					ret_obj.ServerResponse = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerResponse)
+					ret_obj.MacAddr = string(bulkInfo.DhcpRelayHostDhcpStateList[i].MacAddr)
+					ret_obj.LeaseDuration = string(bulkInfo.DhcpRelayHostDhcpStateList[i].LeaseDuration)
+					ret_obj.GatewayIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].GatewayIp)
+					ret_obj.AcceptedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].AcceptedIp)
+					ret_obj.ServerIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerIp)
+					ret_obj.ClientRequest = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientRequest)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.DhcpRelayIntfState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.DhcpRelayIntfState
+			bulkInfo, err := clnt.ClientHdl.GetBulkDhcpRelayIntfState(dhcprelayd.Int(currMarker), dhcprelayd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.TotalDhcpServerRx = int32(bulkInfo.DhcpRelayIntfStateList[i].TotalDhcpServerRx)
+					ret_obj.TotalDhcpServerTx = int32(bulkInfo.DhcpRelayIntfStateList[i].TotalDhcpServerTx)
+					ret_obj.IntfId = int32(bulkInfo.DhcpRelayIntfStateList[i].IntfId)
+					ret_obj.TotalDrops = int32(bulkInfo.DhcpRelayIntfStateList[i].TotalDrops)
+					ret_obj.TotalDhcpClientRx = int32(bulkInfo.DhcpRelayIntfStateList[i].TotalDhcpClientRx)
+					ret_obj.TotalDhcpClientTx = int32(bulkInfo.DhcpRelayIntfStateList[i].TotalDhcpClientTx)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.DhcpRelayIntfServerState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.DhcpRelayIntfServerState
+			bulkInfo, err := clnt.ClientHdl.GetBulkDhcpRelayIntfServerState(dhcprelayd.Int(currMarker), dhcprelayd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.Request = int32(bulkInfo.DhcpRelayIntfServerStateList[i].Request)
+					ret_obj.ServerIp = string(bulkInfo.DhcpRelayIntfServerStateList[i].ServerIp)
+					ret_obj.IntfId = int32(bulkInfo.DhcpRelayIntfServerStateList[i].IntfId)
+					ret_obj.Responses = int32(bulkInfo.DhcpRelayIntfServerStateList[i].Responses)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
 
 	default:
 		break
