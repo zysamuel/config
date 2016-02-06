@@ -274,8 +274,6 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 						objs = make([]models.ConfigObj, 0)
 					}
 					ret_obj.Name = getBulkInfo.PolicyDefinitionStmtStateList[i].Name
-					ret_obj.Import = getBulkInfo.PolicyDefinitionStmtStateList[i].Import
-					ret_obj.Export = getBulkInfo.PolicyDefinitionStmtStateList[i].Export
 					ret_obj.HitCounter = int(getBulkInfo.PolicyDefinitionStmtStateList[i].HitCounter)
 					ret_obj.MatchConditions = getBulkInfo.PolicyDefinitionStmtStateList[i].MatchConditions
 					ret_obj.Conditions = make([]string, 0)
@@ -364,10 +362,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
-	case models.PolicyDefinitionStmtMatchPrefixSetCondition:
-		logger.Println("PolicyDefinitionStmtMatchPrefixSetCondition")
-		inCfg := obj.(models.PolicyDefinitionStmtMatchPrefixSetCondition)
-		var cfg ribd.PolicyDefinitionStmtMatchPrefixSetCondition
+	case models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition:
+		logger.Println("PolicyDefinitionStmtDstIpMatchPrefixSetCondition")
+		inCfg := obj.(models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition)
+		var cfg ribd.PolicyDefinitionStmtDstIpMatchPrefixSetCondition
 		if len(inCfg.PrefixSet) > 0 && len(inCfg.Prefix.IpPrefix) > 0 {
 			logger.Println("cannot set both prefix set name and a prefix")
 			return int64(0), true
@@ -379,7 +377,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfgIpPrefix.MasklengthRange = inCfg.Prefix.MaskLengthRange
 		cfg.Prefix = &cfgIpPrefix
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtMatchPrefixSetCondition(&cfg)
+			clnt.ClientHdl.CreatePolicyDefinitionStmtDstIpMatchPrefixSetCondition(&cfg)
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -455,8 +453,6 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			actions = append(actions, inCfg.Actions[i])
 		}
 		cfg.Actions = actions
-		cfg.Export = inCfg.Export
-		cfg.Import = inCfg.Import
 		cfg.MatchConditions = inCfg.MatchConditions
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStatement(&cfg)
@@ -470,6 +466,12 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Name = inCfg.Name
 		cfg.Precedence = ribd.Int(inCfg.Precedence)
 		cfg.MatchType = inCfg.MatchType
+		cfg.Export = inCfg.Export
+		cfg.Import = inCfg.Import
+        if inCfg.Import == false && inCfg.Export == false {
+			logger.Println("Need to set import or export to true")
+			break
+		}
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
 		policyDefinitionStatements := make([]ribd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
 		cfg.PolicyDefinitionStatements = make([]*ribd.PolicyDefinitionStmtPrecedence, 0)
