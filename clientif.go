@@ -105,7 +105,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
+					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString//strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
@@ -349,7 +349,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		} else {
 			outIntfType = commonDefs.L2RefTypePort
 		}
-		proto, _ := strconv.Atoi(v4Route.Protocol)
+		//proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreateV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
@@ -358,7 +358,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				v4Route.NextHopIp, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.NextHopIp).To4())),
 				outIntfType,
 				ribd.Int(outIntf),
-				ribd.Int(proto))
+				v4Route.Protocol)
+				//ribd.Int(proto))
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -504,13 +505,12 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	switch obj.(type) {
 	case models.IPV4Route:
 		v4Route := obj.(models.IPV4Route)
-		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.DeleteV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
-				ribd.Int(outIntf))
+				v4Route.Protocol)
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		break
