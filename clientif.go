@@ -134,16 +134,16 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					/*ret_obj.PolicyList = make([]string,0)
-			        routePolicyListInfo := ""
-			        if routesInfo.RouteList[i].PolicyList != nil {
-			          for k,v := range routesInfo.RouteList[i].PolicyList {
-				        routePolicyListInfo = k+":"
-			            for vv:=0;vv<len(v);vv++ {
-			              routePolicyListInfo = routePolicyListInfo + v[vv]+"," 	
-			            }
-			            ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
-			          }	
-			        }*/
+					        routePolicyListInfo := ""
+					        if routesInfo.RouteList[i].PolicyList != nil {
+					          for k,v := range routesInfo.RouteList[i].PolicyList {
+						        routePolicyListInfo = k+":"
+					            for vv:=0;vv<len(v);vv++ {
+					              routePolicyListInfo = routePolicyListInfo + v[vv]+","
+					            }
+					            ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
+					          }
+					        }*/
 					ret_obj.PolicyList = make([]string, 0)
 					for j := 0; j < len(routesInfo.RouteList[i].PolicyList); j++ {
 						ret_obj.PolicyList = append(ret_obj.PolicyList, routesInfo.RouteList[i].PolicyList[j])
@@ -525,8 +525,8 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
 	case models.PolicyDefinitionConfig:
-	    logger.Println("PolicyDefinition")
-		inCfg := obj.(models.PolicyDefinitionConfig) 
+		logger.Println("PolicyDefinition")
+		inCfg := obj.(models.PolicyDefinitionConfig)
 		var cfg ribd.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
@@ -853,6 +853,34 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		nextMarker = bgpNeighborStateBulk.NextIndex
 		objCount = bgpNeighborStateBulk.Count
 		more = bgpNeighborStateBulk.More
+
+	case models.BGPRoute:
+		var bgpRouteBulk *bgpd.BGPRouteBulk
+		bgpRouteBulk, err = clnt.ClientHdl.BulkGetBGPRoutes(currMarker, count)
+		if err != nil {
+			break
+		}
+
+		for _, item := range bgpRouteBulk.RouteList {
+			path := make([]uint32, len(item.Path))
+			for idx, elem := range item.Path {
+				path[idx] = uint32(elem)
+			}
+
+			bgpRoute := models.BGPRoute{
+				Network:   item.Network,
+				Mask:      item.Mask,
+				NextHop:   item.NextHop,
+				Metric:    uint32(item.Metric),
+				LocalPref: uint32(item.LocalPref),
+				Path:      path,
+				Updated:   item.Updated,
+			}
+			objs = append(objs, bgpRoute)
+		}
+		nextMarker = bgpRouteBulk.NextIndex
+		objCount = bgpRouteBulk.Count
+		more = bgpRouteBulk.More
 	}
 	return err, objCount, nextMarker, more, objs
 }
