@@ -480,7 +480,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchType = inCfg.MatchType
 		cfg.Export = inCfg.Export
 		cfg.Import = inCfg.Import
-        if inCfg.Import == false && inCfg.Export == false {
+		if inCfg.Import == false && inCfg.Export == false {
 			logger.Println("Need to set import or export to true")
 			break
 		}
@@ -739,6 +739,10 @@ func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd
 	gConf := bgpd.NewBGPGlobalConfig()
 	gConf.ASNum = int32(bgpGlobalConf.ASNum)
 	gConf.RouterId = bgpGlobalConf.RouterId
+	gConf.UseMultiplePaths = bgpGlobalConf.UseMultiplePaths
+	gConf.EBGPMaxPaths = int32(bgpGlobalConf.EBGPMaxPaths)
+	gConf.EBGPAllowMultipleAS = bgpGlobalConf.EBGPAllowMultipleAS
+	gConf.IBGPMaxPaths = int32(bgpGlobalConf.IBGPMaxPaths)
 	return gConf
 }
 
