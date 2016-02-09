@@ -133,6 +133,42 @@ func (clnt *BFDDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		}
 		break
 
+	case models.BfdIntfState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BfdIntfState
+			bulkInfo, err := clnt.ClientHdl.GetBulkBfdIntfState(bfdd.Int(currMarker), bfdd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.InterfaceId = int32(bulkInfo.BfdIntfStateList[i].InterfaceId)
+					ret_obj.DemandEnabled = bool(bulkInfo.BfdIntfStateList[i].DemandEnabled)
+					ret_obj.AuthenticationType = int32(bulkInfo.BfdIntfStateList[i].AuthenticationType)
+					ret_obj.RequiredMinRxInterval = int32(bulkInfo.BfdIntfStateList[i].RequiredMinRxInterval)
+					ret_obj.Enabled = bool(bulkInfo.BfdIntfStateList[i].Enabled)
+					ret_obj.DesiredMinTxInterval = int32(bulkInfo.BfdIntfStateList[i].DesiredMinTxInterval)
+					ret_obj.AuthenticationEnabled = bool(bulkInfo.BfdIntfStateList[i].AuthenticationEnabled)
+					ret_obj.SequenceNumber = int32(bulkInfo.BfdIntfStateList[i].SequenceNumber)
+					ret_obj.NumSessions = int32(bulkInfo.BfdIntfStateList[i].NumSessions)
+					ret_obj.AuthenticationKeyId = int32(bulkInfo.BfdIntfStateList[i].AuthenticationKeyId)
+					ret_obj.RequiredMinEchoRxInterval = int32(bulkInfo.BfdIntfStateList[i].RequiredMinEchoRxInterval)
+					ret_obj.AuthenticationData = string(bulkInfo.BfdIntfStateList[i].AuthenticationData)
+					ret_obj.LocalMultiplier = int32(bulkInfo.BfdIntfStateList[i].LocalMultiplier)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
 	case models.BfdSessionState:
 
 		if clnt.ClientHdl != nil {
