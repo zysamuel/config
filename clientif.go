@@ -428,11 +428,22 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	case models.PolicyDefinitionStmtRouteDispositionAction:
 		logger.Println("PolicyDefinitionStmtRouteDispositionAction")
 		inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
-		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction
+		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction 
 		cfg.Name = inCfg.Name
 		cfg.RouteDisposition = inCfg.RouteDisposition
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyDefinitionStmtRouteDispositionAction(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.PolicyDefinitionStmtAdminDistanceAction:
+		logger.Println("PolicyDefinitionStmtAdminDistanceAction")
+		inCfg := obj.(models.PolicyDefinitionStmtAdminDistanceAction)
+		var cfg ribd.PolicyDefinitionStmtAdminDistanceAction
+		cfg.Name = inCfg.Name
+		cfg.Value = ribd.Int(inCfg.Value)
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreatePolicyDefinitionStmtAdminDistanceAction(&cfg)
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
