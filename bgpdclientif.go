@@ -143,6 +143,10 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					ret_obj.RouterId = string(bulkInfo.BGPGlobalStateList[i].RouterId)
 					ret_obj.TotalPaths = uint32(bulkInfo.BGPGlobalStateList[i].TotalPaths)
 					ret_obj.AS = uint32(bulkInfo.BGPGlobalStateList[i].AS)
+					ret_obj.IBGPMaxPaths = uint32(bulkInfo.BGPGlobalStateList[i].IBGPMaxPaths)
+					ret_obj.EBGPMaxPaths = uint32(bulkInfo.BGPGlobalStateList[i].EBGPMaxPaths)
+					ret_obj.UseMultiplePaths = bool(bulkInfo.BGPGlobalStateList[i].UseMultiplePaths)
+					ret_obj.EBGPAllowMultipleAS = bool(bulkInfo.BGPGlobalStateList[i].EBGPAllowMultipleAS)
 					ret_obj.TotalPrefixes = uint32(bulkInfo.BGPGlobalStateList[i].TotalPrefixes)
 					objs = append(objs, ret_obj)
 				}
@@ -180,6 +184,39 @@ func (clnt *BGPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					ret_obj.HoldTime = uint32(bulkInfo.BGPNeighborStateList[i].HoldTime)
 					ret_obj.LocalAS = uint32(bulkInfo.BGPNeighborStateList[i].LocalAS)
 					ret_obj.ConnectRetryTime = uint32(bulkInfo.BGPNeighborStateList[i].ConnectRetryTime)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.BGPRoute:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BGPRoute
+			bulkInfo, err := clnt.ClientHdl.GetBulkBGPRoute(bgpd.Int(currMarker), bgpd.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.Updated = string(bulkInfo.BGPRouteList[i].Updated)
+					ret_obj.NextHop = string(bulkInfo.BGPRouteList[i].NextHop)
+					ret_obj.Network = string(bulkInfo.BGPRouteList[i].Network)
+					for _, data := range bulkInfo.BGPRouteList[i].Path {
+						ret_obj.Path = uint32(data)
+					}
+
+					ret_obj.Metric = uint32(bulkInfo.BGPRouteList[i].Metric)
+					ret_obj.LocalPref = uint32(bulkInfo.BGPRouteList[i].LocalPref)
+					ret_obj.Mask = string(bulkInfo.BGPRouteList[i].Mask)
 					objs = append(objs, ret_obj)
 				}
 

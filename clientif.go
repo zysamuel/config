@@ -759,6 +759,10 @@ func convertBGPGlobalConfToThriftObj(bgpGlobalConf models.BGPGlobalConfig) *bgpd
 	gConf := bgpd.NewBGPGlobalConfig()
 	gConf.ASNum = int32(bgpGlobalConf.ASNum)
 	gConf.RouterId = bgpGlobalConf.RouterId
+	gConf.UseMultiplePaths = bgpGlobalConf.UseMultiplePaths
+	gConf.EBGPMaxPaths = int32(bgpGlobalConf.EBGPMaxPaths)
+	gConf.EBGPAllowMultipleAS = bgpGlobalConf.EBGPAllowMultipleAS
+	gConf.IBGPMaxPaths = int32(bgpGlobalConf.IBGPMaxPaths)
 	return gConf
 }
 
