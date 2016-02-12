@@ -118,16 +118,20 @@ func (clnt *DHCPRELAYDClient) GetBulkObject(obj models.ConfigObj, currMarker int
 						objs = make([]models.ConfigObj, 0)
 					}
 
-					ret_obj.ClientResponse = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientResponse)
-					ret_obj.ServerRequest = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerRequest)
-					ret_obj.OfferedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].OfferedIp)
-					ret_obj.ServerResponse = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerResponse)
 					ret_obj.MacAddr = string(bulkInfo.DhcpRelayHostDhcpStateList[i].MacAddr)
-					ret_obj.LeaseDuration = string(bulkInfo.DhcpRelayHostDhcpStateList[i].LeaseDuration)
+					ret_obj.ServerAck = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerAck)
+					ret_obj.RequestedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].RequestedIp)
+					ret_obj.ServerRequests = int32(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerRequests)
+					ret_obj.ClientDiscover = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientDiscover)
 					ret_obj.GatewayIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].GatewayIp)
-					ret_obj.AcceptedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].AcceptedIp)
+					ret_obj.ClientRequests = int32(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientRequests)
 					ret_obj.ServerIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerIp)
 					ret_obj.ClientRequest = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientRequest)
+					ret_obj.ClientResponses = int32(bulkInfo.DhcpRelayHostDhcpStateList[i].ClientResponses)
+					ret_obj.OfferedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].OfferedIp)
+					ret_obj.ServerResponses = int32(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerResponses)
+					ret_obj.ServerOffer = string(bulkInfo.DhcpRelayHostDhcpStateList[i].ServerOffer)
+					ret_obj.AcceptedIp = string(bulkInfo.DhcpRelayHostDhcpStateList[i].AcceptedIp)
 					objs = append(objs, ret_obj)
 				}
 

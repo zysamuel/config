@@ -172,6 +172,25 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
+	case models.RouteDistanceState:
+		if clnt.ClientHdl != nil {
+			var ret_obj models.RouteDistanceState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkRouteDistanceState(ribd.Int(currMarker), ribd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.Distance = int(getBulkInfo.RouteDistanceStateList[i].Distance)
+					ret_obj.Protocol = getBulkInfo.RouteDistanceStateList[i].Protocol
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
 
 		/*    case models.PolicyDefinitionStmtMatchProtocolCondition:
 		    logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
@@ -208,9 +227,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					}
 					ret_obj.Name = getBulkInfo.PolicyDefinitionConditionStateList[i].Name
 					ret_obj.ConditionInfo = getBulkInfo.PolicyDefinitionConditionStateList[i].ConditionInfo
-					ret_obj.PolicyList = make([]string, 0)
-					for j := 0; j < len(getBulkInfo.PolicyDefinitionConditionStateList[i].PolicyList); j++ {
-						ret_obj.PolicyList = append(ret_obj.PolicyList, getBulkInfo.PolicyDefinitionConditionStateList[i].PolicyList[j])
+					ret_obj.PolicyStmtList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyDefinitionConditionStateList[i].PolicyStmtList); j++ {
+						ret_obj.PolicyStmtList = append(ret_obj.PolicyStmtList, getBulkInfo.PolicyDefinitionConditionStateList[i].PolicyStmtList[j])
 					}
 					objs = append(objs, ret_obj)
 				}
@@ -251,9 +270,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					}
 					ret_obj.Name = getBulkInfo.PolicyDefinitionActionStateList[i].Name
 					ret_obj.ActionInfo = getBulkInfo.PolicyDefinitionActionStateList[i].ActionInfo
-					ret_obj.PolicyList = make([]string, 0)
-					for j := 0; j < len(getBulkInfo.PolicyDefinitionActionStateList[i].PolicyList); j++ {
-						ret_obj.PolicyList = append(ret_obj.PolicyList, getBulkInfo.PolicyDefinitionActionStateList[i].PolicyList[j])
+					ret_obj.PolicyStmtList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyDefinitionActionStateList[i].PolicyStmtList); j++ {
+						ret_obj.PolicyStmtList = append(ret_obj.PolicyStmtList, getBulkInfo.PolicyDefinitionActionStateList[i].PolicyStmtList[j])
 					}
 					objs = append(objs, ret_obj)
 				}
@@ -480,8 +499,9 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.MatchType = inCfg.MatchType
 		cfg.Export = inCfg.Export
 		cfg.Import = inCfg.Import
-		if inCfg.Import == false && inCfg.Export == false {
-			logger.Println("Need to set import or export to true")
+		cfg.Global = inCfg.Global
+        if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
+			logger.Println("Need to set import,export or global to true")
 			break
 		}
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
