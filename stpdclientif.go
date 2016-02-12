@@ -104,11 +104,11 @@ func (clnt *STPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
 
-	case models.Dot1dStpPortEntryState:
+	case models.Dot1dStpPortEntryStateCounters:
 
 		if clnt.ClientHdl != nil {
-			var ret_obj models.Dot1dStpPortEntryState
-			bulkInfo, err := clnt.ClientHdl.GetBulkDot1dStpPortEntryState(stpd.Int(currMarker), stpd.Int(count))
+			var ret_obj models.Dot1dStpPortEntryStateCounters
+			bulkInfo, err := clnt.ClientHdl.GetBulkDot1dStpPortEntryStateCounters(stpd.Int(currMarker), stpd.Int(count))
 			if bulkInfo != nil && bulkInfo.Count != 0 {
 				objCount = int64(bulkInfo.Count)
 				more = bool(bulkInfo.More)
@@ -118,23 +118,34 @@ func (clnt *STPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 						objs = make([]models.ConfigObj, 0)
 					}
 
-					ret_obj.Dot1dStpPortOperPointToPoint = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortOperPointToPoint)
-					ret_obj.Dot1dStpPortPriority = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortPriority)
-					ret_obj.Dot1dStpPortPathCost = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortPathCost)
-					ret_obj.Dot1dStpPortOperEdgePort = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortOperEdgePort)
-					ret_obj.Dot1dStpPortDesignatedPort = string(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortDesignatedPort)
-					ret_obj.Dot1dStpPortForwardTransitions = uint32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortForwardTransitions)
-					ret_obj.Dot1dStpPortProtocolMigration = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortProtocolMigration)
-					ret_obj.Dot1dStpPortState = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortState)
-					ret_obj.Dot1dStpPortEnable = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortEnable)
-					ret_obj.Dot1dStpPortDesignatedRoot = string(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortDesignatedRoot)
-					ret_obj.Dot1dStpPortAdminPointToPoint = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortAdminPointToPoint)
-					ret_obj.Dot1dStpPortKey = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortKey)
-					ret_obj.Dot1dStpPortDesignatedCost = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortDesignatedCost)
-					ret_obj.Dot1dStpPortAdminEdgePort = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortAdminEdgePort)
-					ret_obj.Dot1dStpPortAdminPathCost = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortAdminPathCost)
-					ret_obj.Dot1dStpPortPathCost32 = int32(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortPathCost32)
-					ret_obj.Dot1dStpPortDesignatedBridge = string(bulkInfo.Dot1dStpPortEntryStateList[i].Dot1dStpPortDesignatedBridge)
+					ret_obj.Dot1dStpPortPriority = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortPriority)
+					ret_obj.Dot1dStpPortDesignatedBridge = string(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortDesignatedBridge)
+					ret_obj.TcInPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].TcInPkts)
+					ret_obj.PvstOutPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].PvstOutPkts)
+					ret_obj.StpOutPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].StpOutPkts)
+					ret_obj.BpduInPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].BpduInPkts)
+					ret_obj.Dot1dStpPortProtocolMigration = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortProtocolMigration)
+					ret_obj.Dot1dStpPortState = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortState)
+					ret_obj.Dot1dStpPortEnable = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortEnable)
+					ret_obj.Dot1dStpPortDesignatedRoot = string(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortDesignatedRoot)
+					ret_obj.Dot1dStpPortAdminPointToPoint = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortAdminPointToPoint)
+					ret_obj.Dot1dStpPortDesignatedCost = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortDesignatedCost)
+					ret_obj.Dot1dStpPortAdminPathCost = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortAdminPathCost)
+					ret_obj.BpduOutPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].BpduOutPkts)
+					ret_obj.Dot1dStpPortPathCost32 = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortPathCost32)
+					ret_obj.PvstInPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].PvstInPkts)
+					ret_obj.StpInPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].StpInPkts)
+					ret_obj.Dot1dStpPortOperPointToPoint = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortOperPointToPoint)
+					ret_obj.Dot1dBrgIfIndex = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dBrgIfIndex)
+					ret_obj.RstpInPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].RstpInPkts)
+					ret_obj.Dot1dStpPortOperEdgePort = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortOperEdgePort)
+					ret_obj.TcOutPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].TcOutPkts)
+					ret_obj.Dot1dStpPortDesignatedPort = string(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortDesignatedPort)
+					ret_obj.Dot1dStpPortAdminEdgePort = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortAdminEdgePort)
+					ret_obj.Dot1dStpPortForwardTransitions = uint32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortForwardTransitions)
+					ret_obj.RstpOutPkts = uint64(bulkInfo.Dot1dStpPortEntryStateCountersList[i].RstpOutPkts)
+					ret_obj.Dot1dStpPort = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPort)
+					ret_obj.Dot1dStpPortPathCost = int32(bulkInfo.Dot1dStpPortEntryStateCountersList[i].Dot1dStpPortPathCost)
 					objs = append(objs, ret_obj)
 				}
 
@@ -158,22 +169,24 @@ func (clnt *STPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 						objs = make([]models.ConfigObj, 0)
 					}
 
+					ret_obj.Dot1dBrgIfIndex = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dBrgIfIndex)
 					ret_obj.Dot1dStpDesignatedRoot = string(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpDesignatedRoot)
 					ret_obj.Dot1dStpBridgeForceVersion = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpBridgeForceVersion)
-					ret_obj.Dot1dStpPriorityKey = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpPriorityKey)
+					ret_obj.Dot1dBridgeAddress = string(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dBridgeAddress)
 					ret_obj.Dot1dStpBridgeHelloTime = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpBridgeHelloTime)
-					ret_obj.Dot1dBridgeAddressKey = string(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dBridgeAddressKey)
 					ret_obj.Dot1dStpHelloTime = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpHelloTime)
+					ret_obj.Dot1dStpPriority = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpPriority)
 					ret_obj.Dot1dStpProtocolSpecification = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpProtocolSpecification)
 					ret_obj.Dot1dStpForwardDelay = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpForwardDelay)
 					ret_obj.Dot1dStpRootPort = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpRootPort)
+					ret_obj.Dot1dStpRootCost = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpRootCost)
 					ret_obj.Dot1dStpBridgeTxHoldCount = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpBridgeTxHoldCount)
 					ret_obj.Dot1dStpTimeSinceTopologyChange = uint32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpTimeSinceTopologyChange)
 					ret_obj.Dot1dStpMaxAge = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpMaxAge)
 					ret_obj.Dot1dStpTopChanges = uint32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpTopChanges)
 					ret_obj.Dot1dStpBridgeForwardDelay = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpBridgeForwardDelay)
 					ret_obj.Dot1dStpBridgeMaxAge = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpBridgeMaxAge)
-					ret_obj.Dot1dStpRootCost = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpRootCost)
+					ret_obj.Dot1dStpVlan = uint16(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpVlan)
 					ret_obj.Dot1dStpHoldTime = int32(bulkInfo.Dot1dStpBridgeStateList[i].Dot1dStpHoldTime)
 					objs = append(objs, ret_obj)
 				}
