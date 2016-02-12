@@ -154,7 +154,6 @@ func (clnt *BFDDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					ret_obj.Enabled = bool(bulkInfo.BfdIntfStateList[i].Enabled)
 					ret_obj.DesiredMinTxInterval = int32(bulkInfo.BfdIntfStateList[i].DesiredMinTxInterval)
 					ret_obj.AuthenticationEnabled = bool(bulkInfo.BfdIntfStateList[i].AuthenticationEnabled)
-					ret_obj.SequenceNumber = int32(bulkInfo.BfdIntfStateList[i].SequenceNumber)
 					ret_obj.NumSessions = int32(bulkInfo.BfdIntfStateList[i].NumSessions)
 					ret_obj.AuthenticationKeyId = int32(bulkInfo.BfdIntfStateList[i].AuthenticationKeyId)
 					ret_obj.RequiredMinEchoRxInterval = int32(bulkInfo.BfdIntfStateList[i].RequiredMinEchoRxInterval)
