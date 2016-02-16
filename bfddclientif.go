@@ -58,6 +58,17 @@ func (clnt *BFDDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
+
+	case models.BfdSessionConfig:
+		data := obj.(models.BfdSessionConfig)
+		conf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateBfdSessionConfig(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
 	default:
 		break
 	}
@@ -84,6 +95,17 @@ func (clnt *BFDDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 		conf := bfdd.NewBfdIntfConfig()
 		models.ConvertbfddBfdIntfConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteBfdIntfConfig(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.BfdSessionConfig:
+		data := obj.(models.BfdSessionConfig)
+		conf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteBfdSessionConfig(conf)
 		if err != nil {
 			return false
 		}
@@ -253,6 +275,25 @@ func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbfddBfdIntfConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateBfdIntfConfig(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.BfdSessionConfig:
+		// cast original object
+		origdata := dbObj.(models.BfdSessionConfig)
+		updatedata := obj.(models.BfdSessionConfig)
+		// create new thrift objects
+		origconf := bfdd.NewBfdSessionConfig()
+		updateconf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&origdata, origconf)
+		models.ConvertbfddBfdSessionConfigObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateBfdSessionConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
