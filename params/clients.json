@@ -26,7 +26,10 @@
 	{"Name":"bfdd",
 	 "Port":9050},
 
-	{"Name":"local",
+	{"Name":"vrrpd",
+	 "Port":10000},
+	
+         {"Name":"local",
 	  "Port":0
 	}
 ]
