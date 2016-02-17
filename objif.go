@@ -22,27 +22,30 @@ type ConfigObjInfo struct {
 //
 //  This method reads the config file and connects to all the clients in the list
 //
-func (mgr *ConfigMgr) InitializeObjectHandles(objsFile string) bool {
+func (mgr *ConfigMgr) InitializeObjectHandles(infoFiles []string) bool {
 	var objMap map[string]ConfigObjJson
-	bytes, err := ioutil.ReadFile(objsFile)
-	if err != nil {
-		logger.Println("Error in reading Object configuration file", objsFile)
-		return false
-	}
-	err = json.Unmarshal(bytes, &objMap)
-	if err != nil {
-		logger.Printf("Error in unmarshaling data from ", objsFile)
-	}
 
 	mgr.objHdlMap = make(map[string]ConfigObjInfo)
-	for k, v := range objMap {
-		logger.Printf("For Object [ %s ] Primary owner is [ %s ]\n", k, v.Owner)
-		entry := new(ConfigObjInfo)
-		entry.owner = mgr.clients[v.Owner]
-		for _, lsnr := range v.Listeners {
-			entry.listeners = append(entry.listeners, mgr.clients[lsnr])
+	for _, objFile := range infoFiles {
+		bytes, err := ioutil.ReadFile(objFile)
+		if err != nil {
+			logger.Println("Error in reading Object configuration file", objFile)
+			return false
 		}
-		mgr.objHdlMap[k] = *entry
+		err = json.Unmarshal(bytes, &objMap)
+		if err != nil {
+			logger.Printf("Error in unmarshaling data from ", objFile)
+		}
+
+		for k, v := range objMap {
+			logger.Printf("For Object [ %s ] Primary owner is [ %s ]\n", k, v.Owner)
+			entry := new(ConfigObjInfo)
+			entry.owner = mgr.clients[v.Owner]
+			for _, lsnr := range v.Listeners {
+				entry.listeners = append(entry.listeners, mgr.clients[lsnr])
+			}
+			mgr.objHdlMap[k] = *entry
+		}
 	}
 	return true
 }

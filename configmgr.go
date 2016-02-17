@@ -433,7 +433,8 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
 
-	objectConfigFile := paramsDir + "/objectconfig.json"
+	objectConfigFiles := [...]string{paramsDir + "/objectconfig.json",
+		paramsDir + "/genObjectConfig.json"}
 	paramsFile := paramsDir + "/clients.json"
 
 	rc = mgr.InitializeClientHandles(paramsFile)
@@ -441,7 +442,7 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 		logger.Println("ERROR: Error in Initializing Client handles")
 		return nil
 	}
-	rc = mgr.InitializeObjectHandles(objectConfigFile)
+	rc = mgr.InitializeObjectHandles(objectConfigFiles[:])
 	if rc == false {
 		logger.Println("ERROR: Error in Initializing Object handles")
 		return nil
