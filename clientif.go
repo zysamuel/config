@@ -541,7 +541,8 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 			clnt.ClientHdl.DeleteV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
-				v4Route.Protocol)
+				v4Route.Protocol,
+				v4Route.NextHopIp)
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		break
