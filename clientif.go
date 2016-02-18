@@ -105,7 +105,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString//strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
+					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString //strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
@@ -378,7 +378,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				outIntfType,
 				ribd.Int(outIntf),
 				v4Route.Protocol)
-				//ribd.Int(proto))
+			//ribd.Int(proto))
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -447,7 +447,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	case models.PolicyDefinitionStmtRouteDispositionAction:
 		logger.Println("PolicyDefinitionStmtRouteDispositionAction")
 		inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
-		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction 
+		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction
 		cfg.Name = inCfg.Name
 		cfg.RouteDisposition = inCfg.RouteDisposition
 		if clnt.ClientHdl != nil {
@@ -500,7 +500,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Export = inCfg.Export
 		cfg.Import = inCfg.Import
 		cfg.Global = inCfg.Global
-        if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
+		if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
 			logger.Println("Need to set import,export or global to true")
 			break
 		}
@@ -780,6 +780,8 @@ func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig)
 	nConf.ConnectRetryTime = int32(bgpNeighborConf.ConnectRetryTime)
 	nConf.HoldTime = int32(bgpNeighborConf.HoldTime)
 	nConf.KeepaliveTime = int32(bgpNeighborConf.KeepaliveTime)
+	nConf.AddPathsRx = bgpNeighborConf.AddPathsRx
+	nConf.AddPathsMaxTx = int8(bgpNeighborConf.AddPathsMaxTx)
 	nConf.PeerGroup = bgpNeighborConf.PeerGroup
 	return nConf
 }
@@ -797,6 +799,8 @@ func convertBGPPeerGroupToThriftObj(bgpPeerGroup models.BGPPeerGroup) *bgpd.BGPP
 	peerGroup.ConnectRetryTime = int32(bgpPeerGroup.ConnectRetryTime)
 	peerGroup.HoldTime = int32(bgpPeerGroup.HoldTime)
 	peerGroup.KeepaliveTime = int32(bgpPeerGroup.KeepaliveTime)
+	peerGroup.AddPathsRx = bool(bgpPeerGroup.AddPathsRx)
+	peerGroup.AddPathsMaxTx = int8(bgpPeerGroup.AddPathsMaxTx)
 	return peerGroup
 }
 
@@ -869,6 +873,8 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 				ConnectRetryTime:        uint32(item.ConnectRetryTime),
 				HoldTime:                uint32(item.HoldTime),
 				KeepaliveTime:           uint32(item.KeepaliveTime),
+				AddPathsRx:              item.AddPathsRx,
+				AddPathsMaxTx:           uint8(item.AddPathsMaxTx),
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
