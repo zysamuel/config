@@ -242,9 +242,11 @@ func (clnt *BFDDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 }
 func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
-
+	var ok bool
+	var err error
 	logger.Println("### Update Object called BFDD", attrSet, objKey)
-	ok := false
+	ok = false
+	err = nil
 	switch obj.(type) {
 
 	case models.BfdGlobalConfig:
@@ -257,7 +259,7 @@ func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbfddBfdGlobalConfigObjToThrift(&origdata, origconf)
 		models.ConvertbfddBfdGlobalConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateBfdGlobalConfig(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateBfdGlobalConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -276,7 +278,7 @@ func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbfddBfdIntfConfigObjToThrift(&origdata, origconf)
 		models.ConvertbfddBfdIntfConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateBfdIntfConfig(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateBfdIntfConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -295,7 +297,7 @@ func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbfddBfdSessionConfigObjToThrift(&origdata, origconf)
 		models.ConvertbfddBfdSessionConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateBfdSessionConfig(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateBfdSessionConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
