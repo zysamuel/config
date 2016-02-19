@@ -69,6 +69,17 @@ func (clnt *BGPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
+
+	case models.BGPAggregate:
+		data := obj.(models.BGPAggregate)
+		conf := bgpd.NewBGPAggregate()
+		models.ConvertbgpdBGPAggregateObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateBGPAggregate(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
 	default:
 		break
 	}
@@ -106,6 +117,17 @@ func (clnt *BGPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 		conf := bgpd.NewBGPPeerGroup()
 		models.ConvertbgpdBGPPeerGroupObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteBGPPeerGroup(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.BGPAggregate:
+		data := obj.(models.BGPAggregate)
+		conf := bgpd.NewBGPAggregate()
+		models.ConvertbgpdBGPAggregateObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteBGPAggregate(conf)
 		if err != nil {
 			return false
 		}
@@ -287,6 +309,25 @@ func (clnt *BGPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbgpdBGPPeerGroupObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateBGPPeerGroup(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.BGPAggregate:
+		// cast original object
+		origdata := dbObj.(models.BGPAggregate)
+		updatedata := obj.(models.BGPAggregate)
+		// create new thrift objects
+		origconf := bgpd.NewBGPAggregate()
+		updateconf := bgpd.NewBGPAggregate()
+		models.ConvertbgpdBGPAggregateObjToThrift(&origdata, origconf)
+		models.ConvertbgpdBGPAggregateObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateBGPAggregate(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {

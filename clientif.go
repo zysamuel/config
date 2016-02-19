@@ -105,7 +105,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
-					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString//strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
+					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString //strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else {
@@ -373,29 +373,29 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				outIntfType,
 				ribd.Int(outIntf),
 				v4Route.Protocol)
-				//ribd.Int(proto))
+			//ribd.Int(proto))
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
-/*	case models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition:
-		logger.Println("PolicyDefinitionStmtDstIpMatchPrefixSetCondition")
-		inCfg := obj.(models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition)
-		var cfg ribd.PolicyDefinitionStmtDstIpMatchPrefixSetCondition
-		if len(inCfg.PrefixSet) > 0 && len(inCfg.Prefix.IpPrefix) > 0 {
-			logger.Println("cannot set both prefix set name and a prefix")
-			return int64(0), true
-		}
-		cfg.Name = inCfg.Name
-		cfg.PrefixSet = inCfg.PrefixSet
-		var cfgIpPrefix ribd.PolicyDefinitionSetsPrefix
-		cfgIpPrefix.IpPrefix = inCfg.Prefix.IpPrefix
-		cfgIpPrefix.MasklengthRange = inCfg.Prefix.MaskLengthRange
-		cfg.Prefix = &cfgIpPrefix
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtDstIpMatchPrefixSetCondition(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true*/
+		/*	case models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition:
+			logger.Println("PolicyDefinitionStmtDstIpMatchPrefixSetCondition")
+			inCfg := obj.(models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition)
+			var cfg ribd.PolicyDefinitionStmtDstIpMatchPrefixSetCondition
+			if len(inCfg.PrefixSet) > 0 && len(inCfg.Prefix.IpPrefix) > 0 {
+				logger.Println("cannot set both prefix set name and a prefix")
+				return int64(0), true
+			}
+			cfg.Name = inCfg.Name
+			cfg.PrefixSet = inCfg.PrefixSet
+			var cfgIpPrefix ribd.PolicyDefinitionSetsPrefix
+			cfgIpPrefix.IpPrefix = inCfg.Prefix.IpPrefix
+			cfgIpPrefix.MasklengthRange = inCfg.Prefix.MaskLengthRange
+			cfg.Prefix = &cfgIpPrefix
+			if clnt.ClientHdl != nil {
+				clnt.ClientHdl.CreatePolicyDefinitionStmtDstIpMatchPrefixSetCondition(&cfg)
+			}
+			objId, _ := inCfg.StoreObjectInDb(dbHdl)
+			return objId, true*/
 	case models.PolicyPrefixSet:
 		logger.Println("PolicyPrefixSet")
 		inCfg := obj.(models.PolicyPrefixSet)
@@ -416,118 +416,118 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
-/*	case models.PolicyDefinitionStmtMatchProtocolCondition:
-		logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
-		inCfg := obj.(models.PolicyDefinitionStmtMatchProtocolCondition)
-		var cfg ribd.PolicyDefinitionStmtMatchProtocolCondition
-		cfg.Name = inCfg.Name
-		cfg.InstallProtocolEq = inCfg.InstallProtocolEq
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtMatchProtocolCondition(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true*/
+		/*	case models.PolicyDefinitionStmtMatchProtocolCondition:
+			logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
+			inCfg := obj.(models.PolicyDefinitionStmtMatchProtocolCondition)
+			var cfg ribd.PolicyDefinitionStmtMatchProtocolCondition
+			cfg.Name = inCfg.Name
+			cfg.InstallProtocolEq = inCfg.InstallProtocolEq
+			if clnt.ClientHdl != nil {
+				clnt.ClientHdl.CreatePolicyDefinitionStmtMatchProtocolCondition(&cfg)
+			}
+			objId, _ := inCfg.StoreObjectInDb(dbHdl)
+			return objId, true*/
 	case models.PolicyConditionConfig:
 		logger.Println("PolicyConditionConfig")
 		inCfg := obj.(models.PolicyConditionConfig)
 		var cfg ribd.PolicyConditionConfig
 		cfg.Name = inCfg.Name
 		cfg.ConditionType = inCfg.ConditionType
-		switch (inCfg.ConditionType) {
-			case "MatchProtocol":
-		      logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
-			  matchProto := inCfg.MatchProtocolConditionInfo
-		      cfg.MatchProtocolConditionInfo = &matchProto
-		      //dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
-			  //cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
-			  break
-			case "MatchDstIpPrefix":
-		      logger.Println("MatchDstIpPrefix")
-			  inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
-		      var cfgIpPrefix ribd.PolicyPrefix
-		      var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
-		      if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
-			    logger.Println("cannot set both prefix set name and a prefix")
-			    return int64(0), true
-		      }
-		      dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
-		      cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
-		      cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
-		      dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
-			  cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
-			  break
-			default:
-			  logger.Println("Invalid condition type")
-			  return int64(0),true
+		switch inCfg.ConditionType {
+		case "MatchProtocol":
+			logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
+			matchProto := inCfg.MatchProtocolConditionInfo
+			cfg.MatchProtocolConditionInfo = &matchProto
+			//dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
+			//cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
+			break
+		case "MatchDstIpPrefix":
+			logger.Println("MatchDstIpPrefix")
+			inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
+			var cfgIpPrefix ribd.PolicyPrefix
+			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
+			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
+				logger.Println("cannot set both prefix set name and a prefix")
+				return int64(0), true
+			}
+			dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
+			cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
+			cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
+			dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
+			cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
+			break
+		default:
+			logger.Println("Invalid condition type")
+			return int64(0), true
 		}
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyCondition(&cfg)
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
-/*	case models.PolicyDefinitionStmtRedistributionAction:
-		logger.Println("PolicyDefinitionStmtRedistributionAction")
-		inCfg := obj.(models.PolicyDefinitionStmtRedistributionAction)
-		var cfg ribd.PolicyDefinitionStmtRedistributionAction
-		cfg.Name = inCfg.Name
-		cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
-		cfg.Redistribute = inCfg.Redistribute
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-	case models.PolicyDefinitionStmtRouteDispositionAction:
-		logger.Println("PolicyDefinitionStmtRouteDispositionAction")
-		inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
-		var cfg ribd.PolicyDefinitionStmtRouteDispositionAction 
-		cfg.Name = inCfg.Name
-		cfg.RouteDisposition = inCfg.RouteDisposition
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtRouteDispositionAction(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-	case models.PolicyDefinitionStmtAdminDistanceAction:
-		logger.Println("PolicyDefinitionStmtAdminDistanceAction")
-		inCfg := obj.(models.PolicyDefinitionStmtAdminDistanceAction)
-		var cfg ribd.PolicyDefinitionStmtAdminDistanceAction
-		cfg.Name = inCfg.Name
-		cfg.Value = ribd.Int(inCfg.Value)
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinitionStmtAdminDistanceAction(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true*/
+		/*	case models.PolicyDefinitionStmtRedistributionAction:
+				logger.Println("PolicyDefinitionStmtRedistributionAction")
+				inCfg := obj.(models.PolicyDefinitionStmtRedistributionAction)
+				var cfg ribd.PolicyDefinitionStmtRedistributionAction
+				cfg.Name = inCfg.Name
+				cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+				cfg.Redistribute = inCfg.Redistribute
+				if clnt.ClientHdl != nil {
+					clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
+				}
+				objId, _ := inCfg.StoreObjectInDb(dbHdl)
+				return objId, true
+			case models.PolicyDefinitionStmtRouteDispositionAction:
+				logger.Println("PolicyDefinitionStmtRouteDispositionAction")
+				inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
+				var cfg ribd.PolicyDefinitionStmtRouteDispositionAction
+				cfg.Name = inCfg.Name
+				cfg.RouteDisposition = inCfg.RouteDisposition
+				if clnt.ClientHdl != nil {
+					clnt.ClientHdl.CreatePolicyDefinitionStmtRouteDispositionAction(&cfg)
+				}
+				objId, _ := inCfg.StoreObjectInDb(dbHdl)
+				return objId, true
+			case models.PolicyDefinitionStmtAdminDistanceAction:
+				logger.Println("PolicyDefinitionStmtAdminDistanceAction")
+				inCfg := obj.(models.PolicyDefinitionStmtAdminDistanceAction)
+				var cfg ribd.PolicyDefinitionStmtAdminDistanceAction
+				cfg.Name = inCfg.Name
+				cfg.Value = ribd.Int(inCfg.Value)
+				if clnt.ClientHdl != nil {
+					clnt.ClientHdl.CreatePolicyDefinitionStmtAdminDistanceAction(&cfg)
+				}
+				objId, _ := inCfg.StoreObjectInDb(dbHdl)
+				return objId, true*/
 	case models.PolicyActionConfig:
 		logger.Println("PolicyActionConfig")
 		inCfg := obj.(models.PolicyActionConfig)
 		var cfg ribd.PolicyActionConfig
 		cfg.Name = inCfg.Name
 		cfg.ActionType = inCfg.ActionType
-        switch inCfg.ActionType {
-			case "RouteDisposition":
-			  logger.Println("RouteDisposition")
-			  cfg.Accept = inCfg.Accept
-			  cfg.Reject = inCfg.Reject
-			  if inCfg.Accept && inCfg.Reject {
-			     logger.Println("Cannot set both accept and reject actions to true")
-				 return int64(0), true	
-			  }
-			  break
-			case "Redistribution":
-			  logger.Println("Redistribution")
-			  inActionCfg := inCfg.RedistributeActionInfo
-		      var actionCfg ribd.PolicyRedistributionAction
-		      actionCfg.RedistributeTargetProtocol = inActionCfg.RedistributeTargetProtocol
-		      actionCfg.Redistribute = inActionCfg.Redistribute
-			  cfg.RedistributeActionInfo = &actionCfg
-			  break
-			case "SetAdminDistance":
-		      logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
-		      cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
-			  break
-		}		
+		switch inCfg.ActionType {
+		case "RouteDisposition":
+			logger.Println("RouteDisposition")
+			cfg.Accept = inCfg.Accept
+			cfg.Reject = inCfg.Reject
+			if inCfg.Accept && inCfg.Reject {
+				logger.Println("Cannot set both accept and reject actions to true")
+				return int64(0), true
+			}
+			break
+		case "Redistribution":
+			logger.Println("Redistribution")
+			inActionCfg := inCfg.RedistributeActionInfo
+			var actionCfg ribd.PolicyRedistributionAction
+			actionCfg.RedistributeTargetProtocol = inActionCfg.RedistributeTargetProtocol
+			actionCfg.Redistribute = inActionCfg.Redistribute
+			cfg.RedistributeActionInfo = &actionCfg
+			break
+		case "SetAdminDistance":
+			logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
+			cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
+			break
+		}
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyAction(&cfg)
 		}
@@ -567,7 +567,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Export = inCfg.Export
 		cfg.Import = inCfg.Import
 		cfg.Global = inCfg.Global
-        if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
+		if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
 			logger.Println("Need to set import,export or global to true")
 			break
 		}
@@ -867,6 +867,14 @@ func convertBGPPeerGroupToThriftObj(bgpPeerGroup models.BGPPeerGroup) *bgpd.BGPP
 	return peerGroup
 }
 
+func convertBGPAggregateToThriftObj(bgpAggregate models.BGPAggregate) *bgpd.BGPAggregate {
+	agg := bgpd.NewBGPAggregate()
+	agg.IPPrefix = bgpAggregate.IPPrefix
+	agg.GenerateASSet = bgpAggregate.GenerateASSet
+	agg.SendSummaryOnly = bgpAggregate.SendSummaryOnly
+	return agg
+}
+
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	retVal := false
 	objId := int64(0)
@@ -901,6 +909,16 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 				return int64(0), false
 			}
 			objId, _ = bgpPeerGroup.StoreObjectInDb(dbHdl)
+			retVal = true
+
+		case models.BGPAggregate:
+			bgpAgg := obj.(models.BGPAggregate)
+			agg := convertBGPAggregateToThriftObj(bgpAgg)
+			_, err := clnt.ClientHdl.CreateBGPAggregate(agg)
+			if err != nil {
+				return int64(0), false
+			}
+			objId, _ = bgpAgg.StoreObjectInDb(dbHdl)
 			retVal = true
 		}
 	}
@@ -1014,6 +1032,16 @@ func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 			}
 			bgpPeerGroup.DeleteObjectFromDb(objKey, dbHdl)
 
+		case models.BGPAggregate:
+			logger.Println("BgpDClient: BGPPeerGroup delete")
+			bgpAgg := obj.(models.BGPAggregate)
+			logger.Println("BgpDClient: BGPPeerGroup delete - %s", bgpAgg)
+			_, err := clnt.ClientHdl.DeleteBGPAggregate(bgpAgg.IPPrefix)
+			if err != nil {
+				return false
+			}
+			bgpAgg.DeleteObjectFromDb(objKey, dbHdl)
+
 		default:
 			return false
 		}
@@ -1059,6 +1087,18 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 				return false
 			}
 			origBgpPeerGroup.UpdateObjectInDb(obj, attrSet, dbHdl)
+
+		case models.BGPAggregate:
+			logger.Println("BgpDClient: BGPPeerGroup update")
+			origBgpAgg := obj.(models.BGPAggregate)
+			origAgg := convertBGPAggregateToThriftObj(origBgpAgg)
+			updatedBgpAgg := obj.(models.BGPAggregate)
+			updatedAgg := convertBGPAggregateToThriftObj(updatedBgpAgg)
+			_, err := clnt.ClientHdl.UpdateBGPAggregate(origAgg, updatedAgg, attrSet)
+			if err != nil {
+				return false
+			}
+			origBgpAgg.UpdateObjectInDb(obj, attrSet, dbHdl)
 
 		default:
 			return false
