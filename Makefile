@@ -28,7 +28,7 @@ SRCS=apihandlers.go\
 	  asicdclientif.go
 
 COMP_NAME=confd
-all: exe install 
+all: gencode exe install 
 
 exe: $(SRCS)
 	 go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
@@ -36,11 +36,16 @@ exe: $(SRCS)
 install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 @$(RSYNC) docsui $(PARAMSDIR)
+	 @echo $(DESTDIR)
 	 install params/clients.json $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
+	 install $(SR_CODE_BASE)/snaproute/src/models/genObjectConfig.json $(PARAMSDIR)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
+
+gencode:
+	$(SR_CODE_BASE)/reltools/codegentools/gencode.sh
 
 guard:
 ifndef SR_CODE_BASE

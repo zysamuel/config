@@ -58,6 +58,17 @@ func (clnt *BFDDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
+
+	case models.BfdSessionConfig:
+		data := obj.(models.BfdSessionConfig)
+		conf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateBfdSessionConfig(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
 	default:
 		break
 	}
@@ -84,6 +95,17 @@ func (clnt *BFDDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl 
 		conf := bfdd.NewBfdIntfConfig()
 		models.ConvertbfddBfdIntfConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteBfdIntfConfig(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.BfdSessionConfig:
+		data := obj.(models.BfdSessionConfig)
+		conf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteBfdSessionConfig(conf)
 		if err != nil {
 			return false
 		}
@@ -182,25 +204,27 @@ func (clnt *BFDDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 						objs = make([]models.ConfigObj, 0)
 					}
 
-					ret_obj.InterfaceId = int32(bulkInfo.BfdSessionStateList[i].InterfaceId)
-					ret_obj.AuthType = uint32(bulkInfo.BfdSessionStateList[i].AuthType)
-					ret_obj.DetectionMultiplier = uint32(bulkInfo.BfdSessionStateList[i].DetectionMultiplier)
-					ret_obj.RegisteredProtocols = string(bulkInfo.BfdSessionStateList[i].RegisteredProtocols)
 					ret_obj.RequiredMinRxInterval = int32(bulkInfo.BfdSessionStateList[i].RequiredMinRxInterval)
-					ret_obj.RemoteMinRxInterval = int32(bulkInfo.BfdSessionStateList[i].RemoteMinRxInterval)
+					ret_obj.AuthType = uint32(bulkInfo.BfdSessionStateList[i].AuthType)
+					ret_obj.RegisteredProtocols = string(bulkInfo.BfdSessionStateList[i].RegisteredProtocols)
 					ret_obj.RemoteDiscriminator = uint32(bulkInfo.BfdSessionStateList[i].RemoteDiscriminator)
-					ret_obj.SentAuthSeq = uint32(bulkInfo.BfdSessionStateList[i].SentAuthSeq)
-					ret_obj.RemoteSessionState = int32(bulkInfo.BfdSessionStateList[i].RemoteSessionState)
-					ret_obj.LocalIpAddr = string(bulkInfo.BfdSessionStateList[i].LocalIpAddr)
+					ret_obj.DemandMode = bool(bulkInfo.BfdSessionStateList[i].DemandMode)
 					ret_obj.DesiredMinTxInterval = int32(bulkInfo.BfdSessionStateList[i].DesiredMinTxInterval)
 					ret_obj.SessionId = int32(bulkInfo.BfdSessionStateList[i].SessionId)
+					ret_obj.RemoteSessionState = int32(bulkInfo.BfdSessionStateList[i].RemoteSessionState)
+					ret_obj.NumTxPackets = uint32(bulkInfo.BfdSessionStateList[i].NumTxPackets)
+					ret_obj.NumRxPackets = uint32(bulkInfo.BfdSessionStateList[i].NumRxPackets)
+					ret_obj.RemoteDemandMode = bool(bulkInfo.BfdSessionStateList[i].RemoteDemandMode)
+					ret_obj.InterfaceId = int32(bulkInfo.BfdSessionStateList[i].InterfaceId)
+					ret_obj.DetectionMultiplier = uint32(bulkInfo.BfdSessionStateList[i].DetectionMultiplier)
+					ret_obj.RemoteMinRxInterval = int32(bulkInfo.BfdSessionStateList[i].RemoteMinRxInterval)
+					ret_obj.SentAuthSeq = uint32(bulkInfo.BfdSessionStateList[i].SentAuthSeq)
+					ret_obj.LocalIpAddr = string(bulkInfo.BfdSessionStateList[i].LocalIpAddr)
 					ret_obj.LocalDiscriminator = uint32(bulkInfo.BfdSessionStateList[i].LocalDiscriminator)
 					ret_obj.SessionState = int32(bulkInfo.BfdSessionStateList[i].SessionState)
 					ret_obj.AuthSeqKnown = bool(bulkInfo.BfdSessionStateList[i].AuthSeqKnown)
-					ret_obj.RemoteDemandMode = bool(bulkInfo.BfdSessionStateList[i].RemoteDemandMode)
 					ret_obj.ReceivedAuthSeq = uint32(bulkInfo.BfdSessionStateList[i].ReceivedAuthSeq)
 					ret_obj.RemoteIpAddr = string(bulkInfo.BfdSessionStateList[i].RemoteIpAddr)
-					ret_obj.DemandMode = bool(bulkInfo.BfdSessionStateList[i].DemandMode)
 					ret_obj.LocalDiagType = int32(bulkInfo.BfdSessionStateList[i].LocalDiagType)
 					objs = append(objs, ret_obj)
 				}
@@ -253,6 +277,25 @@ func (clnt *BFDDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		models.ConvertbfddBfdIntfConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateBfdIntfConfig(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.BfdSessionConfig:
+		// cast original object
+		origdata := dbObj.(models.BfdSessionConfig)
+		updatedata := obj.(models.BfdSessionConfig)
+		// create new thrift objects
+		origconf := bfdd.NewBfdSessionConfig()
+		updateconf := bfdd.NewBfdSessionConfig()
+		models.ConvertbfddBfdSessionConfigObjToThrift(&origdata, origconf)
+		models.ConvertbfddBfdSessionConfigObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateBfdSessionConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
