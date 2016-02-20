@@ -4,12 +4,13 @@ PARAMSDIR=$(DESTDIR)/params
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
-SRCS=apihandlers.go\
+CLIENTIF_FILES = $(shell ls  *clientif.go)
+SRCS=$(CLIENTIF_FILES)\
+	  apihandlers.go\
 	  apierrcodes.go\
 	  ipcutils.go\
 	  client.go\
 	  clientmap.go\
-	  clientif.go\
 	  objif.go\
 	  logger.go\
 	  restroutes.go\
@@ -17,16 +18,7 @@ SRCS=apihandlers.go\
 	  dbif.go\
 	  ipblockmgr.go\
 	  usermgmt.go\
-	  main.go\
-	  remotebgppeer.go\
-	  lacpdclientif.go\
-	  localclientif.go\
-	  stpdclientif.go\
-	  dhcprelaydclientif.go\
-	  vrrpdclientif.go\
-	  ospfdclientif.go\
-	  bfddclientif.go\
-	  asicdclientif.go
+	  main.go
 
 COMP_NAME=confd
 all: gencode exe install 
