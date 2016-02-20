@@ -23,6 +23,7 @@ SRCS=apihandlers.go\
 	  localclientif.go\
 	  stpdclientif.go\
 	  dhcprelaydclientif.go\
+	  vrrpdclientif.go\
 	  ospfdclientif.go\
 	  bfddclientif.go\
 	  asicdclientif.go
