@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"models"
 )
 
 //
@@ -17,6 +18,13 @@ type ConfigObjJson struct {
 type ConfigObjInfo struct {
 	owner     ClientIf
 	listeners []ClientIf
+}
+
+func (mgr *ConfigMgr) CreateObjectMap() {
+	//models.ConfigObjectMap
+	for objName, obj := range models.GenConfigObjectMap {
+		models.ConfigObjectMap[objName] = obj
+	}
 }
 
 //

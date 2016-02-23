@@ -442,6 +442,8 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 		logger.Println("ERROR: Error in Initializing Client handles")
 		return nil
 	}
+
+	mgr.CreateObjectMap()
 	rc = mgr.InitializeObjectHandles(objectConfigFiles[:])
 	if rc == false {
 		logger.Println("ERROR: Error in Initializing Object handles")

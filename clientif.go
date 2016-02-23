@@ -1214,9 +1214,6 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool
 	return nil, false
 }
 
-func (clnt *OSPFDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
-	return nil, false
-}
 
 func (clnt *STPDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 	return nil, false
