@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	//"io/ioutil"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -83,22 +84,9 @@ func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
 func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
-func main() {
+
+func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
 	fset := token.NewFileSet() // positions are relative to fset
-	outFileName := "flexApis.json"
-
-	inputFile := "../../models/objects.go"
-
-	docJsFile, err := os.Create(outFileName)
-	if err != nil {
-		fmt.Println("Failed to open the file")
-		return
-	}
-	defer docJsFile.Close()
-
-	// Write Header by copying each line from header file
-	writeStaticPart("part1.txt", docJsFile)
-	docJsFile.Sync()
 
 	// Parse the object file.
 	f, err := parser.ParseFile(fset,
@@ -110,7 +98,6 @@ func main() {
 		fmt.Println("Failed to parse input file ", inputFile, err)
 		return
 	}
-
 	for _, dec := range f.Decls {
 		tk, ok := dec.(*ast.GenDecl)
 		if ok {
@@ -119,8 +106,7 @@ func main() {
 				case *ast.TypeSpec:
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
-					switch typ.Name.Name {
-					case "BGPNeighborConfig", "IPv4Intf", "Vlan", "PortIntfConfig", "BGPGlobalConfig", "IPV4Route", "AggregationConfig","AggregationLacpConfig":
+					if typ.Name.Name == structName {
 						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							writeResourceHdr(typ.Name.Name, docJsFile)
@@ -138,14 +124,59 @@ func main() {
 							writeEpilogueForStruct(typ.Name.Name, docJsFile)
 							writePathCompletion(docJsFile)
 						}
-
 					}
-
 				}
 
 			}
 		}
 	}
+}
+
+type ObjectInfoJson struct {
+	Access       string `json:"access"`
+	Owner        string `json:"owner"`
+	SrcFile      string `json:"srcfile"`
+	Multiplicity string `json:"multiplicity"`
+}
+
+func main() {
+	outFileName := "flexApis.json"
+
+	docJsFile, err := os.Create(outFileName)
+	if err != nil {
+		fmt.Println("Failed to open the file")
+		return
+	}
+	defer docJsFile.Close()
+
+	// Write Header by copying each line from header file
+	writeStaticPart("part1.txt", docJsFile)
+	docJsFile.Sync()
+
+	var jsonFilesList []string
+	base := os.Getenv("SR_CODE_BASE")
+	if len(base) <= 0 {
+		fmt.Println(" Environment Variable SR_CODE_BASE has not been set")
+		return
+	}
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/genObjectConfig.json")
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/handCodedObjInfo.json")
+
+	for _, infoFile := range jsonFilesList {
+		var objMap map[string]ObjectInfoJson
+		objMap = make(map[string]ObjectInfoJson, 1)
+		bytes, err := ioutil.ReadFile(infoFile)
+		if err != nil {
+			fmt.Println("Error in reading Object configuration file", infoFile)
+			return
+		}
+		err = json.Unmarshal(bytes, &objMap)
+		for objName, objInfo := range objMap {
+			WriteRestResourceDoc(docJsFile, objName,
+				base+"/snaproute/src/models/"+objInfo.SrcFile)
+		}
+	}
+
 	docJsFile.WriteString(twoTabs + " } " + "\n")
 	docJsFile.WriteString(twoTabs + " }; " + "\n")
 	writeStaticPart("part2.txt", docJsFile)
