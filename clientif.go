@@ -1173,7 +1173,3 @@ func (clnt *DHCPRELAYDClient) GetObject(obj models.ConfigObj) (models.ConfigObj,
 func (clnt *LocalClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 	return nil, false
 }
-
-func (clnt *BFDDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
-	return nil, false
-}
