@@ -517,11 +517,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			  break
 			case "Redistribution":
 			  logger.Println("Redistribution")
-			  inActionCfg := inCfg.RedistributeActionInfo
-		      var actionCfg ribd.PolicyRedistributionAction
-		      actionCfg.RedistributeTargetProtocol = inActionCfg.RedistributeTargetProtocol
-		      actionCfg.Redistribute = inActionCfg.Redistribute
-			  cfg.RedistributeActionInfo = &actionCfg
+			  cfg.RedistributeAction = inCfg.RedistributeAction
+			  cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
 			  break
 			case "SetAdminDistance":
 		      logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
@@ -870,9 +867,120 @@ func convertBGPPeerGroupToThriftObj(bgpPeerGroup models.BGPPeerGroup) *bgpd.BGPP
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	retVal := false
 	objId := int64(0)
-
+    logger.Println("bgp create object")
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
+	   case models.BGPPolicyConditionConfig:
+		logger.Println("BGPPolicyConditionConfig")
+		inCfg := obj.(models.BGPPolicyConditionConfig)
+		var cfg bgpd.BGPPolicyConditionConfig
+		cfg.Name = inCfg.Name
+		cfg.ConditionType = inCfg.ConditionType
+		switch (inCfg.ConditionType) {
+			case "MatchDstIpPrefix":
+		      logger.Println("MatchDstIpPrefix")
+			  inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
+		      var cfgIpPrefix bgpd.BGPPolicyPrefix
+		      var dstIpMatchPrefixconditionCfg bgpd.PolicyDstIpMatchPrefixSetCondition
+		      if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
+			    logger.Println("cannot set both prefix set name and a prefix")
+			    return int64(0), true
+		      }
+		      dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
+		      cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
+		      cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
+		      dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
+			  cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
+			  break
+			default:
+			  logger.Println("Invalid condition type")
+			  return int64(0),true
+		}
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreateBGPPolicyConditionConfig(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.BGPPolicyActionConfig:
+		logger.Println("BGPPolicyActionConfig")
+		inCfg := obj.(models.BGPPolicyActionConfig)
+		var cfg bgpd.BGPPolicyActionConfig
+		cfg.Name = inCfg.Name
+		cfg.ActionType = inCfg.ActionType
+        switch inCfg.ActionType {
+			case "Aggregate":
+			  logger.Println("Aggregate")
+			  inActionCfg := inCfg.AggregateActionInfo
+		      var actionCfg bgpd.BGPPolicyAggregateAction
+		      actionCfg.GenerateASSet = inActionCfg.GenerateASSet
+		      actionCfg.SendSummaryOnly = inActionCfg.SendSummaryOnly
+			  cfg.AggregateActionInfo = &actionCfg
+			  break
+		}		
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreateBGPPolicyActionConfig(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.BGPPolicyStmtConfig:
+		logger.Println("BGPPolicyStmtConfig")
+		var i int
+		inCfg := obj.(models.BGPPolicyStmtConfig)
+		var cfg bgpd.BGPPolicyStmtConfig
+		cfg.Name = inCfg.Name
+		logger.Println("Number of conditons = ", len(inCfg.Conditions))
+		conditions := make([]string, 0)
+		for i = 0; i < len(inCfg.Conditions); i++ {
+			conditions = append(conditions, inCfg.Conditions[i])
+		}
+		cfg.Conditions = conditions
+		logger.Println("Number of actions = ", len(inCfg.Actions))
+		actions := make([]string, 0)
+		for i = 0; i < len(inCfg.Actions); i++ {
+			actions = append(actions, inCfg.Actions[i])
+		}
+		cfg.Actions = actions
+		cfg.MatchConditions = inCfg.MatchConditions
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreateBGPPolicyStmtConfig(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+	case models.BGPPolicyDefinitionConfig:
+		logger.Println("BGPPolicyDefinitionConfig")
+		inCfg := obj.(models.BGPPolicyDefinitionConfig)
+		var cfg bgpd.BGPPolicyDefinitionConfig
+		cfg.Name = inCfg.Name
+		cfg.Precedence = bgpd.Int(inCfg.Precedence)
+		cfg.MatchType = inCfg.MatchType
+		cfg.Export = inCfg.Export
+		cfg.Import = inCfg.Import
+		cfg.Global = inCfg.Global
+        if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
+			logger.Println("Need to set import,export or global to true")
+			break
+		}
+		logger.Println("Number of statements = ", len(inCfg.StatementList))
+		policyDefinitionStatements := make([]bgpd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
+		cfg.PolicyDefinitionStatements = make([]*bgpd.PolicyDefinitionStmtPrecedence, 0)
+		var i int
+		for k, v := range inCfg.StatementList {
+			logger.Println("k= ", k, " v= ", v)
+			if v == nil {
+				logger.Println("Interface nil at key ", k)
+				continue
+			}
+			inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
+			policyDefinitionStatements[i] = bgpd.PolicyDefinitionStmtPrecedence{Precedence: bgpd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}
+			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
+			i++
+		}
+		if clnt.ClientHdl != nil {
+			clnt.ClientHdl.CreateBGPPolicyDefinitionConfig(&cfg)
+		}
+		objId, _ := inCfg.StoreObjectInDb(dbHdl)
+		return objId, true
+
 		case models.BGPGlobalConfig:
 			bgpGlobalConf := obj.(models.BGPGlobalConfig)
 			gConf := convertBGPGlobalConfToThriftObj(bgpGlobalConf)
@@ -902,9 +1010,11 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			}
 			objId, _ = bgpPeerGroup.StoreObjectInDb(dbHdl)
 			retVal = true
-		}
+		default:
+		  logger.Println("default unknown value")
+		  break
 	}
-
+   }    
 	return objId, retVal
 }
 
@@ -913,6 +1023,106 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 
 	logger.Println("BgpDClient: GetBulkObject called - start")
 	switch obj.(type) {
+	case models.BGPPolicyConditionState:
+		logger.Println("BGPPolicyConditionState")
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BGPPolicyConditionState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyConditionState(bgpd.Int(currMarker), bgpd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.Name = getBulkInfo.PolicyConditionStateList[i].Name
+					ret_obj.ConditionInfo = getBulkInfo.PolicyConditionStateList[i].ConditionInfo
+					ret_obj.PolicyStmtList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyConditionStateList[i].PolicyStmtList); j++ {
+						ret_obj.PolicyStmtList = append(ret_obj.PolicyStmtList, getBulkInfo.PolicyConditionStateList[i].PolicyStmtList[j])
+					}
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
+	case models.BGPPolicyActionState:
+		logger.Println("BGPPolicyActionState")
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BGPPolicyActionState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyActionState(bgpd.Int(currMarker), bgpd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.Name = getBulkInfo.PolicyActionStateList[i].Name
+					ret_obj.ActionInfo = getBulkInfo.PolicyActionStateList[i].ActionInfo
+					ret_obj.PolicyStmtList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyActionStateList[i].PolicyStmtList); j++ {
+						ret_obj.PolicyStmtList = append(ret_obj.PolicyStmtList, getBulkInfo.PolicyActionStateList[i].PolicyStmtList[j])
+					}
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
+	case models.BGPPolicyStmtState:
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BGPPolicyStmtState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyStmtState(bgpd.Int(currMarker), bgpd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				var j int
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.Name = getBulkInfo.PolicyStmtStateList[i].Name
+					ret_obj.MatchConditions = getBulkInfo.PolicyStmtStateList[i].MatchConditions
+					ret_obj.Conditions = make([]string, 0)
+					for j = 0; j < len(getBulkInfo.PolicyStmtStateList[i].Conditions); j++ {
+						ret_obj.Conditions = append(ret_obj.Conditions, getBulkInfo.PolicyStmtStateList[i].Conditions[j])
+					}
+					ret_obj.Actions = make([]string, 0)
+					for j = 0; j < len(getBulkInfo.PolicyStmtStateList[i].Actions); j++ {
+						ret_obj.Actions = append(ret_obj.Actions, getBulkInfo.PolicyStmtStateList[i].Actions[j])
+					}
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
+	case models.BGPPolicyDefinitionState:
+		if clnt.ClientHdl != nil {
+			var ret_obj models.BGPPolicyDefinitionState
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyDefinitionState(bgpd.Int(currMarker),bgpd.Int(count))
+			if getBulkInfo.Count != 0 {
+				objCount = int64(getBulkInfo.Count)
+				more = bool(getBulkInfo.More)
+				nextMarker = int64(getBulkInfo.EndIdx)
+				var j int
+				for i := 0; i < int(getBulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+					ret_obj.Name = getBulkInfo.PolicyDefinitionStateList[i].Name
+					ret_obj.HitCounter = int(getBulkInfo.PolicyDefinitionStateList[i].HitCounter)
+					ret_obj.IpPrefixList = make([]string, 0)
+					for j = 0; j < len(getBulkInfo.PolicyDefinitionStateList[i].IpPrefixList); j++ {
+						ret_obj.IpPrefixList = append(ret_obj.IpPrefixList, getBulkInfo.PolicyDefinitionStateList[i].IpPrefixList[j])
+					}
+					objs = append(objs, ret_obj)
+				}
+			}
+		}
+		break
 	case models.BGPNeighborState:
 		var bgpNeighborStateBulk *bgpd.BGPNeighborStateBulk
 		bgpNeighborStateBulk, err = clnt.ClientHdl.BulkGetBGPNeighbors(currMarker, count)
