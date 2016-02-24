@@ -35,9 +35,9 @@ func writeStaticPart(inputFile string, dstFile *os.File) {
 	}
 }
 
-func writeResourceHdr(strName string, dstFile *os.File) {
-	dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
-	dstFile.WriteString(twoTabs + "\"post\": { " + "\n")
+func writeResourceHdr(strName string, operation string, dstFile *os.File) {
+	//dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
+	dstFile.WriteString(twoTabs + "\"" + operation + "\": { " + "\n")
 	dstFile.WriteString(threeTabs + "\"tags\": [ " + "\n")
 	dstFile.WriteString(fourTabs + "\"" + strName + "\"" + "\n")
 	dstFile.WriteString(threeTabs + "]," + "\n")
@@ -59,7 +59,7 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(fourTabs + "\"description\": \"Invalid input\"" + "\n")
 	dstFile.WriteString(threeTabs + " }" + "\n")
 	dstFile.WriteString(twoTabs + " }" + "\n")
-	dstFile.WriteString(twoTabs + " } " + "\n")
+	dstFile.WriteString(twoTabs + " }," + "\n")
 }
 
 func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
@@ -83,6 +83,22 @@ func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
 
 func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
+}
+
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, str *ast.StructType) {
+	writeResourceHdr(structName, operation, docJsFile)
+	for _, fld := range str.Fields.List {
+		if fld.Names != nil {
+			switch fld.Type.(type) {
+			case *ast.Ident:
+				fmt.Printf("-- %s \n", fld.Names[0])
+				idnt := fld.Type.(*ast.Ident)
+				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+			}
+		}
+	}
+	docJsFile.WriteString(twoTabs + " ], " + "\n")
+	writeEpilogueForStruct(structName, docJsFile)
 }
 
 func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
@@ -109,19 +125,24 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					if typ.Name.Name == structName {
 						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
-							writeResourceHdr(typ.Name.Name, docJsFile)
-							for _, fld := range str.Fields.List {
-								if fld.Names != nil {
-									switch fld.Type.(type) {
-									case *ast.Ident:
-										fmt.Printf("-- %s \n", fld.Names[0])
-										idnt := fld.Type.(*ast.Ident)
-										writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
-									}
-								}
-							}
-							docJsFile.WriteString(twoTabs + " ], " + "\n")
-							writeEpilogueForStruct(typ.Name.Name, docJsFile)
+							docJsFile.WriteString(twoTabs + "\"/" + typ.Name.Name + "\": { \n")
+							writeResourceOperation(typ.Name.Name, "post", docJsFile, str)
+							writeResourceOperation(typ.Name.Name, "get", docJsFile, str)
+							writeResourceOperation(typ.Name.Name, "delete", docJsFile, str)
+							//writeResourceHdr(typ.Name.Name, docJsFile)
+							//for _, fld := range str.Fields.List {
+							//	if fld.Names != nil {
+							//		switch fld.Type.(type) {
+							//		case *ast.Ident:
+							//			fmt.Printf("-- %s \n", fld.Names[0])
+							//			idnt := fld.Type.(*ast.Ident)
+							//			writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+							//		}
+							//	}
+							//}
+							//docJsFile.WriteString(twoTabs + " ], " + "\n")
+							//writeEpilogueForStruct(typ.Name.Name, docJsFile)
+							//docJsFile.WriteString(twoTabs + " } " + "\n")
 							writePathCompletion(docJsFile)
 						}
 					}
