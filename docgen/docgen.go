@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	//"io/ioutil"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -34,9 +35,9 @@ func writeStaticPart(inputFile string, dstFile *os.File) {
 	}
 }
 
-func writeResourceHdr(strName string, dstFile *os.File) {
-	dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
-	dstFile.WriteString(twoTabs + "\"post\": { " + "\n")
+func writeResourceHdr(strName string, operation string, dstFile *os.File) {
+	//dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
+	dstFile.WriteString(twoTabs + "\"" + operation + "\": { " + "\n")
 	dstFile.WriteString(threeTabs + "\"tags\": [ " + "\n")
 	dstFile.WriteString(fourTabs + "\"" + strName + "\"" + "\n")
 	dstFile.WriteString(threeTabs + "]," + "\n")
@@ -58,7 +59,7 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(fourTabs + "\"description\": \"Invalid input\"" + "\n")
 	dstFile.WriteString(threeTabs + " }" + "\n")
 	dstFile.WriteString(twoTabs + " }" + "\n")
-	dstFile.WriteString(twoTabs + " } " + "\n")
+	dstFile.WriteString(twoTabs + " }," + "\n")
 }
 
 func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
@@ -83,11 +84,84 @@ func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
 func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
-func main() {
-	fset := token.NewFileSet() // positions are relative to fset
-	outFileName := "flexApis.json"
 
-	inputFile := "../../models/objects.go"
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, str *ast.StructType) {
+	writeResourceHdr(structName, operation, docJsFile)
+	for _, fld := range str.Fields.List {
+		if fld.Names != nil {
+			switch fld.Type.(type) {
+			case *ast.Ident:
+				fmt.Printf("-- %s \n", fld.Names[0])
+				idnt := fld.Type.(*ast.Ident)
+				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+			}
+		}
+	}
+	docJsFile.WriteString(twoTabs + " ], " + "\n")
+	writeEpilogueForStruct(structName, docJsFile)
+}
+
+func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
+	fset := token.NewFileSet() // positions are relative to fset
+
+	// Parse the object file.
+	f, err := parser.ParseFile(fset,
+		inputFile,
+		nil,
+		parser.ParseComments)
+
+	if err != nil {
+		fmt.Println("Failed to parse input file ", inputFile, err)
+		return
+	}
+	for _, dec := range f.Decls {
+		tk, ok := dec.(*ast.GenDecl)
+		if ok {
+			for _, spec := range tk.Specs {
+				switch spec.(type) {
+				case *ast.TypeSpec:
+					typ := spec.(*ast.TypeSpec)
+					str, ok := typ.Type.(*ast.StructType)
+					if typ.Name.Name == structName {
+						fmt.Printf("%s \n", typ.Name.Name)
+						if ok {
+							docJsFile.WriteString(twoTabs + "\"/" + typ.Name.Name + "\": { \n")
+							writeResourceOperation(typ.Name.Name, "post", docJsFile, str)
+							writeResourceOperation(typ.Name.Name, "get", docJsFile, str)
+							writeResourceOperation(typ.Name.Name, "delete", docJsFile, str)
+							//writeResourceHdr(typ.Name.Name, docJsFile)
+							//for _, fld := range str.Fields.List {
+							//	if fld.Names != nil {
+							//		switch fld.Type.(type) {
+							//		case *ast.Ident:
+							//			fmt.Printf("-- %s \n", fld.Names[0])
+							//			idnt := fld.Type.(*ast.Ident)
+							//			writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+							//		}
+							//	}
+							//}
+							//docJsFile.WriteString(twoTabs + " ], " + "\n")
+							//writeEpilogueForStruct(typ.Name.Name, docJsFile)
+							//docJsFile.WriteString(twoTabs + " } " + "\n")
+							writePathCompletion(docJsFile)
+						}
+					}
+				}
+
+			}
+		}
+	}
+}
+
+type ObjectInfoJson struct {
+	Access       string `json:"access"`
+	Owner        string `json:"owner"`
+	SrcFile      string `json:"srcfile"`
+	Multiplicity string `json:"multiplicity"`
+}
+
+func main() {
+	outFileName := "flexApis.json"
 
 	docJsFile, err := os.Create(outFileName)
 	if err != nil {
@@ -100,52 +174,30 @@ func main() {
 	writeStaticPart("part1.txt", docJsFile)
 	docJsFile.Sync()
 
-	// Parse the object file.
-	f, err := parser.ParseFile(fset,
-		inputFile,
-		nil,
-		parser.ParseComments)
-
-	if err != nil {
-		fmt.Println("Failed to parse input file ", inputFile, err)
+	var jsonFilesList []string
+	base := os.Getenv("SR_CODE_BASE")
+	if len(base) <= 0 {
+		fmt.Println(" Environment Variable SR_CODE_BASE has not been set")
 		return
 	}
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/genObjectConfig.json")
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/handCodedObjInfo.json")
 
-	for _, dec := range f.Decls {
-		tk, ok := dec.(*ast.GenDecl)
-		if ok {
-			for _, spec := range tk.Specs {
-				switch spec.(type) {
-				case *ast.TypeSpec:
-					typ := spec.(*ast.TypeSpec)
-					str, ok := typ.Type.(*ast.StructType)
-					switch typ.Name.Name {
-					case "BGPNeighborConfig", "IPv4Intf", "Vlan", "PortIntfConfig", "BGPGlobalConfig", "IPV4Route", "AggregationConfig","AggregationLacpConfig":
-						fmt.Printf("%s \n", typ.Name.Name)
-						if ok {
-							writeResourceHdr(typ.Name.Name, docJsFile)
-							for _, fld := range str.Fields.List {
-								if fld.Names != nil {
-									switch fld.Type.(type) {
-									case *ast.Ident:
-										fmt.Printf("-- %s \n", fld.Names[0])
-										idnt := fld.Type.(*ast.Ident)
-										writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
-									}
-								}
-							}
-							docJsFile.WriteString(twoTabs + " ], " + "\n")
-							writeEpilogueForStruct(typ.Name.Name, docJsFile)
-							writePathCompletion(docJsFile)
-						}
-
-					}
-
-				}
-
-			}
+	for _, infoFile := range jsonFilesList {
+		var objMap map[string]ObjectInfoJson
+		objMap = make(map[string]ObjectInfoJson, 1)
+		bytes, err := ioutil.ReadFile(infoFile)
+		if err != nil {
+			fmt.Println("Error in reading Object configuration file", infoFile)
+			return
+		}
+		err = json.Unmarshal(bytes, &objMap)
+		for objName, objInfo := range objMap {
+			WriteRestResourceDoc(docJsFile, objName,
+				base+"/snaproute/src/models/"+objInfo.SrcFile)
 		}
 	}
+
 	docJsFile.WriteString(twoTabs + " } " + "\n")
 	docJsFile.WriteString(twoTabs + " }; " + "\n")
 	writeStaticPart("part2.txt", docJsFile)
