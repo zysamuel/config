@@ -129,20 +129,6 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 							writeResourceOperation(typ.Name.Name, "post", docJsFile, str)
 							writeResourceOperation(typ.Name.Name, "get", docJsFile, str)
 							writeResourceOperation(typ.Name.Name, "delete", docJsFile, str)
-							//writeResourceHdr(typ.Name.Name, docJsFile)
-							//for _, fld := range str.Fields.List {
-							//	if fld.Names != nil {
-							//		switch fld.Type.(type) {
-							//		case *ast.Ident:
-							//			fmt.Printf("-- %s \n", fld.Names[0])
-							//			idnt := fld.Type.(*ast.Ident)
-							//			writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
-							//		}
-							//	}
-							//}
-							//docJsFile.WriteString(twoTabs + " ], " + "\n")
-							//writeEpilogueForStruct(typ.Name.Name, docJsFile)
-							//docJsFile.WriteString(twoTabs + " } " + "\n")
 							writePathCompletion(docJsFile)
 						}
 					}
