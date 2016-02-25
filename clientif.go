@@ -302,6 +302,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					for j = 0; j < len(getBulkInfo.PolicyStmtStateList[i].Actions); j++ {
 						ret_obj.Actions = append(ret_obj.Actions, getBulkInfo.PolicyStmtStateList[i].Actions[j])
 					}
+					ret_obj.PolicyList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyStmtStateList[i].PolicyList); j++ {
+						ret_obj.PolicyList = append(ret_obj.PolicyList, getBulkInfo.PolicyStmtStateList[i].PolicyList[j])
+					}
 					objs = append(objs, ret_obj)
 				}
 			}
@@ -436,8 +440,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		switch (inCfg.ConditionType) {
 			case "MatchProtocol":
 		      logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
-			  matchProto := inCfg.MatchProtocolConditionInfo
-		      cfg.MatchProtocolConditionInfo = &matchProto
+			  cfg.MatchProtocolConditionInfo = inCfg.MatchProtocolConditionInfo
 		      //dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
 			  //cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
 			  break
