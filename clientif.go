@@ -8,6 +8,7 @@ import (
 	"models"
 	"ribd"
 	"strconv"
+	"l3/rib/ribdCommonDefs"
 	"utils/commonDefs"
 	"utils/ipcutils"
 )
@@ -360,8 +361,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			/* End of hack*/
 		if v4Route.OutgoingIntfType == "VLAN" {
 			outIntfType = commonDefs.L2RefTypeVlan
-		} else {
+		} else if v4Route.OutgoingIntfType == "PHY"{
 			outIntfType = commonDefs.L2RefTypePort
+		} else if v4Route.OutgoingIntfType == "NULL"{
+			outIntfType = ribdCommonDefs.NullIntfType
 		}
 		//proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
