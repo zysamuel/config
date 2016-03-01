@@ -848,6 +848,7 @@ func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig)
 	nConf.HoldTime = int32(bgpNeighborConf.HoldTime)
 	nConf.KeepaliveTime = int32(bgpNeighborConf.KeepaliveTime)
 	nConf.PeerGroup = bgpNeighborConf.PeerGroup
+	nConf.BfdEnable = bgpNeighborConf.BfdEnable
 	return nConf
 }
 
@@ -1168,6 +1169,7 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 				ConnectRetryTime:        uint32(item.ConnectRetryTime),
 				HoldTime:                uint32(item.HoldTime),
 				KeepaliveTime:           uint32(item.KeepaliveTime),
+				BfdNeighborState:        item.BfdNeighborState,
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
