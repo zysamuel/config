@@ -129,8 +129,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
-					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+					ret_obj.DestinationNw = routesInfo.RouteList[i].DestNetIp
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					/*ret_obj.PolicyList = make([]string,0)
