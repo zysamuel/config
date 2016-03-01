@@ -1,0 +1,34 @@
+[
+	{"Module": "confd",
+	 "Level": 3},
+
+	{"Module": "asicd",
+	 "Level": 3},
+
+	{"Module": "bgpd",
+	 "Level": 3},
+
+	{"Module": "ribd",  
+	 "Level": 3},
+	
+	{"Module": "arpd", 
+	 "Level": 3},
+		
+	{"Module": "lacpd",
+	 "Level": 3},
+
+	{"Module": "ospfd",
+	 "Level": 3},
+	
+	{"Module": "stpd",
+	 "Level": 3},
+
+	{"Module": "dhcprelayd",
+	 "Level": 3},
+
+	{"Module": "bfdd",
+	 "Level": 3},
+
+	{"Module": "vrrpd",
+	 "Level": 3}
+]
