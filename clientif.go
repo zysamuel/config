@@ -1225,6 +1225,26 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 func (clnt *BgpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
+		case models.BGPPolicyStmtConfig:
+			logger.Println("BgpDClient: BGPPolicyStmtConfig delete")
+			inCfg := obj.(models.BGPPolicyStmtConfig)
+			logger.Println("BgpDClient: BGPPolicyStmtConfig delete - %s", inCfg)
+			_, err := clnt.ClientHdl.DeleteBGPPolicyStmtConfig(inCfg.Name)
+			if err != nil {
+				return false
+			}
+			inCfg.DeleteObjectFromDb(objKey, dbHdl)
+
+		case models.BGPPolicyDefinitionConfig:
+			logger.Println("BgpDClient: BGPPolicyDefinitionConfig delete")
+			inCfg := obj.(models.BGPPolicyDefinitionConfig)
+			logger.Println("BgpDClient: BGPPolicyDefinitionConfig delete - %s", inCfg)
+			_, err := clnt.ClientHdl.DeleteBGPPolicyDefinitionConfig(inCfg.Name)
+			if err != nil {
+				return false
+			}
+			inCfg.DeleteObjectFromDb(objKey, dbHdl)
+
 		case models.BGPGlobalConfig:
 			return false
 
