@@ -71,8 +71,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func CheckIfSystemIsReady(w http.ResponseWriter) bool {
-	//return gMgr.IsReady()
-	return true
+	return gMgr.IsReady()
 }
 
 func ShowConfigObject(w http.ResponseWriter, r *http.Request) {
