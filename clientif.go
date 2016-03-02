@@ -130,7 +130,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					ret_obj.DestinationNw = routesInfo.RouteList[i].DestNetIp
+					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					/*ret_obj.PolicyList = make([]string,0)
@@ -881,120 +881,6 @@ func convertBGPAggregateToThriftObj(bgpAggregate models.BGPAggregate) *bgpd.BGPA
 func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	retVal := false
 	objId := int64(0)
-    logger.Println("bgp create object")
-	if clnt.ClientHdl != nil {
-		switch obj.(type) {
-	   case models.BGPPolicyConditionConfig:
-		logger.Println("BGPPolicyConditionConfig")
-		inCfg := obj.(models.BGPPolicyConditionConfig)
-		var cfg bgpd.BGPPolicyConditionConfig
-		cfg.Name = inCfg.Name
-		cfg.ConditionType = inCfg.ConditionType
-		switch (inCfg.ConditionType) {
-			case "MatchDstIpPrefix":
-		      logger.Println("MatchDstIpPrefix")
-			  inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
-		      var cfgIpPrefix bgpd.BGPPolicyPrefix
-		      var dstIpMatchPrefixconditionCfg bgpd.PolicyDstIpMatchPrefixSetCondition
-		      if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
-			    logger.Println("cannot set both prefix set name and a prefix")
-			    return int64(0), true
-		      }
-		      dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
-		      cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
-		      cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
-		      dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
-			  cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
-			  break
-			default:
-			  logger.Println("Invalid condition type")
-			  return int64(0),true
-		}
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreateBGPPolicyConditionConfig(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-	case models.BGPPolicyActionConfig:
-		logger.Println("BGPPolicyActionConfig")
-		inCfg := obj.(models.BGPPolicyActionConfig)
-		var cfg bgpd.BGPPolicyActionConfig
-		cfg.Name = inCfg.Name
-		cfg.ActionType = inCfg.ActionType
-        switch inCfg.ActionType {
-			case "Aggregate":
-			  logger.Println("Aggregate")
-			  inActionCfg := inCfg.AggregateActionInfo
-		      var actionCfg bgpd.BGPPolicyAggregateAction
-		      actionCfg.GenerateASSet = inActionCfg.GenerateASSet
-		      actionCfg.SendSummaryOnly = inActionCfg.SendSummaryOnly
-			  cfg.AggregateActionInfo = &actionCfg
-			  break
-		}		
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreateBGPPolicyActionConfig(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-	case models.BGPPolicyStmtConfig:
-		logger.Println("BGPPolicyStmtConfig")
-		var i int
-		inCfg := obj.(models.BGPPolicyStmtConfig)
-		var cfg bgpd.BGPPolicyStmtConfig
-		cfg.Name = inCfg.Name
-		logger.Println("Number of conditons = ", len(inCfg.Conditions))
-		conditions := make([]string, 0)
-		for i = 0; i < len(inCfg.Conditions); i++ {
-			conditions = append(conditions, inCfg.Conditions[i])
-		}
-		cfg.Conditions = conditions
-		logger.Println("Number of actions = ", len(inCfg.Actions))
-		actions := make([]string, 0)
-		for i = 0; i < len(inCfg.Actions); i++ {
-			actions = append(actions, inCfg.Actions[i])
-		}
-		cfg.Actions = actions
-		cfg.MatchConditions = inCfg.MatchConditions
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreateBGPPolicyStmtConfig(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-	case models.BGPPolicyDefinitionConfig:
-		logger.Println("BGPPolicyDefinitionConfig")
-		inCfg := obj.(models.BGPPolicyDefinitionConfig)
-		var cfg bgpd.BGPPolicyDefinitionConfig
-		cfg.Name = inCfg.Name
-		cfg.Precedence = bgpd.Int(inCfg.Precedence)
-		cfg.MatchType = inCfg.MatchType
-		cfg.Export = inCfg.Export
-		cfg.Import = inCfg.Import
-		cfg.Global = inCfg.Global
-        if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
-			logger.Println("Need to set import,export or global to true")
-			break
-		}
-		logger.Println("Number of statements = ", len(inCfg.StatementList))
-		policyDefinitionStatements := make([]bgpd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
-		cfg.PolicyDefinitionStatements = make([]*bgpd.PolicyDefinitionStmtPrecedence, 0)
-		var i int
-		for k, v := range inCfg.StatementList {
-			logger.Println("k= ", k, " v= ", v)
-			if v == nil {
-				logger.Println("Interface nil at key ", k)
-				continue
-			}
-			inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
-			policyDefinitionStatements[i] = bgpd.PolicyDefinitionStmtPrecedence{Precedence: bgpd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}
-			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
-			i++
-		}
-		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreateBGPPolicyDefinitionConfig(&cfg)
-		}
-		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-/*=======
 	logger.Println("bgp create object")
 	if clnt.ClientHdl != nil {
 		switch obj.(type) {
@@ -1108,8 +994,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			}
 			objId, _ := inCfg.StoreObjectInDb(dbHdl)
 			return objId, true
->>>>>>> upstream/master
-*/
+
 		case models.BGPGlobalConfig:
 			bgpGlobalConf := obj.(models.BGPGlobalConfig)
 			gConf := convertBGPGlobalConfToThriftObj(bgpGlobalConf)
@@ -1154,7 +1039,7 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			break
 		}
 	}
-   }    
+
 	return objId, retVal
 }
 
