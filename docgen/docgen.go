@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 )
 
 var oneTabs string = "\t"
@@ -62,7 +64,7 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }," + "\n")
 }
 
-func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
+func writeAttributeJson(attrName string, attrType string, dstFile *os.File, fld *ast.Field) {
 	var attrTypeVal string
 	dstFile.WriteString(fourTabs + "{" + "\n")
 	dstFile.WriteString(fourTabs + "\"in\": \"formData\"," + "\n")
@@ -75,9 +77,15 @@ func writeAttributeJson(attrName string, attrType string, dstFile *os.File) {
 	default:
 		attrTypeVal = "string"
 	}
+	description, isRquired := getSpecialTagsForAttribute(fld)
 	dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
-	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + attrName + "\"" + "," + "\n")
-	dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
+	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + description + "\"" + "," + "\n")
+	if isRquired {
+		dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
+	} else {
+		dstFile.WriteString(fourTabs + "\"required\":" + "false," + "\n")
+	}
+
 	dstFile.WriteString(fourTabs + "}," + "\n")
 }
 
@@ -85,20 +93,87 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
+func getSpecialTagsForAttribute(fld *ast.Field) (description string, isRequired bool) {
+	reg, err := regexp.Compile("[`\"]")
+	if err != nil {
+		fmt.Println("Error in regex ", err)
+	}
+	if fld.Tag != nil {
+		tags := reg.ReplaceAllString(fld.Tag.Value, "")
+		splits := strings.Split(tags, ",")
+		for _, part := range splits {
+			keys := strings.Split(part, ":")
+			for idx, key := range keys {
+				alphas, err := regexp.Compile("[^A-Za-z]")
+				if err != nil {
+					fmt.Println("Error in regex ", err)
+				}
+				key = alphas.ReplaceAllString(key, "")
+				switch key {
+				case "DESCRIPTION":
+					description = keys[idx+1]
+				case "DEFAULT":
+					isRequired = false
+				}
+			}
+		}
+	}
+	return description, isRequired
+}
+
 func writeResourceOperation(structName string, operation string, docJsFile *os.File, str *ast.StructType) {
 	writeResourceHdr(structName, operation, docJsFile)
 	for _, fld := range str.Fields.List {
 		if fld.Names != nil {
 			switch fld.Type.(type) {
+
+			case *ast.ArrayType:
+				fmt.Println("### Array Type attribute ", fld.Names[0].Name)
+				//arrayInfo := fld.Type.(*ast.ArrayType)
+				//info := ObjectMembersInfo{}
+				//info.IsArray = true
+				//objMembers[varName] = info
+				//idntType := arrayInfo.Elt.(*ast.Ident)
+				//varType := idntType.String()
+				//info.VarType = varType
+				//objMembers[varName] = info
+				//if fld.Tag != nil {
+				//	getSpecialTagsForAttribute(fld.Tag.Value, &info)
+				//}
 			case *ast.Ident:
 				fmt.Printf("-- %s \n", fld.Names[0])
 				idnt := fld.Type.(*ast.Ident)
-				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
+				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
 			}
 		}
 	}
 	docJsFile.WriteString(twoTabs + " ], " + "\n")
 	writeEpilogueForStruct(structName, docJsFile)
+}
+
+func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructType) {
+
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
+	writeResourceOperation(structName, "post", docJsFile, str)
+	writePathCompletion(docJsFile)
+
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{objec-id}\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, str)
+	writeResourceOperation(structName, "delete", docJsFile, str)
+	writeResourceOperation(structName, "patch", docJsFile, str)
+	writePathCompletion(docJsFile)
+}
+
+func WriteStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "s\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, str)
+	writePathCompletion(docJsFile)
+}
+
+func WriteGlobalStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, str)
+	writePathCompletion(docJsFile)
 }
 
 func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
@@ -125,29 +200,18 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					if typ.Name.Name == structName {
 						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
-							docJsFile.WriteString(twoTabs + "\"/" + typ.Name.Name + "\": { \n")
-							writeResourceOperation(typ.Name.Name, "post", docJsFile, str)
-							writeResourceOperation(typ.Name.Name, "get", docJsFile, str)
-							writeResourceOperation(typ.Name.Name, "delete", docJsFile, str)
-							//writeResourceHdr(typ.Name.Name, docJsFile)
-							//for _, fld := range str.Fields.List {
-							//	if fld.Names != nil {
-							//		switch fld.Type.(type) {
-							//		case *ast.Ident:
-							//			fmt.Printf("-- %s \n", fld.Names[0])
-							//			idnt := fld.Type.(*ast.Ident)
-							//			writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile)
-							//		}
-							//	}
-							//}
-							//docJsFile.WriteString(twoTabs + " ], " + "\n")
-							//writeEpilogueForStruct(typ.Name.Name, docJsFile)
-							//docJsFile.WriteString(twoTabs + " } " + "\n")
-							writePathCompletion(docJsFile)
+							if strings.HasSuffix(typ.Name.Name, "Config") {
+								WriteConfigObject(typ.Name.Name, docJsFile, str)
+							} else if strings.HasSuffix(typ.Name.Name, "State") {
+								if strings.Contains(typ.Name.Name, "Global") {
+									WriteGlobalStateObject(typ.Name.Name, docJsFile, str)
+								} else {
+									WriteStateObject(typ.Name.Name+"s", docJsFile, str)
+								}
+							}
 						}
 					}
 				}
-
 			}
 		}
 	}

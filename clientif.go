@@ -102,8 +102,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
-					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+					ret_obj.DestinationNw = routesInfo.RouteList[i].DestNetIp
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
 					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString //strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
@@ -130,8 +129,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					if len(objs) == 0 {
 						objs = make([]models.ConfigObj, 0)
 					}
-					ret_obj.DestinationNw = routesInfo.RouteList[i].Ipaddr
-					ret_obj.NetworkMask = routesInfo.RouteList[i].Mask
+					ret_obj.DestinationNw = routesInfo.RouteList[i].DestNetIp
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
 					/*ret_obj.PolicyList = make([]string,0)
@@ -303,6 +301,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					for j = 0; j < len(getBulkInfo.PolicyStmtStateList[i].Actions); j++ {
 						ret_obj.Actions = append(ret_obj.Actions, getBulkInfo.PolicyStmtStateList[i].Actions[j])
 					}
+					ret_obj.PolicyList = make([]string, 0)
+					for j := 0; j < len(getBulkInfo.PolicyStmtStateList[i].PolicyList); j++ {
+						ret_obj.PolicyList = append(ret_obj.PolicyList, getBulkInfo.PolicyStmtStateList[i].PolicyList[j])
+					}
 					objs = append(objs, ret_obj)
 				}
 			}
@@ -436,32 +438,31 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var cfg ribd.PolicyConditionConfig
 		cfg.Name = inCfg.Name
 		cfg.ConditionType = inCfg.ConditionType
-		switch inCfg.ConditionType {
-		case "MatchProtocol":
-			logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
-			matchProto := inCfg.MatchProtocolConditionInfo
-			cfg.MatchProtocolConditionInfo = &matchProto
-			//dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
-			//cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
-			break
-		case "MatchDstIpPrefix":
-			logger.Println("MatchDstIpPrefix")
-			inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
-			var cfgIpPrefix ribd.PolicyPrefix
-			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
-			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
-				logger.Println("cannot set both prefix set name and a prefix")
-				return int64(0), true
-			}
-			dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
-			cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
-			cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
-			dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
-			cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
-			break
-		default:
-			logger.Println("Invalid condition type")
-			return int64(0), true
+		switch (inCfg.ConditionType) {
+			case "MatchProtocol":
+		      logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
+			  cfg.MatchProtocolConditionInfo = inCfg.MatchProtocolConditionInfo
+		      //dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
+			  //cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
+			  break
+			case "MatchDstIpPrefix":
+		      logger.Println("MatchDstIpPrefix")
+			  inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
+		      var cfgIpPrefix ribd.PolicyPrefix
+		      var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
+		      if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
+			    logger.Println("cannot set both prefix set name and a prefix")
+			    return int64(0), true
+		      }
+		      dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
+		      cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
+		      cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
+		      dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
+			  cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
+			  break
+			default:
+			  logger.Println("Invalid condition type")
+			  return int64(0),true
 		}
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyCondition(&cfg)
@@ -508,29 +509,26 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var cfg ribd.PolicyActionConfig
 		cfg.Name = inCfg.Name
 		cfg.ActionType = inCfg.ActionType
-		switch inCfg.ActionType {
-		case "RouteDisposition":
-			logger.Println("RouteDisposition")
-			cfg.Accept = inCfg.Accept
-			cfg.Reject = inCfg.Reject
-			if inCfg.Accept && inCfg.Reject {
-				logger.Println("Cannot set both accept and reject actions to true")
-				return int64(0), true
-			}
-			break
-		case "Redistribution":
-			logger.Println("Redistribution")
-			inActionCfg := inCfg.RedistributeActionInfo
-			var actionCfg ribd.PolicyRedistributionAction
-			actionCfg.RedistributeTargetProtocol = inActionCfg.RedistributeTargetProtocol
-			actionCfg.Redistribute = inActionCfg.Redistribute
-			cfg.RedistributeActionInfo = &actionCfg
-			break
-		case "SetAdminDistance":
-			logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
-			cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
-			break
-		}
+        switch inCfg.ActionType {
+			case "RouteDisposition":
+			  logger.Println("RouteDisposition")
+			  cfg.Accept = inCfg.Accept
+			  cfg.Reject = inCfg.Reject
+			  if inCfg.Accept && inCfg.Reject {
+			     logger.Println("Cannot set both accept and reject actions to true")
+				 return int64(0), true	
+			  }
+			  break
+			case "Redistribution":
+			  logger.Println("Redistribution")
+			  cfg.RedistributeAction = inCfg.RedistributeAction
+			  cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+			  break
+			case "SetAdminDistance":
+		      logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
+		      cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
+			  break
+		}		
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyAction(&cfg)
 		}
