@@ -30,7 +30,7 @@ install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 @$(RSYNC) docsui $(PARAMSDIR)
 	 @echo $(DESTDIR)
-	 install params/clients.json $(PARAMSDIR)/
+	 install params/* $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 	 install $(SR_CODE_BASE)/snaproute/src/models/genObjectConfig.json $(PARAMSDIR)
 

@@ -66,7 +66,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json;charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	//if err := json.NewEncoder(w).Encode(peers); err != nil {
-   //	return
+	//	return
 	//}
 }
 
