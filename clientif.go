@@ -8,7 +8,6 @@ import (
 	"models"
 	"ribd"
 	"strconv"
-	"l3/rib/ribdCommonDefs"
 	"utils/commonDefs"
 	"utils/ipcutils"
 )
@@ -108,8 +107,10 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString //strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
-					} else {
+					} else if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypePort{
 						ret_obj.OutgoingIntfType = "PHY"
+					} else if routesInfo.RouteList[i].NextHopIfType == commonDefs.IfTypeNull {
+						ret_obj.OutgoingIntfType = "NULL"
 					}
 					ret_obj.OutgoingInterface = strconv.Itoa(int(routesInfo.RouteList[i].IfIndex))
 					objs = append(objs, ret_obj)
@@ -366,7 +367,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		} else if v4Route.OutgoingIntfType == "PHY"{
 			outIntfType = commonDefs.L2RefTypePort
 		} else if v4Route.OutgoingIntfType == "NULL"{
-			outIntfType = ribdCommonDefs.NullIntfType
+			outIntfType = commonDefs.IfTypeNull
 		}
 		//proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
