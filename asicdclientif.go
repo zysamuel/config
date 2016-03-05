@@ -240,6 +240,7 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.IfInUnknownProtos = int64(bulkInfo.PortStateList[i].IfInUnknownProtos)
 					ret_obj.IfIndex = int32(bulkInfo.PortStateList[i].IfIndex)
 					ret_obj.IfOutDiscards = int64(bulkInfo.PortStateList[i].IfOutDiscards)
+					ret_obj.ErrDisableReason = string(bulkInfo.PortStateList[i].ErrDisableReason)
 					objs = append(objs, ret_obj)
 				}
 
