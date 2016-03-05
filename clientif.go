@@ -1206,9 +1206,12 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		}
 
 		for _, item := range bgpRouteBulk.RouteList {
-			path := make([]uint32, len(item.Path))
-			for idx, elem := range item.Path {
-				path[idx] = uint32(elem)
+			path := make([][]uint32, len(item.Path))
+			for idx, asList := range item.Path {
+				path[idx] = make([]uint32, len(asList))
+				for i, as := range asList {
+					path[idx][i] = uint32(as)
+				}
 			}
 
 			bgpRoute := models.BGPRoute{

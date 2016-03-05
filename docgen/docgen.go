@@ -128,7 +128,7 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 			switch fld.Type.(type) {
 
 			case *ast.ArrayType:
-				fmt.Println("### Array Type attribute ", fld.Names[0].Name)
+				//fmt.Println("### Array Type attribute ", fld.Names[0].Name)
 				//arrayInfo := fld.Type.(*ast.ArrayType)
 				//info := ObjectMembersInfo{}
 				//info.IsArray = true
@@ -141,7 +141,7 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 				//	getSpecialTagsForAttribute(fld.Tag.Value, &info)
 				//}
 			case *ast.Ident:
-				fmt.Printf("-- %s \n", fld.Names[0])
+				//fmt.Printf("-- %s \n", fld.Names[0])
 				idnt := fld.Type.(*ast.Ident)
 				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
 			}
@@ -198,7 +198,7 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					if typ.Name.Name == structName {
-						fmt.Printf("%s \n", typ.Name.Name)
+						//fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							if strings.HasSuffix(typ.Name.Name, "Config") {
 								WriteConfigObject(typ.Name.Name, docJsFile, str)
