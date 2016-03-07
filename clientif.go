@@ -570,13 +570,6 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Name = inCfg.Name
 		cfg.Precedence = ribd.Int(inCfg.Precedence)
 		cfg.MatchType = inCfg.MatchType
-		cfg.Export = inCfg.Export
-		cfg.Import = inCfg.Import
-		cfg.Global = inCfg.Global
-		if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
-			logger.Println("Need to set import,export or global to true")
-			break
-		}
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
 		policyDefinitionStatements := make([]ribd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
 		cfg.PolicyDefinitionStatements = make([]*ribd.PolicyDefinitionStmtPrecedence, 0)
