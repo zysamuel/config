@@ -1,6 +1,6 @@
 RM=rm -f
 DESTDIR=$(SR_CODE_BASE)/snaproute/src/out/bin
-PARAMSDIR=$(DESTDIR)/params
+PARAMSDIR=$(SR_CODE_BASE)/snaproute/src/out/params
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
@@ -25,7 +25,7 @@ all: gencode exe install
 
 exe: $(SRCS)
 	go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
-	$(SR_CODE_BASE)/snaproute/src/config/docgen/gendoc.sh
+	#$(SR_CODE_BASE)/snaproute/src/config/docgen/gendoc.sh
 
 install:
 	 @$(MKDIR) $(PARAMSDIR)
