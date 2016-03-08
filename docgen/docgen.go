@@ -112,6 +112,7 @@ func getSpecialTagsForAttribute(fld *ast.Field) (description string, isRequired 
 				switch key {
 				case "DESCRIPTION":
 					description = keys[idx+1]
+					description = strings.Replace(description, "\n", " ", -1)
 				case "DEFAULT":
 					isRequired = false
 				}
