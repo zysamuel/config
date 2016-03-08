@@ -59,6 +59,17 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		objId, _ = data.StoreObjectInDb(dbHdl)
 		break
 
+	case models.LogicalIntfConfig:
+		data := obj.(models.LogicalIntfConfig)
+		conf := asicdServices.NewLogicalIntfConfig()
+		models.ConvertasicdLogicalIntfConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateLogicalIntfConfig(conf)
+		if err != nil {
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
 	case models.PortConfig:
 		data := obj.(models.PortConfig)
 		conf := asicdServices.NewPortConfig()
@@ -95,6 +106,17 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		conf := asicdServices.NewIPv4Intf()
 		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
+		if err != nil {
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.LogicalIntfConfig:
+		data := obj.(models.LogicalIntfConfig)
+		conf := asicdServices.NewLogicalIntfConfig()
+		models.ConvertasicdLogicalIntfConfigObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteLogicalIntfConfig(conf)
 		if err != nil {
 			return false
 		}
@@ -146,6 +168,41 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.IfIndex = int32(bulkInfo.VlanList[i].IfIndex)
 					ret_obj.OperState = string(bulkInfo.VlanList[i].OperState)
 					ret_obj.VlanId = int32(bulkInfo.VlanList[i].VlanId)
+					objs = append(objs, ret_obj)
+				}
+
+			} else {
+				fmt.Println(err)
+			}
+		}
+		break
+
+	case models.LogicalIntfState:
+
+		if clnt.ClientHdl != nil {
+			var ret_obj models.LogicalIntfState
+			bulkInfo, err := clnt.ClientHdl.GetBulkLogicalIntfState(asicdServices.Int(currMarker), asicdServices.Int(count))
+			if bulkInfo != nil && bulkInfo.Count != 0 {
+				objCount = int64(bulkInfo.Count)
+				more = bool(bulkInfo.More)
+				nextMarker = int64(bulkInfo.EndIdx)
+				for i := 0; i < int(bulkInfo.Count); i++ {
+					if len(objs) == 0 {
+						objs = make([]models.ConfigObj, 0)
+					}
+
+					ret_obj.IfInDiscards = int64(bulkInfo.LogicalIntfStateList[i].IfInDiscards)
+					ret_obj.OperState = string(bulkInfo.LogicalIntfStateList[i].OperState)
+					ret_obj.IfInErrors = int64(bulkInfo.LogicalIntfStateList[i].IfInErrors)
+					ret_obj.Name = string(bulkInfo.LogicalIntfStateList[i].Name)
+					ret_obj.IfInOctets = int64(bulkInfo.LogicalIntfStateList[i].IfInOctets)
+					ret_obj.IfInUcastPkts = int64(bulkInfo.LogicalIntfStateList[i].IfInUcastPkts)
+					ret_obj.IfOutUcastPkts = int64(bulkInfo.LogicalIntfStateList[i].IfOutUcastPkts)
+					ret_obj.IfOutOctets = int64(bulkInfo.LogicalIntfStateList[i].IfOutOctets)
+					ret_obj.IfOutErrors = int64(bulkInfo.LogicalIntfStateList[i].IfOutErrors)
+					ret_obj.IfInUnknownProtos = int64(bulkInfo.LogicalIntfStateList[i].IfInUnknownProtos)
+					ret_obj.IfIndex = int32(bulkInfo.LogicalIntfStateList[i].IfIndex)
+					ret_obj.IfOutDiscards = int64(bulkInfo.LogicalIntfStateList[i].IfOutDiscards)
 					objs = append(objs, ret_obj)
 				}
 
@@ -272,6 +329,25 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertasicdVlanObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
 			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
+			if ok {
+				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
+			} else {
+				panic(err)
+			}
+		}
+		break
+
+	case models.LogicalIntfConfig:
+		// cast original object
+		origdata := dbObj.(models.LogicalIntfConfig)
+		updatedata := obj.(models.LogicalIntfConfig)
+		// create new thrift objects
+		origconf := asicdServices.NewLogicalIntfConfig()
+		updateconf := asicdServices.NewLogicalIntfConfig()
+		models.ConvertasicdLogicalIntfConfigObjToThrift(&origdata, origconf)
+		models.ConvertasicdLogicalIntfConfigObjToThrift(&updatedata, updateconf)
+		if clnt.ClientHdl != nil {
+			ok, err := clnt.ClientHdl.UpdateLogicalIntfConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
