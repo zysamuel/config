@@ -57,9 +57,9 @@ func (clnt *RibClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) 
 
 	switch obj.(type) {
 
-	case models.IPV4Route:
-		var retObj models.IPV4Route
-		data := obj.(models.IPV4Route)
+	case models.IPv4Route:
+		var retObj models.IPv4Route
+		data := obj.(models.IPv4Route)
 		routeInfo, err := clnt.ClientHdl.GetRoute(data.DestinationNw, data.NetworkMask)
 		if err == nil {
 			retObj.DestinationNw = routeInfo.Ipaddr
@@ -89,9 +89,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	objs []models.ConfigObj) {
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
-	case models.IPV4Route:
+	case models.IPv4Route:
 		if clnt.ClientHdl != nil {
-			var ret_obj models.IPV4Route
+			var ret_obj models.IPv4Route
 			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
@@ -118,9 +118,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
-	case models.IPV4RouteState:
+	case models.IPv4RouteState:
 		if clnt.ClientHdl != nil {
-			var ret_obj models.IPV4RouteState
+			var ret_obj models.IPv4RouteState
 			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
@@ -153,9 +153,9 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
-	case models.IPV4EventState:
+	case models.IPv4EventState:
 		if clnt.ClientHdl != nil {
-			var ret_obj models.IPV4EventState
+			var ret_obj models.IPv4EventState
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkIPV4EventState(ribd.Int(currMarker), ribd.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
@@ -341,8 +341,8 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 
 func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	switch obj.(type) {
-	case models.IPV4Route:
-		v4Route := obj.(models.IPV4Route)
+	case models.IPv4Route:
+		v4Route := obj.(models.IPv4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		var outIntfType ribd.Int
 		/*fix me - temporary hack for testing intf dis/ena*/
@@ -448,7 +448,9 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			break
 		case "MatchDstIpPrefix":
 			logger.Println("MatchDstIpPrefix")
-			inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
+			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
+			inConditionCfg.Prefix.IpPrefix = inCfg.MatchDstIpConditionIpPrefix
+			inConditionCfg.Prefix.MaskLengthRange = inCfg.MatchDstIpConditionMaskLengthRange
 			var cfgIpPrefix ribd.PolicyPrefix
 			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
 			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
@@ -510,26 +512,30 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var cfg ribd.PolicyActionConfig
 		cfg.Name = inCfg.Name
 		cfg.ActionType = inCfg.ActionType
-		switch inCfg.ActionType {
-		case "RouteDisposition":
-			logger.Println("RouteDisposition")
-			cfg.Accept = inCfg.Accept
-			cfg.Reject = inCfg.Reject
-			if inCfg.Accept && inCfg.Reject {
-				logger.Println("Cannot set both accept and reject actions to true")
-				return int64(0), true
-			}
-			break
-		case "Redistribution":
-			logger.Println("Redistribution")
-			cfg.RedistributeAction = inCfg.RedistributeAction
-			cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
-			break
-		case "SetAdminDistance":
-			logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
-			cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
-			break
-		}
+        switch inCfg.ActionType {
+			case "RouteDisposition":
+			  logger.Println("RouteDisposition")
+			  cfg.Accept = inCfg.Accept
+			  cfg.Reject = inCfg.Reject
+			  if inCfg.Accept && inCfg.Reject {
+			     logger.Println("Cannot set both accept and reject actions to true")
+				 return int64(0), true	
+			  }
+			  break
+			case "Redistribution":
+			  logger.Println("Redistribution")
+			  cfg.RedistributeAction = inCfg.RedistributeAction
+			  cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+			  break
+			case "NetworkStatementAdvertise":
+			  logger.Println("NetworkStatementAdvertise")
+			  cfg.NetworkStatementTargetProtocol = inCfg.NetworkStatementTargetProtocol
+			  break
+			case "SetAdminDistance":
+		      logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
+		      cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
+			  break
+		}		
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.CreatePolicyAction(&cfg)
 		}
@@ -566,25 +572,19 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Name = inCfg.Name
 		cfg.Precedence = ribd.Int(inCfg.Precedence)
 		cfg.MatchType = inCfg.MatchType
-		cfg.Export = inCfg.Export
-		cfg.Import = inCfg.Import
-		cfg.Global = inCfg.Global
-		if inCfg.Import == false && inCfg.Export == false && inCfg.Global == false {
-			logger.Println("Need to set import,export or global to true")
-			break
-		}
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
 		policyDefinitionStatements := make([]ribd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
 		cfg.PolicyDefinitionStatements = make([]*ribd.PolicyDefinitionStmtPrecedence, 0)
 		var i int
 		for k, v := range inCfg.StatementList {
 			logger.Println("k= ", k, " v= ", v)
-			if v == nil {
+			/*if v == nil {
 				logger.Println("Interface nil at key ", k)
 				continue
-			}
-			inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
-			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}
+			}*/
+			/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
+			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
+			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(v.Precedence), Statement: v.Statement}
 			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
 			i++
 		}
@@ -603,8 +603,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey, obj)
 	switch obj.(type) {
-	case models.IPV4Route:
-		v4Route := obj.(models.IPV4Route)
+	case models.IPv4Route:
+		v4Route := obj.(models.IPv4Route)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
 			clnt.ClientHdl.DeleteV4Route(
@@ -646,8 +646,8 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Update Object is called in RIBClient. ", objKey, dbObj, obj, attrSet)
 	switch obj.(type) {
-	case models.IPV4Route:
-		v4Route := obj.(models.IPV4Route)
+	case models.IPv4Route:
+		v4Route := obj.(models.IPv4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		logger.Println("### UpdateV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, outIntf)
 		/*
@@ -1410,7 +1410,7 @@ func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 					}
 					ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
 					ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
-					ret_obj.Vlan = uint32(arpEntryBulk.ArpList[i].Vlan)
+					ret_obj.Vlan = int32(arpEntryBulk.ArpList[i].Vlan)
 					ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
 					ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
 					objs = append(objs, ret_obj)
