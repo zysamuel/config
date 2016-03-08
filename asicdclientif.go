@@ -43,17 +43,7 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		models.ConvertasicdVlanObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateVlan(conf)
 		if err != nil {
-			return int64(0), false
-		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
-		break
-
-	case models.IPv4Intf:
-		data := obj.(models.IPv4Intf)
-		conf := asicdServices.NewIPv4Intf()
-		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
-		if err != nil {
+			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
@@ -65,6 +55,19 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		models.ConvertasicdLogicalIntfConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateLogicalIntfConfig(conf)
 		if err != nil {
+			fmt.Println("Create failed:", err)
+			return int64(0), false
+		}
+		objId, _ = data.StoreObjectInDb(dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
+		if err != nil {
+			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
@@ -76,6 +79,7 @@ func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		models.ConvertasicdPortConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreatePortConfig(conf)
 		if err != nil {
+			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
 		objId, _ = data.StoreObjectInDb(dbHdl)
@@ -96,17 +100,7 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		models.ConvertasicdVlanObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteVlan(conf)
 		if err != nil {
-			return false
-		}
-		data.DeleteObjectFromDb(objKey, dbHdl)
-		break
-
-	case models.IPv4Intf:
-		data := obj.(models.IPv4Intf)
-		conf := asicdServices.NewIPv4Intf()
-		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
-		if err != nil {
+			fmt.Println("Delete failed:", err)
 			return false
 		}
 		data.DeleteObjectFromDb(objKey, dbHdl)
@@ -118,6 +112,19 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		models.ConvertasicdLogicalIntfConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeleteLogicalIntfConfig(conf)
 		if err != nil {
+			fmt.Println("Delete failed:", err)
+			return false
+		}
+		data.DeleteObjectFromDb(objKey, dbHdl)
+		break
+
+	case models.IPv4Intf:
+		data := obj.(models.IPv4Intf)
+		conf := asicdServices.NewIPv4Intf()
+		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
+		_, err := clnt.ClientHdl.DeleteIPv4Intf(conf)
+		if err != nil {
+			fmt.Println("Delete failed:", err)
 			return false
 		}
 		data.DeleteObjectFromDb(objKey, dbHdl)
@@ -129,6 +136,7 @@ func (clnt *ASICDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		models.ConvertasicdPortConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.DeletePortConfig(conf)
 		if err != nil {
+			fmt.Println("Delete failed:", err)
 			return false
 		}
 		data.DeleteObjectFromDb(objKey, dbHdl)
@@ -291,13 +299,13 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.Name = string(bulkInfo.PortStateList[i].Name)
 					ret_obj.IfInOctets = int64(bulkInfo.PortStateList[i].IfInOctets)
 					ret_obj.IfInUcastPkts = int64(bulkInfo.PortStateList[i].IfInUcastPkts)
+					ret_obj.ErrDisableReason = string(bulkInfo.PortStateList[i].ErrDisableReason)
 					ret_obj.IfOutUcastPkts = int64(bulkInfo.PortStateList[i].IfOutUcastPkts)
 					ret_obj.IfOutOctets = int64(bulkInfo.PortStateList[i].IfOutOctets)
 					ret_obj.IfOutErrors = int64(bulkInfo.PortStateList[i].IfOutErrors)
 					ret_obj.IfInUnknownProtos = int64(bulkInfo.PortStateList[i].IfInUnknownProtos)
 					ret_obj.IfIndex = int32(bulkInfo.PortStateList[i].IfIndex)
 					ret_obj.IfOutDiscards = int64(bulkInfo.PortStateList[i].IfOutDiscards)
-					ret_obj.ErrDisableReason = string(bulkInfo.PortStateList[i].ErrDisableReason)
 					objs = append(objs, ret_obj)
 				}
 
@@ -314,9 +322,11 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 
 }
 func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
-
+	var ok bool
+	var err error
 	logger.Println("### Update Object called ASICD", attrSet, objKey)
-	ok := false
+	ok = false
+	err = nil
 	switch obj.(type) {
 
 	case models.Vlan:
@@ -329,7 +339,7 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertasicdVlanObjToThrift(&origdata, origconf)
 		models.ConvertasicdVlanObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateVlan(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -348,7 +358,7 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertasicdLogicalIntfConfigObjToThrift(&origdata, origconf)
 		models.ConvertasicdLogicalIntfConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateLogicalIntfConfig(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateLogicalIntfConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -367,7 +377,7 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertasicdIPv4IntfObjToThrift(&origdata, origconf)
 		models.ConvertasicdIPv4IntfObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateIPv4Intf(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdateIPv4Intf(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
@@ -386,7 +396,7 @@ func (clnt *ASICDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertasicdPortConfigObjToThrift(&origdata, origconf)
 		models.ConvertasicdPortConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdatePortConfig(origconf, updateconf, attrSet)
+			ok, err = clnt.ClientHdl.UpdatePortConfig(origconf, updateconf, attrSet)
 			if ok {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
