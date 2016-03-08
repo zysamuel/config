@@ -448,7 +448,9 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			break
 		case "MatchDstIpPrefix":
 			logger.Println("MatchDstIpPrefix")
-			inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
+			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
+			inConditionCfg.Prefix.IpPrefix = inCfg.MatchDstIpConditionIpPrefix
+			inConditionCfg.Prefix.MaskLengthRange = inCfg.MatchDstIpConditionMaskLengthRange
 			var cfgIpPrefix ribd.PolicyPrefix
 			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
 			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
@@ -576,12 +578,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var i int
 		for k, v := range inCfg.StatementList {
 			logger.Println("k= ", k, " v= ", v)
-			if v == nil {
+			/*if v == nil {
 				logger.Println("Interface nil at key ", k)
 				continue
-			}
-			inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
-			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}
+			}*/
+			/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
+			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
+			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(v.Precedence), Statement: v.Statement}
 			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
 			i++
 		}
