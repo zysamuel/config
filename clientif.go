@@ -607,13 +607,42 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		v4Route := obj.(models.IPv4Route)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeleteV4Route(
+			_,err := clnt.ClientHdl.DeleteV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				v4Route.Protocol,
 				v4Route.NextHopIp)
+		    if err != nil {
+			    return false
+		    }
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyConditionConfig:
+		logger.Println("PolicyConditionConfig")
+		inCfg := obj.(models.PolicyConditionConfig)
+		var cfg ribd.PolicyConditionConfig
+		cfg.Name = inCfg.Name
+		if clnt.ClientHdl != nil {
+			_,err := clnt.ClientHdl.DeletePolicyCondition(&cfg)
+		    if err != nil {
+			    return false
+		    }
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyActionConfig:
+		logger.Println("PolicyActionConfig")
+		inCfg := obj.(models.PolicyActionConfig)
+		var cfg ribd.PolicyActionConfig
+		cfg.Name = inCfg.Name
+		if clnt.ClientHdl != nil {
+			_,err := clnt.ClientHdl.DeletePolicyAction(&cfg)
+		    if err != nil {
+			    return false
+		    }
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
 	case models.PolicyStmtConfig:
 		logger.Println("PolicyStmtConfig")
@@ -621,7 +650,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeletePolicyStatement(&cfg)
+			_,err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
+		    if err != nil {
+			    return false
+		    }
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -631,7 +663,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeletePolicyDefinition(&cfg)
+			_,err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
+		    if err != nil {
+			    return false
+		    }
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
