@@ -607,13 +607,42 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		v4Route := obj.(models.IPv4Route)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeleteV4Route(
+			_,err := clnt.ClientHdl.DeleteV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				v4Route.Protocol,
 				v4Route.NextHopIp)
+		    if err != nil {
+			    return false
+		    }
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyConditionConfig:
+		logger.Println("PolicyConditionConfig")
+		inCfg := obj.(models.PolicyConditionConfig)
+		var cfg ribd.PolicyConditionConfig
+		cfg.Name = inCfg.Name
+		if clnt.ClientHdl != nil {
+			_,err := clnt.ClientHdl.DeletePolicyCondition(&cfg)
+		    if err != nil {
+			    return false
+		    }
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
+		break
+	case models.PolicyActionConfig:
+		logger.Println("PolicyActionConfig")
+		inCfg := obj.(models.PolicyActionConfig)
+		var cfg ribd.PolicyActionConfig
+		cfg.Name = inCfg.Name
+		if clnt.ClientHdl != nil {
+			_,err := clnt.ClientHdl.DeletePolicyAction(&cfg)
+		    if err != nil {
+			    return false
+		    }
+		}
+		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
 	case models.PolicyStmtConfig:
 		logger.Println("PolicyStmtConfig")
@@ -621,7 +650,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeletePolicyStatement(&cfg)
+			_,err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
+		    if err != nil {
+			    return false
+		    }
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -631,7 +663,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.DeletePolicyDefinition(&cfg)
+			_,err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
+		    if err != nil {
+			    return false
+		    }
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -893,16 +928,10 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			switch inCfg.ConditionType {
 			case "MatchDstIpPrefix":
 				logger.Println("MatchDstIpPrefix")
-				inConditionCfg := inCfg.MatchDstIpPrefixConditionInfo
 				var cfgIpPrefix bgpd.BGPPolicyPrefix
 				var dstIpMatchPrefixconditionCfg bgpd.PolicyDstIpMatchPrefixSetCondition
-				if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
-					logger.Println("cannot set both prefix set name and a prefix")
-					return int64(0), true
-				}
-				dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
-				cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
-				cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
+				cfgIpPrefix.IpPrefix = inCfg.IpPrefix
+				cfgIpPrefix.MasklengthRange = inCfg.MaskLengthRange
 				dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
 				cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
 				break
@@ -910,8 +939,9 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 				logger.Println("Invalid condition type")
 				return int64(0), true
 			}
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreateBGPPolicyConditionConfig(&cfg)
+			_, err := clnt.ClientHdl.CreateBGPPolicyConditionConfig(&cfg)
+			if err != nil {
+				return int64(0), false
 			}
 			objId, _ := inCfg.StoreObjectInDb(dbHdl)
 			return objId, true
@@ -924,15 +954,15 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			switch inCfg.ActionType {
 			case "Aggregate":
 				logger.Println("Aggregate")
-				inActionCfg := inCfg.AggregateActionInfo
 				var actionCfg bgpd.BGPPolicyAggregateAction
-				actionCfg.GenerateASSet = inActionCfg.GenerateASSet
-				actionCfg.SendSummaryOnly = inActionCfg.SendSummaryOnly
+				actionCfg.GenerateASSet = inCfg.GenerateASSet
+				actionCfg.SendSummaryOnly = inCfg.SendSummaryOnly
 				cfg.AggregateActionInfo = &actionCfg
 				break
 			}
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreateBGPPolicyActionConfig(&cfg)
+			_, err := clnt.ClientHdl.CreateBGPPolicyActionConfig(&cfg)
+			if err != nil {
+				return int64(0), false
 			}
 			objId, _ := inCfg.StoreObjectInDb(dbHdl)
 			return objId, true
@@ -943,20 +973,21 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 			var cfg bgpd.BGPPolicyStmtConfig
 			cfg.Name = inCfg.Name
 			logger.Println("Number of conditons = ", len(inCfg.Conditions))
-			conditions := make([]string, 0)
+			conditions := make([]string, 0, len(inCfg.Conditions))
 			for i = 0; i < len(inCfg.Conditions); i++ {
 				conditions = append(conditions, inCfg.Conditions[i])
 			}
 			cfg.Conditions = conditions
 			logger.Println("Number of actions = ", len(inCfg.Actions))
-			actions := make([]string, 0)
+			actions := make([]string, 0, len(inCfg.Actions))
 			for i = 0; i < len(inCfg.Actions); i++ {
 				actions = append(actions, inCfg.Actions[i])
 			}
 			cfg.Actions = actions
 			cfg.MatchConditions = inCfg.MatchConditions
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreateBGPPolicyStmtConfig(&cfg)
+			_, err := clnt.ClientHdl.CreateBGPPolicyStmtConfig(&cfg)
+			if err != nil {
+				return int64(0), false
 			}
 			objId, _ := inCfg.StoreObjectInDb(dbHdl)
 			return objId, true
@@ -975,22 +1006,15 @@ func (clnt *BgpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64
 				break
 			}
 			logger.Println("Number of statements = ", len(inCfg.StatementList))
-			policyDefinitionStatements := make([]bgpd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
-			cfg.PolicyDefinitionStatements = make([]*bgpd.PolicyDefinitionStmtPrecedence, 0)
-			var i int
-			for k, v := range inCfg.StatementList {
-				logger.Println("k= ", k, " v= ", v)
-				if v == nil {
-					logger.Println("Interface nil at key ", k)
-					continue
-				}
-				inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
-				policyDefinitionStatements[i] = bgpd.PolicyDefinitionStmtPrecedence{Precedence: bgpd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}
-				cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
-				i++
+			cfg.PolicyDefinitionStatements = make([]*bgpd.PolicyDefinitionStmtPrecedence, 0, len(inCfg.StatementList))
+			for k, inCfgStatementPrec := range inCfg.StatementList {
+				logger.Println("k= ", k, " v= ", inCfgStatementPrec)
+				policyDefinitionStatement := bgpd.PolicyDefinitionStmtPrecedence{Precedence: bgpd.Int(inCfgStatementPrec.Precedence), Statement: inCfgStatementPrec.Statement}
+				cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatement)
 			}
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreateBGPPolicyDefinitionConfig(&cfg)
+			_, err := clnt.ClientHdl.CreateBGPPolicyDefinitionConfig(&cfg)
+			if err != nil {
+				return int64(0), false
 			}
 			objId, _ := inCfg.StoreObjectInDb(dbHdl)
 			return objId, true
