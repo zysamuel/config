@@ -199,7 +199,6 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					if typ.Name.Name == structName {
-						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							if objInfo.Access == "w" || objInfo.Access == "rw" {
 								WriteConfigObject(typ.Name.Name, docJsFile, str)
