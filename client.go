@@ -108,24 +108,37 @@ func (mgr *ConfigMgr) disconnectFromAllClients() bool {
 // This method is to get Port interfaces from Asicd and store in DB for config update on those ports
 //
 func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
-	logger.Println("Waiting for PortConfig server")
-	serverUp := <-clientsUp
-	logger.Println("PortConfig server is up? ", serverUp)
+	// Wait till confd connects to all the servers, i.e. all the clients are up
+	<-clientsUp
+	logger.Println("Discovering system objects")
+
+	logger.Println("Discover ports")
 	resource := "PortConfig"
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		var resp GetBulkResponse
+		var objects []models.ConfigObj
 		var err error
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
-		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-			resp.StateObjects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
-			for i := 0; i < len(resp.StateObjects); i++ {
-				portConfig := resp.StateObjects[i].(models.PortConfig)
-				_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
+			for i := 0; i < len(objects); i++ {
+				portConfig := objects[i].(models.PortConfig)
+				objKey, _ := portConfig.GetKey()
+				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
+				// if we can not find the port in DB then go ahead and store
 				if err != nil {
-					logger.Println("Failed to store PortConfig in DB ", i, portConfig, err)
+					_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
+					if err != nil {
+						logger.Println("Failed to store PortConfig in DB ", i, portConfig, err)
+					} else {
+						uuid, err := StoreUuidToKeyMapInDb(portConfig)
+						if err != nil {
+							logger.Println("Failed to store uuid map for PortConfig in DB ", portConfig, err)
+						} else {
+							logger.Println("Stored uuid map for PortConfig in DB ", portConfig, uuid)
+						}
+					}
 				}
 			}
 		}
