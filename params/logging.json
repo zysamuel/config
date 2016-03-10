@@ -36,8 +36,5 @@
 
 		{"Module": "sysd",
 		 "Level": "info"},
-		
-		{"Name":"vxland",
-		"Level": "info"}
 	]
 }
