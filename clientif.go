@@ -443,18 +443,18 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.ConditionType = inCfg.ConditionType
 		switch inCfg.ConditionType {
 		case "MatchProtocol":
-			logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
-			cfg.MatchProtocolConditionInfo = inCfg.MatchProtocolConditionInfo
+			logger.Println("MatchProtocol ", inCfg.MatchProtocol)
+			cfg.MatchProtocolConditionInfo = inCfg.MatchProtocol
 			//dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
 			//cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
 			break
 		case "MatchDstIpPrefix":
 			logger.Println("MatchDstIpPrefix")
 			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
-			inConditionCfg.Prefix.IpPrefix = inCfg.MatchDstIpConditionIpPrefix
-			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.MatchDstIpConditionIpPrefix)
+			inConditionCfg.Prefix.IpPrefix = inCfg.IpPrefix
+			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.IpPrefix)
 			logger.Println("inConditionCfg.Prefix.IpPrefix = ", inConditionCfg.Prefix.IpPrefix)
-			inConditionCfg.Prefix.MaskLengthRange = inCfg.MatchDstIpConditionMaskLengthRange
+			inConditionCfg.Prefix.MaskLengthRange = inCfg.MaskLengthRange
 			var cfgIpPrefix ribd.PolicyPrefix
 			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
 			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
