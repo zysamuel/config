@@ -105,14 +105,16 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.NextHopIp = routesInfo.RouteList[i].NextHopIp
 					ret_obj.Cost = uint32(routesInfo.RouteList[i].Metric)
 					ret_obj.Protocol = routesInfo.RouteList[i].RoutePrototypeString //strconv.Itoa(int(routesInfo.RouteList[i].Prototype))
+					ret_obj.OutgoingInterface = strconv.Itoa(int(routesInfo.RouteList[i].IfIndex))
 					if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypeVlan {
 						ret_obj.OutgoingIntfType = "VLAN"
 					} else if routesInfo.RouteList[i].NextHopIfType == commonDefs.L2RefTypePort {
 						ret_obj.OutgoingIntfType = "PHY"
 					} else if routesInfo.RouteList[i].NextHopIfType == commonDefs.IfTypeNull {
 						ret_obj.OutgoingIntfType = "NULL"
+					} else if routesInfo.RouteList[i].NextHopIfType == commonDefs.IfTypeLoopback {
+						ret_obj.OutgoingIntfType = "Lpbk"
 					}
-					ret_obj.OutgoingInterface = strconv.Itoa(int(routesInfo.RouteList[i].IfIndex))
 					objs = append(objs, ret_obj)
 				}
 			}
