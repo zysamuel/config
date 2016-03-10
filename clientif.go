@@ -452,6 +452,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			logger.Println("MatchDstIpPrefix")
 			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
 			inConditionCfg.Prefix.IpPrefix = inCfg.MatchDstIpConditionIpPrefix
+			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.MatchDstIpConditionIpPrefix)
+			logger.Println("inConditionCfg.Prefix.IpPrefix = ", inConditionCfg.Prefix.IpPrefix)
 			inConditionCfg.Prefix.MaskLengthRange = inCfg.MatchDstIpConditionMaskLengthRange
 			var cfgIpPrefix ribd.PolicyPrefix
 			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
@@ -462,6 +464,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			dstIpMatchPrefixconditionCfg.PrefixSet = inConditionCfg.PrefixSet
 			cfgIpPrefix.IpPrefix = inConditionCfg.Prefix.IpPrefix
 			cfgIpPrefix.MasklengthRange = inConditionCfg.Prefix.MaskLengthRange
+			logger.Println("cfgIpPrefix.IpPrefix = ", cfgIpPrefix.IpPrefix)
 			dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
 			cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
 			break
