@@ -177,7 +177,7 @@ func WriteGlobalStateObject(structName string, docJsFile *os.File, str *ast.Stru
 	writePathCompletion(docJsFile)
 }
 
-func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
+func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string, objInfo ObjectInfoJson) {
 	fset := token.NewFileSet() // positions are relative to fset
 
 	// Parse the object file.
@@ -199,11 +199,10 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					if typ.Name.Name == structName {
-						//fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
-							if strings.HasSuffix(typ.Name.Name, "Config") {
+							if objInfo.Access == "w" || objInfo.Access == "rw" {
 								WriteConfigObject(typ.Name.Name, docJsFile, str)
-							} else if strings.HasSuffix(typ.Name.Name, "State") {
+							} else if objInfo.Access == "r" || objInfo.Access == "rw" {
 								if strings.Contains(typ.Name.Name, "Global") {
 									WriteGlobalStateObject(typ.Name.Name, docJsFile, str)
 								} else {
@@ -259,7 +258,7 @@ func main() {
 		err = json.Unmarshal(bytes, &objMap)
 		for objName, objInfo := range objMap {
 			WriteRestResourceDoc(docJsFile, objName,
-				base+"/snaproute/src/models/"+objInfo.SrcFile)
+				base+"/snaproute/src/models/"+objInfo.SrcFile, objInfo)
 		}
 	}
 
