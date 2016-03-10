@@ -33,6 +33,5 @@
 	 "Port":10050},
 	
 	{"Name":"local",
-	  "Port":0
-	}
+	  "Port":0},
 ]
