@@ -10,6 +10,7 @@ import (
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
 	Owner     string   `json:"Owner"`
+	Access    string   `json: "access"`
 	Listeners []string `json:"Listeners"`
 }
 
@@ -17,6 +18,7 @@ type ConfigObjJson struct {
 // This structure represents the in memory layout of all the config object handlers
 type ConfigObjInfo struct {
 	owner     ClientIf
+	access    string
 	listeners []ClientIf
 }
 
@@ -46,9 +48,10 @@ func (mgr *ConfigMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			logger.Printf("For Object [ %s ] Primary owner is [ %s ]\n", k, v.Owner)
+			logger.Printf("For Object [ %s ] Primary owner is [ %s ] access is %s\n", k, v.Owner, v.Access)
 			entry := new(ConfigObjInfo)
 			entry.owner = mgr.clients[v.Owner]
+			entry.access = v.Access
 			for _, lsnr := range v.Listeners {
 				entry.listeners = append(entry.listeners, mgr.clients[lsnr])
 			}
