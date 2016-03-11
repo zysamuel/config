@@ -342,6 +342,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 }
 
 func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+    var err error
 	switch obj.(type) {
 	case models.IPv4Route:
 		v4Route := obj.(models.IPv4Route)
@@ -373,7 +374,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		//proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreateV4Route(
+			_,err = clnt.ClientHdl.CreateV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				ribd.Int(v4Route.Cost),
@@ -382,6 +383,9 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 				ribd.Int(outIntf),
 				v4Route.Protocol)
 			//ribd.Int(proto))
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -420,7 +424,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		cfg.IpPrefixList = cfgIpPrefixList
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyPrefixSet(&cfg)
+			_,err = clnt.ClientHdl.CreatePolicyPrefixSet(&cfg)
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -443,18 +450,18 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.ConditionType = inCfg.ConditionType
 		switch inCfg.ConditionType {
 		case "MatchProtocol":
-			logger.Println("MatchProtocol ", inCfg.MatchProtocolConditionInfo)
-			cfg.MatchProtocolConditionInfo = inCfg.MatchProtocolConditionInfo
+			logger.Println("MatchProtocol ", inCfg.MatchProtocol)
+			cfg.MatchProtocolConditionInfo = inCfg.MatchProtocol
 			//dstIpMatchPrefixconditionCfg.Prefix = &cfgIpPrefix
 			//cfg.MatchDstIpPrefixConditionInfo = &dstIpMatchPrefixconditionCfg
 			break
 		case "MatchDstIpPrefix":
 			logger.Println("MatchDstIpPrefix")
 			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
-			inConditionCfg.Prefix.IpPrefix = inCfg.MatchDstIpConditionIpPrefix
-			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.MatchDstIpConditionIpPrefix)
+			inConditionCfg.Prefix.IpPrefix = inCfg.IpPrefix
+			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.IpPrefix)
 			logger.Println("inConditionCfg.Prefix.IpPrefix = ", inConditionCfg.Prefix.IpPrefix)
-			inConditionCfg.Prefix.MaskLengthRange = inCfg.MatchDstIpConditionMaskLengthRange
+			inConditionCfg.Prefix.MaskLengthRange = inCfg.MaskLengthRange
 			var cfgIpPrefix ribd.PolicyPrefix
 			var dstIpMatchPrefixconditionCfg ribd.PolicyDstIpMatchPrefixSetCondition
 			if len(inConditionCfg.PrefixSet) > 0 && len(inConditionCfg.Prefix.IpPrefix) > 0 {
@@ -473,44 +480,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0), true
 		}
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyCondition(&cfg)
+			_,err = clnt.ClientHdl.CreatePolicyCondition(&cfg)
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
-		/*	case models.PolicyDefinitionStmtRedistributionAction:
-				logger.Println("PolicyDefinitionStmtRedistributionAction")
-				inCfg := obj.(models.PolicyDefinitionStmtRedistributionAction)
-				var cfg ribd.PolicyDefinitionStmtRedistributionAction
-				cfg.Name = inCfg.Name
-				cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
-				cfg.Redistribute = inCfg.Redistribute
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.CreatePolicyDefinitionStmtRedistributionAction(&cfg)
-				}
-				objId, _ := inCfg.StoreObjectInDb(dbHdl)
-				return objId, true
-			case models.PolicyDefinitionStmtRouteDispositionAction:
-				logger.Println("PolicyDefinitionStmtRouteDispositionAction")
-				inCfg := obj.(models.PolicyDefinitionStmtRouteDispositionAction)
-				var cfg ribd.PolicyDefinitionStmtRouteDispositionAction
-				cfg.Name = inCfg.Name
-				cfg.RouteDisposition = inCfg.RouteDisposition
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.CreatePolicyDefinitionStmtRouteDispositionAction(&cfg)
-				}
-				objId, _ := inCfg.StoreObjectInDb(dbHdl)
-				return objId, true
-			case models.PolicyDefinitionStmtAdminDistanceAction:
-				logger.Println("PolicyDefinitionStmtAdminDistanceAction")
-				inCfg := obj.(models.PolicyDefinitionStmtAdminDistanceAction)
-				var cfg ribd.PolicyDefinitionStmtAdminDistanceAction
-				cfg.Name = inCfg.Name
-				cfg.Value = ribd.Int(inCfg.Value)
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.CreatePolicyDefinitionStmtAdminDistanceAction(&cfg)
-				}
-				objId, _ := inCfg.StoreObjectInDb(dbHdl)
-				return objId, true*/
 	case models.PolicyActionConfig:
 		logger.Println("PolicyActionConfig")
 		inCfg := obj.(models.PolicyActionConfig)
@@ -542,7 +518,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			  break
 		}		
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyAction(&cfg)
+			_,err = clnt.ClientHdl.CreatePolicyAction(&cfg)
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -566,7 +545,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Actions = actions
 		cfg.MatchConditions = inCfg.MatchConditions
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyStatement(&cfg)
+			_,err = clnt.ClientHdl.CreatePolicyStatement(&cfg)
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -594,7 +576,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			i++
 		}
 		if clnt.ClientHdl != nil {
-			clnt.ClientHdl.CreatePolicyDefinition(&cfg)
+			_,err = clnt.ClientHdl.CreatePolicyDefinition(&cfg)
+		}
+		if err != nil {
+			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
