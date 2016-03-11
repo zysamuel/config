@@ -112,6 +112,7 @@ func getSpecialTagsForAttribute(fld *ast.Field) (description string, isRequired 
 				switch key {
 				case "DESCRIPTION":
 					description = keys[idx+1]
+					description = strings.Replace(description, "\n", " ", -1)
 				case "DEFAULT":
 					isRequired = false
 				}
@@ -128,7 +129,7 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 			switch fld.Type.(type) {
 
 			case *ast.ArrayType:
-				fmt.Println("### Array Type attribute ", fld.Names[0].Name)
+				//fmt.Println("### Array Type attribute ", fld.Names[0].Name)
 				//arrayInfo := fld.Type.(*ast.ArrayType)
 				//info := ObjectMembersInfo{}
 				//info.IsArray = true
@@ -141,7 +142,7 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 				//	getSpecialTagsForAttribute(fld.Tag.Value, &info)
 				//}
 			case *ast.Ident:
-				fmt.Printf("-- %s \n", fld.Names[0])
+				//fmt.Printf("-- %s \n", fld.Names[0])
 				idnt := fld.Type.(*ast.Ident)
 				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
 			}
@@ -176,7 +177,7 @@ func WriteGlobalStateObject(structName string, docJsFile *os.File, str *ast.Stru
 	writePathCompletion(docJsFile)
 }
 
-func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string) {
+func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string, objInfo ObjectInfoJson) {
 	fset := token.NewFileSet() // positions are relative to fset
 
 	// Parse the object file.
@@ -198,11 +199,10 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					if typ.Name.Name == structName {
-						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
-							if strings.HasSuffix(typ.Name.Name, "Config") {
+							if objInfo.Access == "w" || objInfo.Access == "rw" {
 								WriteConfigObject(typ.Name.Name, docJsFile, str)
-							} else if strings.HasSuffix(typ.Name.Name, "State") {
+							} else if objInfo.Access == "r" || objInfo.Access == "rw" {
 								if strings.Contains(typ.Name.Name, "Global") {
 									WriteGlobalStateObject(typ.Name.Name, docJsFile, str)
 								} else {
@@ -258,7 +258,7 @@ func main() {
 		err = json.Unmarshal(bytes, &objMap)
 		for objName, objInfo := range objMap {
 			WriteRestResourceDoc(docJsFile, objName,
-				base+"/snaproute/src/models/"+objInfo.SrcFile)
+				base+"/snaproute/src/models/"+objInfo.SrcFile, objInfo)
 		}
 	}
 

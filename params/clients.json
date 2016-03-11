@@ -28,8 +28,10 @@
 
 	{"Name":"vrrpd",
 	 "Port":10000},
+
+	{"Name":"sysd",
+	 "Port":10050},
 	
-    {"Name":"local",
-	  "Port":0
-	}
+	{"Name":"local",
+	  "Port":0}
 ]

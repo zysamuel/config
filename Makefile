@@ -24,13 +24,14 @@ COMP_NAME=confd
 all: gencode exe install 
 
 exe: $(SRCS)
-	 go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
+	go build -o $(DESTDIR)/$(COMP_NAME) $(SRCS)
+	$(SR_CODE_BASE)/snaproute/src/config/docgen/gendoc.sh
 
 install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 @$(RSYNC) docsui $(PARAMSDIR)
 	 @echo $(DESTDIR)
-	 install params/clients.json $(PARAMSDIR)/
+	 install params/* $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 	 install $(SR_CODE_BASE)/snaproute/src/models/genObjectConfig.json $(PARAMSDIR)
 
