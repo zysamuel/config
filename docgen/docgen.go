@@ -166,7 +166,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructTyp
 }
 
 func WriteStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "s\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, str)
 	writePathCompletion(docJsFile)
 }
