@@ -34,8 +34,8 @@ type GetBulkResponse struct {
 }
 
 type ReturnObject struct {
-	ObjectId string `json:"ObjectId"`
-	models.ConfigObj
+	ObjectId string           `json:"ObjectId"`
+        Object   models.ConfigObj `json:"Object"`
 }
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
