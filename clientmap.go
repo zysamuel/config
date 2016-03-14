@@ -2,7 +2,7 @@ package main
 
 var ClientInterfaces = map[string]ClientIf{"ribd": &RibClient{},
 	"asicd":      &ASICDClient{},
-	"arpd":       &ArpDClient{},
+	"arpd":       &ARPDClient{},
 	"bgpd":       &BgpDClient{},
 	"lacpd":      &LACPDClient{},
 	"dhcprelayd": &DHCPRELAYDClient{},

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"arpd"
 	//"asicdServices"
 	"bgpd"
 	"database/sql"
@@ -1367,93 +1366,6 @@ func (clnt *BgpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigOb
 		}
 	}
 	return true
-}
-
-type ArpDClient struct {
-	ipcutils.IPCClientBase
-	ClientHdl *arpd.ARPDServicesClient
-}
-
-func (clnt *ArpDClient) Initialize(name string, address string) {
-	clnt.Address = address
-	return
-}
-
-func (clnt *ArpDClient) ConnectToServer() bool {
-	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	}
-	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = arpd.NewARPDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
-		if clnt.ClientHdl != nil {
-			clnt.IsConnected = true
-		} else {
-			clnt.IsConnected = false
-		}
-	}
-	return true
-}
-
-func (clnt *ArpDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-	logger.Println("ArpDClient: CreateObject called - start")
-	if clnt.ClientHdl != nil {
-		switch obj.(type) {
-		case models.ArpConfig: //Arp Timeout
-			arpConfigObj := obj.(models.ArpConfig)
-			_, err := clnt.ClientHdl.SetArpConfig(arpd.Int(arpConfigObj.Timeout))
-			if err != nil {
-				return int64(0), false
-			}
-		}
-	}
-	return int64(0), true
-}
-
-func (clnt *ArpDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
-	return true
-}
-
-func (clnt *ArpDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
-	return true
-}
-
-func (clnt *ArpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error, objCount int64,
-	nextMarker int64, more bool, objs []models.ConfigObj) {
-
-	logger.Println("ArpDClient: GetBulkObject called - start")
-	var ret_obj models.ArpEntry
-	switch obj.(type) {
-	case models.ArpEntry:
-		if clnt.ClientHdl != nil {
-			arpEntryBulk, err := clnt.ClientHdl.GetBulkArpEntry(arpd.Int(currMarker), arpd.Int(count))
-			if err != nil {
-				logger.Println("GetBulkObject call to Arpd failed:", err)
-				return nil, objCount, nextMarker, more, objs
-			}
-			if arpEntryBulk.Count != 0 {
-				objCount = int64(arpEntryBulk.Count)
-				more = arpEntryBulk.More
-				nextMarker = int64(arpEntryBulk.EndIdx)
-				cnt := int(arpEntryBulk.Count)
-				for i := 0; i < cnt; i++ {
-					if len(objs) == 0 {
-						objs = make([]models.ConfigObj, 0)
-					}
-					ret_obj.IpAddr = arpEntryBulk.ArpList[i].IpAddr
-					ret_obj.MacAddr = arpEntryBulk.ArpList[i].MacAddr
-					ret_obj.Vlan = int32(arpEntryBulk.ArpList[i].Vlan)
-					ret_obj.Intf = arpEntryBulk.ArpList[i].Intf
-					ret_obj.ExpiryTimeLeft = arpEntryBulk.ArpList[i].ExpiryTimeLeft
-					objs = append(objs, ret_obj)
-				}
-			}
-		}
-	}
-	return nil, objCount, nextMarker, more, objs
-}
-
-func (clnt *ArpDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
-	return nil, false
 }
 
 func (clnt *ASICDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
