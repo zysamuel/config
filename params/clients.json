@@ -31,7 +31,10 @@
 
 	{"Name":"sysd",
 	 "Port":10050},
-	
+
+	{"Name":"vxland",
+	 "Port":10100},
+		
 	{"Name":"local",
 	  "Port":0}
 ]
