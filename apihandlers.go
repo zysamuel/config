@@ -26,24 +26,17 @@ type ConfigResponse struct {
 	UUId string `json:"ObjectId"`
 }
 
-type Object models.ConfigObj
-
 type ReturnObject struct {
-	ObjectId string           `json:"ObjectId,omitempty"`
-	Object   models.ConfigObj `json:",omitempty"`
+	ObjectId string `json:"ObjectId"`
+	models.ConfigObj
 }
 
 type GetBulkResponse struct {
-	MoreExist     bool           `json:"MoreExist"`
-	ObjCount      int64          `json:"ObjCount"`
-	CurrentMarker int64          `json:"CurrentMarker"`
-	NextMarker    int64          `json:"NextMarker"`
-	StateObjects  []ReturnObject `json:"StateObjects"`
-}
-
-type ReturnObject struct {
-	ObjectId string           `json:"ObjectId"`
-	Object   models.ConfigObj `json:"Object"`
+	MoreExist     bool  `json:"MoreExist"`
+	ObjCount      int64 `json:"ObjCount"`
+	CurrentMarker int64 `json:"CurrentMarker"`
+	NextMarker    int64 `json:"NextMarker"`
+	StateObjects  []ReturnObject
 }
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
@@ -101,7 +94,7 @@ func GetConfigObject(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
-			if retObj.Object, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err == nil {
+			if retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err == nil {
 				retObj.ObjectId = uuid
 				js, err := json.Marshal(retObj)
 				if err != nil {
@@ -129,7 +122,7 @@ func GetStateObject(w http.ResponseWriter, r *http.Request) {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
 			stateObj, success := gMgr.objHdlMap[resource].owner.GetObject(obj)
 			if success == true {
-				retObj.Object = stateObj
+				retObj.ConfigObj = stateObj
 				objKey, _ := stateObj.GetKey()
 				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&retObj.ObjectId)
 				js, err := json.Marshal(retObj)
@@ -176,7 +169,7 @@ func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Reques
 			if err == nil {
 				retObjs = make([]ReturnObject, len(objList))
 				for idx, object := range objList {
-					retObjs[idx].Object = object
+					retObjs[idx].ConfigObj = object
 					objKey, _ := object.GetKey()
 					gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&retObjs[idx].ObjectId)
 				}
@@ -220,7 +213,7 @@ func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request
 		if err == nil {
 			resp.StateObjects = make([]ReturnObject, resp.ObjCount)
 			for idx, stateObject := range stateObjects {
-				resp.StateObjects[idx].Object = stateObject
+				resp.StateObjects[idx].ConfigObj = stateObject
 				objKey, _ = stateObject.GetKey()
 				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.StateObjects[idx].ObjectId)
 			}
