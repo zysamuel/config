@@ -41,6 +41,11 @@ type GetBulkResponse struct {
 	StateObjects  []ReturnObject `json:"StateObjects"`
 }
 
+type ReturnObject struct {
+	ObjectId string           `json:"ObjectId"`
+	Object   models.ConfigObj `json:"Object"`
+}
+
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
@@ -155,10 +160,10 @@ func BulkGetObjects(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
-	if strings.Contains(gMgr.objHdlMap[resource].access, "w") {
-		ConfigObjectsBulkGet(resource, w, r)
-	} else {
+	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
 		StateObjectsBulkGet(resource, w, r)
+	} else {
+		ConfigObjectsBulkGet(resource, w, r)
 	}
 }
 

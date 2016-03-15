@@ -873,6 +873,8 @@ func convertBGPNeighborConfToThriftObj(bgpNeighborConf models.BGPNeighborConfig)
 	nConf.ConnectRetryTime = int32(bgpNeighborConf.ConnectRetryTime)
 	nConf.HoldTime = int32(bgpNeighborConf.HoldTime)
 	nConf.KeepaliveTime = int32(bgpNeighborConf.KeepaliveTime)
+	nConf.AddPathsRx = bgpNeighborConf.AddPathsRx
+	nConf.AddPathsMaxTx = int8(bgpNeighborConf.AddPathsMaxTx)
 	nConf.PeerGroup = bgpNeighborConf.PeerGroup
 	nConf.BfdEnable = bgpNeighborConf.BfdEnable
 	return nConf
@@ -891,6 +893,8 @@ func convertBGPPeerGroupToThriftObj(bgpPeerGroup models.BGPPeerGroup) *bgpd.BGPP
 	peerGroup.ConnectRetryTime = int32(bgpPeerGroup.ConnectRetryTime)
 	peerGroup.HoldTime = int32(bgpPeerGroup.HoldTime)
 	peerGroup.KeepaliveTime = int32(bgpPeerGroup.KeepaliveTime)
+	peerGroup.AddPathsRx = bool(bgpPeerGroup.AddPathsRx)
+	peerGroup.AddPathsMaxTx = int8(bgpPeerGroup.AddPathsMaxTx)
 	return peerGroup
 }
 
@@ -1188,6 +1192,8 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 				KeepaliveTime:           uint32(item.KeepaliveTime),
 				PeerGroup:               item.PeerGroup,
 				BfdNeighborState:        item.BfdNeighborState,
+				AddPathsRx:              item.AddPathsRx,
+				AddPathsMaxTx:           uint8(item.AddPathsMaxTx),
 				Messages: models.BGPMessages{
 					Sent: models.BgpCounters{
 						Update:       uint64(item.Messages.Sent.Update),
