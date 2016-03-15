@@ -341,7 +341,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 }
 
 func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-    var err error
+	var err error
 	switch obj.(type) {
 	case models.IPv4Route:
 		v4Route := obj.(models.IPv4Route)
@@ -373,7 +373,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		//proto, _ := strconv.Atoi(v4Route.Protocol)
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreateV4Route(
+			_, err = clnt.ClientHdl.CreateV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				ribd.Int(v4Route.Cost),
@@ -384,7 +384,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			//ribd.Int(proto))
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -423,10 +423,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		}
 		cfg.IpPrefixList = cfgIpPrefixList
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreatePolicyPrefixSet(&cfg)
+			_, err = clnt.ClientHdl.CreatePolicyPrefixSet(&cfg)
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -456,7 +456,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			break
 		case "MatchDstIpPrefix":
 			logger.Println("MatchDstIpPrefix")
-			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition {}
+			inConditionCfg := models.PolicyDstIpMatchPrefixSetCondition{}
 			inConditionCfg.Prefix.IpPrefix = inCfg.IpPrefix
 			logger.Println("inCfg.MatchDstIpConditionIpPrefix = ", inCfg.IpPrefix)
 			logger.Println("inConditionCfg.Prefix.IpPrefix = ", inConditionCfg.Prefix.IpPrefix)
@@ -479,10 +479,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0), true
 		}
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreatePolicyCondition(&cfg)
+			_, err = clnt.ClientHdl.CreatePolicyCondition(&cfg)
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -492,35 +492,35 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		var cfg ribd.PolicyActionConfig
 		cfg.Name = inCfg.Name
 		cfg.ActionType = inCfg.ActionType
-        switch inCfg.ActionType {
-			case "RouteDisposition":
-			  logger.Println("RouteDisposition")
-			  cfg.Accept = inCfg.Accept
-			  cfg.Reject = inCfg.Reject
-			  if inCfg.Accept && inCfg.Reject {
-			     logger.Println("Cannot set both accept and reject actions to true")
-				 return int64(0), true	
-			  }
-			  break
-			case "Redistribution":
-			  logger.Println("Redistribution")
-			  cfg.RedistributeAction = inCfg.RedistributeAction
-			  cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
-			  break
-			case "NetworkStatementAdvertise":
-			  logger.Println("NetworkStatementAdvertise")
-			  cfg.NetworkStatementTargetProtocol = inCfg.NetworkStatementTargetProtocol
-			  break
-			case "SetAdminDistance":
-		      logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
-		      cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
-			  break
-		}		
+		switch inCfg.ActionType {
+		case "RouteDisposition":
+			logger.Println("RouteDisposition")
+			cfg.Accept = inCfg.Accept
+			cfg.Reject = inCfg.Reject
+			if inCfg.Accept && inCfg.Reject {
+				logger.Println("Cannot set both accept and reject actions to true")
+				return int64(0), true
+			}
+			break
+		case "Redistribution":
+			logger.Println("Redistribution")
+			cfg.RedistributeAction = inCfg.RedistributeAction
+			cfg.RedistributeTargetProtocol = inCfg.RedistributeTargetProtocol
+			break
+		case "NetworkStatementAdvertise":
+			logger.Println("NetworkStatementAdvertise")
+			cfg.NetworkStatementTargetProtocol = inCfg.NetworkStatementTargetProtocol
+			break
+		case "SetAdminDistance":
+			logger.Println("SetSdminDistance to inCfg.SetAdminDistanceValue")
+			cfg.SetAdminDistanceValue = ribd.Int(inCfg.SetAdminDistanceValue)
+			break
+		}
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreatePolicyAction(&cfg)
+			_, err = clnt.ClientHdl.CreatePolicyAction(&cfg)
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -544,10 +544,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		cfg.Actions = actions
 		cfg.MatchConditions = inCfg.MatchConditions
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreatePolicyStatement(&cfg)
+			_, err = clnt.ClientHdl.CreatePolicyStatement(&cfg)
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -575,10 +575,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			i++
 		}
 		if clnt.ClientHdl != nil {
-			_,err = clnt.ClientHdl.CreatePolicyDefinition(&cfg)
+			_, err = clnt.ClientHdl.CreatePolicyDefinition(&cfg)
 		}
 		if err != nil {
-			return int64(0),false
+			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
 		return objId, true
@@ -596,14 +596,14 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		v4Route := obj.(models.IPv4Route)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
-			_,err := clnt.ClientHdl.DeleteV4Route(
+			_, err := clnt.ClientHdl.DeleteV4Route(
 				v4Route.DestinationNw, //ribd.Int(binary.BigEndian.Uint32(net.ParseIP(v4Route.DestinationNw).To4())),
 				v4Route.NetworkMask,   //ribd.Int(prefixLen),
 				v4Route.Protocol,
 				v4Route.NextHopIp)
-		    if err != nil {
-			    return false
-		    }
+			if err != nil {
+				return false
+			}
 		}
 		v4Route.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -613,10 +613,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyConditionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			_,err := clnt.ClientHdl.DeletePolicyCondition(&cfg)
-		    if err != nil {
-			    return false
-		    }
+			_, err := clnt.ClientHdl.DeletePolicyCondition(&cfg)
+			if err != nil {
+				return false
+			}
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -626,10 +626,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyActionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			_,err := clnt.ClientHdl.DeletePolicyAction(&cfg)
-		    if err != nil {
-			    return false
-		    }
+			_, err := clnt.ClientHdl.DeletePolicyAction(&cfg)
+			if err != nil {
+				return false
+			}
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -639,10 +639,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			_,err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
-		    if err != nil {
-			    return false
-		    }
+			_, err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
+			if err != nil {
+				return false
+			}
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -652,10 +652,10 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		var cfg ribd.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
-			_,err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
-		    if err != nil {
-			    return false
-		    }
+			_, err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
+			if err != nil {
+				return false
+			}
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -1110,6 +1110,7 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		}
 		break
 	case models.BGPPolicyStmtState:
+		logger.Println("BGPPolicyStmtState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.BGPPolicyStmtState
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyStmtState(bgpd.Int(currMarker), bgpd.Int(count))
@@ -1138,6 +1139,7 @@ func (clnt *BgpDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, co
 		}
 		break
 	case models.BGPPolicyDefinitionState:
+		logger.Println("BGPPolicyDefinitionState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.BGPPolicyDefinitionState
 			getBulkInfo, _ := clnt.ClientHdl.GetBulkBGPPolicyDefinitionState(bgpd.Int(currMarker), bgpd.Int(count))

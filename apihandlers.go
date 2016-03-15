@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -25,17 +26,19 @@ type ConfigResponse struct {
 	UUId string `json:"ObjectId"`
 }
 
+type Object models.ConfigObj
+
+type ReturnObject struct {
+	ObjectId string           `json:"ObjectId,omitempty"`
+	Object   models.ConfigObj `json:",omitempty"`
+}
+
 type GetBulkResponse struct {
 	MoreExist     bool           `json:"MoreExist"`
 	ObjCount      int64          `json:"ObjCount"`
 	CurrentMarker int64          `json:"CurrentMarker"`
 	NextMarker    int64          `json:"NextMarker"`
 	StateObjects  []ReturnObject `json:"StateObjects"`
-}
-
-type ReturnObject struct {
-	ObjectId string           `json:"ObjectId"`
-	Object   models.ConfigObj `json:"Object"`
 }
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
@@ -281,7 +284,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				errCode = SRAlreadyConfigured
 				logger.Println("Config object is present")
-			} else {
+			} else if err == sql.ErrNoRows {
 				updateKeys, _ := GetUpdateKeys(body)
 				if len(updateKeys) == 0 {
 					errCode = SRNoContent
