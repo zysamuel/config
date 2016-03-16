@@ -5,9 +5,8 @@ import (
 	"bgpd"
 	"database/sql"
 	"models"
-	"ribd"
-	"strconv"
-	"utils/commonDefs"
+//	"strconv"
+//	"utils/commonDefs"
 	"utils/ipcutils"
 )
 
@@ -26,16 +25,16 @@ type ClientIf interface {
 	GetObject(obj models.ConfigObj) (models.ConfigObj, bool)
 }
 
-type RibClient struct {
+/*type RIBDIntClient struct {
 	ipcutils.IPCClientBase
 	ClientHdl *ribd.RIBDServicesClient
 }
 
-func (clnt *RIBDClient) Initialize(name string, address string) {
+func (clnt *RIBDIntClient) Initialize(name string, address string) {
 	clnt.Address = address
 	return
 }
-func (clnt *RIBDClient) ConnectToServer() bool {
+func (clnt *RIBDIntClient) ConnectToServer() bool {
 
 	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
@@ -49,7 +48,7 @@ func (clnt *RIBDClient) ConnectToServer() bool {
 	return true
 }
 
-func (clnt *RibClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+func (clnt *RIBDIntClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 
 	switch obj.(type) {
 
@@ -59,17 +58,17 @@ func (clnt *RibClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) 
 	return nil, false
 }
 
-func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+func (clnt *RIBDIntClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
 	more bool,
 	objs []models.ConfigObj) {
 	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
-/*	case models.IPv4Route:
+	case models.IPv4Route:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.IPv4Route
-			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
+			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
 				more = bool(routesInfo.More)
@@ -169,13 +168,13 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-		break */
+		break 
 
 	case models.PolicyConditionState:
 		logger.Println("PolicyConditionState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyConditionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyConditionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyConditionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -199,7 +198,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 		logger.Println("PolicyActionState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyActionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyActionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyActionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -222,7 +221,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	case models.PolicyStmtState:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyStmtState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmtState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmtState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -254,7 +253,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	case models.PolicyDefinitionState:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyDefinitionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -279,7 +278,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+func (clnt *RIBDIntClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
     var err error
 	switch obj.(type) {
 /*	case models.IPv4Route:
@@ -309,7 +308,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0),false
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
-		return objId, true */
+		return objId, true 
 	case models.PolicyPrefixSet:
 		logger.Println("PolicyPrefixSet")
 		inCfg := obj.(models.PolicyPrefixSet)
@@ -332,7 +331,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
+		return objId, true*/
 /*	case models.PolicyConditionConfig:
 		logger.Println("PolicyConditionConfig")
 		inCfg := obj.(models.PolicyConditionConfig)
@@ -415,12 +414,12 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0),false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true*/
+		return objId, true
 	case models.PolicyStmtConfig:
 		logger.Println("PolicyStmtConfig")
 		var i int
 		inCfg := obj.(models.PolicyStmtConfig)
-		var cfg ribd.PolicyStmtConfig
+		var cfg ribdInt.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		logger.Println("Number of conditons = ", len(inCfg.Conditions))
 		conditions := make([]string, 0)
@@ -446,13 +445,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	case models.PolicyDefinitionConfig:
 		logger.Println("PolicyDefinitionConfig")
 		inCfg := obj.(models.PolicyDefinitionConfig)
-		var cfg ribd.PolicyDefinitionConfig
+		var cfg ribdInt.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
-		cfg.Precedence = ribd.Int(inCfg.Precedence)
+		cfg.Precedence = ribdInt.Int(inCfg.Precedence)
 		cfg.MatchType = inCfg.MatchType
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
-		policyDefinitionStatements := make([]ribd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
-		cfg.PolicyDefinitionStatements = make([]*ribd.PolicyDefinitionStmtPrecedence, 0)
+		policyDefinitionStatements := make([]ribdInt.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
+		cfg.PolicyDefinitionStatements = make([]*ribdInt.PolicyDefinitionStmtPrecedence, 0)
 		var i int
 		for k, v := range inCfg.StatementList {
 			logger.Println("k= ", k, " v= ", v)
@@ -462,7 +461,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			}*/
 			/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
 			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
-			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(v.Precedence), Statement: v.Statement}
+			/*policyDefinitionStatements[i] = ribdInt.PolicyDefinitionStmtPrecedence{Precedence: ribdInt.Int(v.Precedence), Statement: v.Statement}
 			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
 			i++
 		}
@@ -481,7 +480,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	return int64(0), true
 }
 
-func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RIBDIntClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey, obj)
 	switch obj.(type) {
 /*	case models.IPv4Route:
@@ -524,11 +523,11 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 		    }
 		}
 		inCfg.DeleteObjectFromDb(objKey, dbHdl)
-		break*/
+		break
 	case models.PolicyStmtConfig:
 		logger.Println("PolicyStmtConfig")
 		inCfg := obj.(models.PolicyStmtConfig)
-		var cfg ribd.PolicyStmtConfig
+		var cfg ribdInt.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
 			_,err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
@@ -541,7 +540,7 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	case models.PolicyDefinitionConfig:
 		logger.Println("PolicyDefinition")
 		inCfg := obj.(models.PolicyDefinitionConfig)
-		var cfg ribd.PolicyDefinitionConfig
+		var cfg ribdInt.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
 			_,err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
@@ -559,15 +558,11 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	return true
 }
 
-func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RIBDIntClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Update Object is called in RIBClient. ", objKey, dbObj, obj, attrSet)
-	switch obj.(type) {
-		default:
-			logger.Println("OBJECT Type is ", obj.(type))
-	}
 	return true
 }
-
+*/
 /*
 type AsicDClient struct {
 	ipcutils.IPCClientBase
