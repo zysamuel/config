@@ -4,10 +4,9 @@ import (
 	//"asicdServices"
 	"database/sql"
 	"models"
-	"ribd"
-	"strconv"
-	"utils/commonDefs"
-	"utils/ipcutils"
+//	"strconv"
+//	"utils/commonDefs"
+//	"utils/ipcutils"
 )
 
 type ClientIf interface {
@@ -25,23 +24,20 @@ type ClientIf interface {
 	GetObject(obj models.ConfigObj) (models.ConfigObj, bool)
 }
 
-type RibClient struct {
+/*type RIBDIntClient struct {
 	ipcutils.IPCClientBase
-	ClientHdl *ribd.RouteServiceClient
+	ClientHdl *ribd.RIBDServicesClient
 }
 
-func (clnt *RibClient) Initialize(name string, address string) {
+func (clnt *RIBDIntClient) Initialize(name string, address string) {
 	clnt.Address = address
 	return
 }
+func (clnt *RIBDIntClient) ConnectToServer() bool {
 
-func (clnt *RibClient) ConnectToServer() bool {
-
-	if clnt.TTransport == nil && clnt.PtrProtocolFactory == nil {
-		clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
-	}
+	clnt.TTransport, clnt.PtrProtocolFactory, _ = ipcutils.CreateIPCHandles(clnt.Address)
 	if clnt.TTransport != nil && clnt.PtrProtocolFactory != nil {
-		clnt.ClientHdl = ribd.NewRouteServiceClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
+		clnt.ClientHdl = ribd.NewRIBDServicesClientFactory(clnt.TTransport, clnt.PtrProtocolFactory)
 		if clnt.ClientHdl != nil {
 			clnt.IsConnected = true
 		} else {
@@ -51,36 +47,17 @@ func (clnt *RibClient) ConnectToServer() bool {
 	return true
 }
 
-func (clnt *RibClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
+func (clnt *RIBDIntClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 
 	switch obj.(type) {
 
-	case models.IPv4Route:
-		var retObj models.IPv4Route
-		data := obj.(models.IPv4Route)
-		routeInfo, err := clnt.ClientHdl.GetRoute(data.DestinationNw, data.NetworkMask)
-		if err == nil {
-			retObj.DestinationNw = routeInfo.Ipaddr
-			retObj.NetworkMask = routeInfo.Mask
-			retObj.NextHopIp = routeInfo.NextHopIp
-			retObj.Cost = uint32(routeInfo.Metric)
-			retObj.Protocol = strconv.Itoa(int(routeInfo.Prototype))
-			if routeInfo.NextHopIfType == commonDefs.L2RefTypeVlan {
-				retObj.OutgoingIntfType = "VLAN"
-			} else {
-				retObj.OutgoingIntfType = "PHY"
-			}
-			retObj.OutgoingInterface = strconv.Itoa(int(routeInfo.IfIndex))
-			return retObj, true
-		}
-		break
 	default:
 		break
 	}
 	return nil, false
 }
 
-func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
+func (clnt *RIBDIntClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
 	more bool,
@@ -90,7 +67,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	case models.IPv4Route:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.IPv4Route
-			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribd.Int(currMarker), ribd.Int(count))
+			routesInfo, _ := clnt.ClientHdl.GetBulkRoutes(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if routesInfo.Count != 0 {
 				objCount = int64(routesInfo.Count)
 				more = bool(routesInfo.More)
@@ -133,17 +110,17 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 					ret_obj.DestinationNw = routesInfo.RouteList[i].DestNetIp
 					ret_obj.RouteCreatedTime = routesInfo.RouteList[i].RouteCreated
 					ret_obj.RouteUpdatedTime = routesInfo.RouteList[i].RouteUpdated
-					/*ret_obj.PolicyList = make([]string,0)
-					        routePolicyListInfo := ""
-					        if routesInfo.RouteList[i].PolicyList != nil {
-					          for k,v := range routesInfo.RouteList[i].PolicyList {
-						        routePolicyListInfo = k+":"
-					            for vv:=0;vv<len(v);vv++ {
-					              routePolicyListInfo = routePolicyListInfo + v[vv]+","
-					            }
-					            ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
-					          }
-					        }*/
+					//ret_obj.PolicyList = make([]string,0)
+					  //      routePolicyListInfo := ""
+					    //    if routesInfo.RouteList[i].PolicyList != nil {
+					      //    for k,v := range routesInfo.RouteList[i].PolicyList {
+						    //    routePolicyListInfo = k+":"
+					          //  for vv:=0;vv<len(v);vv++ {
+					           //   routePolicyListInfo = routePolicyListInfo + v[vv]+","
+					            //}
+					            //ret_obj.PolicyList = append(ret_obj.PolicyList,routePolicyListInfo)
+					         // }
+					        //}
 					ret_obj.PolicyList = make([]string, 0)
 					for j := 0; j < len(routesInfo.RouteList[i].PolicyList); j++ {
 						ret_obj.PolicyList = append(ret_obj.PolicyList, routesInfo.RouteList[i].PolicyList[j])
@@ -190,33 +167,13 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 				}
 			}
 		}
-		break
+		break 
 
-		/*    case models.PolicyDefinitionStmtMatchProtocolCondition:
-		    logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
-			if clnt.ClientHdl != nil {
-				var ret_obj models.PolicyDefinitionStmtMatchProtocolCondition
-				getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionStmtMatchProtocolConditions(ribd.Int(currMarker), ribd.Int(count))
-				if getBulkInfo.Count != 0 {
-					objCount = int64(getBulkInfo.Count)
-					more = bool(getBulkInfo.More)
-					nextMarker = int64(getBulkInfo.EndIdx)
-					for i := 0; i < int(getBulkInfo.Count); i++ {
-						if len(objs) == 0 {
-							objs = make([]models.ConfigObj, 0)
-						}
-						ret_obj.Name = getBulkInfo.PolicyDefinitionStmtMatchProtocolConditionList[i].Name
-						ret_obj.InstallProtocolEq = getBulkInfo.PolicyDefinitionStmtMatchProtocolConditionList[i].InstallProtocolEq
-						objs = append(objs, ret_obj)
-					}
-				}
-			}
-		    break*/
 	case models.PolicyConditionState:
 		logger.Println("PolicyConditionState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyConditionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyConditionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyConditionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -236,30 +193,11 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 			}
 		}
 		break
-		/*	case models.PolicyDefinitionStmtRedistributionAction:
-			if clnt.ClientHdl != nil {
-				var ret_obj models.PolicyDefinitionStmtRedistributionAction
-				getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionStmtRedistributionActions(ribd.Int(currMarker), ribd.Int(count))
-				if getBulkInfo.Count != 0 {
-					objCount = int64(getBulkInfo.Count)
-					more = bool(getBulkInfo.More)
-					nextMarker = int64(getBulkInfo.EndIdx)
-					for i := 0; i < int(getBulkInfo.Count); i++ {
-						if len(objs) == 0 {
-							objs = make([]models.ConfigObj, 0)
-						}
-						ret_obj.Name = getBulkInfo.PolicyDefinitionStmtRedistributionActionList[i].Name
-						ret_obj.RedistributeTargetProtocol = getBulkInfo.PolicyDefinitionStmtRedistributionActionList[i].RedistributeTargetProtocol
-						objs = append(objs, ret_obj)
-					}
-				}
-			}
-		    break*/
 	case models.PolicyActionState:
 		logger.Println("PolicyActionState")
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyActionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyActionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyActionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -282,7 +220,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	case models.PolicyStmtState:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyStmtState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmtState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyStmtState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -314,7 +252,7 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	case models.PolicyDefinitionState:
 		if clnt.ClientHdl != nil {
 			var ret_obj models.PolicyDefinitionState
-			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionState(ribd.Int(currMarker), ribd.Int(count))
+			getBulkInfo, _ := clnt.ClientHdl.GetBulkPolicyDefinitionState(ribdInt.Int(currMarker), ribdInt.Int(count))
 			if getBulkInfo.Count != 0 {
 				objCount = int64(getBulkInfo.Count)
 				more = bool(getBulkInfo.More)
@@ -339,30 +277,13 @@ func (clnt *RibClient) GetBulkObject(obj models.ConfigObj, currMarker int64, cou
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-	var err error
+func (clnt *RIBDIntClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+    var err error
 	switch obj.(type) {
-	case models.IPv4Route:
+/*	case models.IPv4Route:
 		v4Route := obj.(models.IPv4Route)
 		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
 		var outIntfType ribd.Int
-		/*fix me - temporary hack for testing intf dis/ena*/
-		/*	if v4Route.OutgoingIntfType == "DIS" {
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.IntfDown("10.1.1.2/24")
-				}
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.IntfDown("30.1.1.2/24")
-				}
-			} else 	if v4Route.OutgoingIntfType == "ENA" {
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.IntfUp("10.1.1.2/24")
-				}
-				if clnt.ClientHdl != nil {
-					clnt.ClientHdl.IntfUp("30.1.1.2/24")
-				}
-			} else if v4Route.OutgoingIntfType == "VLAN" {
-			/* End of hack*/
 		if v4Route.OutgoingIntfType == "VLAN" {
 			outIntfType = commonDefs.L2RefTypeVlan
 		} else if v4Route.OutgoingIntfType == "PHY" {
@@ -386,26 +307,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0), false
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
-		return objId, true
-		/*	case models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition:
-			logger.Println("PolicyDefinitionStmtDstIpMatchPrefixSetCondition")
-			inCfg := obj.(models.PolicyDefinitionStmtDstIpMatchPrefixSetCondition)
-			var cfg ribd.PolicyDefinitionStmtDstIpMatchPrefixSetCondition
-			if len(inCfg.PrefixSet) > 0 && len(inCfg.Prefix.IpPrefix) > 0 {
-				logger.Println("cannot set both prefix set name and a prefix")
-				return int64(0), true
-			}
-			cfg.Name = inCfg.Name
-			cfg.PrefixSet = inCfg.PrefixSet
-			var cfgIpPrefix ribd.PolicyDefinitionSetsPrefix
-			cfgIpPrefix.IpPrefix = inCfg.Prefix.IpPrefix
-			cfgIpPrefix.MasklengthRange = inCfg.Prefix.MaskLengthRange
-			cfg.Prefix = &cfgIpPrefix
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreatePolicyDefinitionStmtDstIpMatchPrefixSetCondition(&cfg)
-			}
-			objId, _ := inCfg.StoreObjectInDb(dbHdl)
-			return objId, true*/
+		return objId, true 
 	case models.PolicyPrefixSet:
 		logger.Println("PolicyPrefixSet")
 		inCfg := obj.(models.PolicyPrefixSet)
@@ -428,19 +330,8 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			return int64(0), false
 		}
 		objId, _ := inCfg.StoreObjectInDb(dbHdl)
-		return objId, true
-		/*	case models.PolicyDefinitionStmtMatchProtocolCondition:
-			logger.Println("PolicyDefinitionStmtMatchProtocolCondition")
-			inCfg := obj.(models.PolicyDefinitionStmtMatchProtocolCondition)
-			var cfg ribd.PolicyDefinitionStmtMatchProtocolCondition
-			cfg.Name = inCfg.Name
-			cfg.InstallProtocolEq = inCfg.InstallProtocolEq
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.CreatePolicyDefinitionStmtMatchProtocolCondition(&cfg)
-			}
-			objId, _ := inCfg.StoreObjectInDb(dbHdl)
-			return objId, true*/
-	case models.PolicyConditionConfig:
+		return objId, true*/
+/*	case models.PolicyConditionConfig:
 		logger.Println("PolicyConditionConfig")
 		inCfg := obj.(models.PolicyConditionConfig)
 		var cfg ribd.PolicyConditionConfig
@@ -527,7 +418,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 		logger.Println("PolicyStmtConfig")
 		var i int
 		inCfg := obj.(models.PolicyStmtConfig)
-		var cfg ribd.PolicyStmtConfig
+		var cfg ribdInt.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		logger.Println("Number of conditons = ", len(inCfg.Conditions))
 		conditions := make([]string, 0)
@@ -553,13 +444,13 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	case models.PolicyDefinitionConfig:
 		logger.Println("PolicyDefinitionConfig")
 		inCfg := obj.(models.PolicyDefinitionConfig)
-		var cfg ribd.PolicyDefinitionConfig
+		var cfg ribdInt.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
-		cfg.Precedence = ribd.Int(inCfg.Precedence)
+		cfg.Precedence = ribdInt.Int(inCfg.Precedence)
 		cfg.MatchType = inCfg.MatchType
 		logger.Println("Number of statements = ", len(inCfg.StatementList))
-		policyDefinitionStatements := make([]ribd.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
-		cfg.PolicyDefinitionStatements = make([]*ribd.PolicyDefinitionStmtPrecedence, 0)
+		policyDefinitionStatements := make([]ribdInt.PolicyDefinitionStmtPrecedence, len(inCfg.StatementList))
+		cfg.PolicyDefinitionStatements = make([]*ribdInt.PolicyDefinitionStmtPrecedence, 0)
 		var i int
 		for k, v := range inCfg.StatementList {
 			logger.Println("k= ", k, " v= ", v)
@@ -569,7 +460,7 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 			}*/
 			/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
 			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
-			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(v.Precedence), Statement: v.Statement}
+			/*policyDefinitionStatements[i] = ribdInt.PolicyDefinitionStmtPrecedence{Precedence: ribdInt.Int(v.Precedence), Statement: v.Statement}
 			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
 			i++
 		}
@@ -588,10 +479,10 @@ func (clnt *RibClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64,
 	return int64(0), true
 }
 
-func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RIBDIntClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Delete Object is called in RIBClient. ObjectKey: ", objKey, obj)
 	switch obj.(type) {
-	case models.IPv4Route:
+/*	case models.IPv4Route:
 		v4Route := obj.(models.IPv4Route)
 		logger.Println("### DeleteV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, v4Route.OutgoingInterface)
 		if clnt.ClientHdl != nil {
@@ -635,7 +526,7 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	case models.PolicyStmtConfig:
 		logger.Println("PolicyStmtConfig")
 		inCfg := obj.(models.PolicyStmtConfig)
-		var cfg ribd.PolicyStmtConfig
+		var cfg ribdInt.PolicyStmtConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
 			_, err := clnt.ClientHdl.DeletePolicyStatement(&cfg)
@@ -648,7 +539,7 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	case models.PolicyDefinitionConfig:
 		logger.Println("PolicyDefinition")
 		inCfg := obj.(models.PolicyDefinitionConfig)
-		var cfg ribd.PolicyDefinitionConfig
+		var cfg ribdInt.PolicyDefinitionConfig
 		cfg.Name = inCfg.Name
 		if clnt.ClientHdl != nil {
 			_, err := clnt.ClientHdl.DeletePolicyDefinition(&cfg)
@@ -666,28 +557,11 @@ func (clnt *RibClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *
 	return true
 }
 
-func (clnt *RibClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
+func (clnt *RIBDIntClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
 	logger.Println("### Update Object is called in RIBClient. ", objKey, dbObj, obj, attrSet)
-	switch obj.(type) {
-	case models.IPv4Route:
-		v4Route := obj.(models.IPv4Route)
-		outIntf, _ := strconv.Atoi(v4Route.OutgoingInterface)
-		logger.Println("### UpdateV4Route is called in RIBClient. ", v4Route.DestinationNw, v4Route.NetworkMask, outIntf)
-		/*
-			if clnt.ClientHdl != nil {
-				clnt.ClientHdl.UpdateV4Route(
-					dbObj,
-					obj,
-					attrSet)
-			}
-		*/
-		v4Route.UpdateObjectInDb(dbObj, attrSet, dbHdl)
-		//default:
-		//	logger.Println("OBJECT Type is ", obj.(type))
-	}
 	return true
 }
-
+*/
 /*
 type AsicDClient struct {
 	ipcutils.IPCClientBase
