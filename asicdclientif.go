@@ -35,54 +35,71 @@ func (clnt *ASICDClient) IsConnectedToServer() bool {
 }
 func (clnt *ASICDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
 	var objId int64
+	var err error
 	switch obj.(type) {
 
 	case models.Vlan:
 		data := obj.(models.Vlan)
 		conf := asicdServices.NewVlan()
 		models.ConvertasicdVlanObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateVlan(conf)
+		_, err = clnt.ClientHdl.CreateVlan(conf)
 		if err != nil {
 			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		objId, err = data.StoreObjectInDb(dbHdl)
+		if err != nil {
+			fmt.Println("Store in DB failed:", err)
+			return objId, false
+		}
 		break
 
 	case models.LogicalIntfConfig:
 		data := obj.(models.LogicalIntfConfig)
 		conf := asicdServices.NewLogicalIntfConfig()
 		models.ConvertasicdLogicalIntfConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateLogicalIntfConfig(conf)
+		_, err = clnt.ClientHdl.CreateLogicalIntfConfig(conf)
 		if err != nil {
 			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		objId, err = data.StoreObjectInDb(dbHdl)
+		if err != nil {
+			fmt.Println("Store in DB failed:", err)
+			return objId, false
+		}
 		break
 
 	case models.IPv4Intf:
 		data := obj.(models.IPv4Intf)
 		conf := asicdServices.NewIPv4Intf()
 		models.ConvertasicdIPv4IntfObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateIPv4Intf(conf)
+		_, err = clnt.ClientHdl.CreateIPv4Intf(conf)
 		if err != nil {
 			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		objId, err = data.StoreObjectInDb(dbHdl)
+		if err != nil {
+			fmt.Println("Store in DB failed:", err)
+			return objId, false
+		}
 		break
 
 	case models.PortConfig:
 		data := obj.(models.PortConfig)
 		conf := asicdServices.NewPortConfig()
 		models.ConvertasicdPortConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreatePortConfig(conf)
+		_, err = clnt.ClientHdl.CreatePortConfig(conf)
 		if err != nil {
 			fmt.Println("Create failed:", err)
 			return int64(0), false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		objId, err = data.StoreObjectInDb(dbHdl)
+		if err != nil {
+			fmt.Println("Store in DB failed:", err)
+			return objId, false
+		}
 		break
 	default:
 		break
@@ -153,7 +170,7 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	more bool,
 	objs []models.ConfigObj) {
 
-	logger.Println("### Get Bulk request called with", currMarker, count, obj)
+	logger.Println("### Get Bulk request called with", currMarker, count)
 	switch obj.(type) {
 
 	case models.Vlan:
@@ -211,6 +228,7 @@ func (clnt *ASICDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 					ret_obj.IfInUnknownProtos = int64(bulkInfo.LogicalIntfStateList[i].IfInUnknownProtos)
 					ret_obj.IfIndex = int32(bulkInfo.LogicalIntfStateList[i].IfIndex)
 					ret_obj.IfOutDiscards = int64(bulkInfo.LogicalIntfStateList[i].IfOutDiscards)
+					ret_obj.SrcMac = string(bulkInfo.LogicalIntfStateList[i].SrcMac)
 					objs = append(objs, ret_obj)
 				}
 
