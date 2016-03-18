@@ -4,9 +4,9 @@ import (
 	//"asicdServices"
 	"database/sql"
 	"models"
-//	"strconv"
-//	"utils/commonDefs"
-//	"utils/ipcutils"
+	//	"strconv"
+	//	"utils/commonDefs"
+	//	"utils/ipcutils"
 )
 
 type ClientIf interface {
@@ -167,7 +167,7 @@ func (clnt *RIBDIntClient) GetBulkObject(obj models.ConfigObj, currMarker int64,
 				}
 			}
 		}
-		break 
+		break
 
 	case models.PolicyConditionState:
 		logger.Println("PolicyConditionState")
@@ -307,7 +307,7 @@ func (clnt *RIBDIntClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (in
 			return int64(0), false
 		}
 		objId, _ := v4Route.StoreObjectInDb(dbHdl)
-		return objId, true 
+		return objId, true
 	case models.PolicyPrefixSet:
 		logger.Println("PolicyPrefixSet")
 		inCfg := obj.(models.PolicyPrefixSet)
@@ -458,9 +458,9 @@ func (clnt *RIBDIntClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (in
 				logger.Println("Interface nil at key ", k)
 				continue
 			}*/
-			/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
-			policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
-			/*policyDefinitionStatements[i] = ribdInt.PolicyDefinitionStmtPrecedence{Precedence: ribdInt.Int(v.Precedence), Statement: v.Statement}
+/*inCfgStatementIf := v.(map[string]interface{}) //models.PolicyDefinitionStmtPrecedence)
+policyDefinitionStatements[i] = ribd.PolicyDefinitionStmtPrecedence{Precedence: ribd.Int(inCfgStatementIf["Precedence"].(float64)), Statement: inCfgStatementIf["Statement"].(string)}*/
+/*policyDefinitionStatements[i] = ribdInt.PolicyDefinitionStmtPrecedence{Precedence: ribdInt.Int(v.Precedence), Statement: v.Statement}
 			cfg.PolicyDefinitionStatements = append(cfg.PolicyDefinitionStatements, &policyDefinitionStatements[i])
 			i++
 		}

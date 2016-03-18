@@ -58,25 +58,37 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 		rt = ApiRoute{key + "Delete",
 			"DELETE",
 			mgr.apiBase + key + "/" + "{objId}",
+			HandleRestRouteDeleteForId,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Delete",
+			"DELETE",
+			mgr.apiBase + key,
 			HandleRestRouteDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
 			"PATCH",
 			mgr.apiBase + key + "/" + "{objId}",
-			HandleRestRouteUpdate,
+			HandleRestRouteUpdateForId,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Show",
-			"GET",
-			mgr.apiBase + key + "/" + "{objId}",
-			HandleRestRouteGetConfig,
+		rt = ApiRoute{key + "Update",
+			"PATCH",
+			mgr.apiBase + key,
+			HandleRestRouteUpdate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Get",
 			"GET",
+			mgr.apiBase + key + "/" + "{objId}",
+			HandleRestRouteGetForId,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Show",
+			"GET",
 			mgr.apiBase + key,
-			HandleRestRouteGetState,
+			HandleRestRouteGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
@@ -271,6 +283,31 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectDeleteForId(w, r)
+	*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectDeleteForId(w, r)
+	return
+}
+
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
@@ -293,6 +330,31 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ConfigObjectDelete(w, r)
+	return
+}
+
+func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if CheckIfSystemIsReady(w) != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ConfigObjectUpdateForId(w, r)
+	*/
+	if CheckIfSystemIsReady(w) != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ConfigObjectUpdateForId(w, r)
 	return
 }
 
@@ -321,7 +383,7 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -336,22 +398,22 @@ func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetConfigObject(w, r)
+		GetOneObjectForId(w, r)
 	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetConfigObject(w, r)
+	GetOneObjectForId(w, r)
 }
 
-func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 		payload, _ := base64.StdEncoding.DecodeString(auth[1])
 		pair := strings.SplitN(string(payload), ":", 2)
-		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
 		if ok:= AuthenticateSessionId(sessionId); ok == false {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
@@ -360,14 +422,13 @@ func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetStateObject(w, r)
+		GetOneObject(w, r)
 	*/
 	if CheckIfSystemIsReady(w) != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetStateObject(w, r)
-	return
+	GetOneObject(w, r)
 }
 
 func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
