@@ -69,17 +69,17 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 				if waitCount%100 == 0 {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
-				if len(unconnectedClients) == 0 {
-					mgr.reconncetTimer.Stop()
-					break
-				}
-				if len(unconnectedClients) < i {
+				if len(unconnectedClients) > i {
 					if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
 						mgr.clients[unconnectedClients[i]].ConnectToServer()
 					}
 				}
+			}
+			if len(unconnectedClients) == 0 {
+				mgr.reconncetTimer.Stop()
+				break
 			}
 			waitCount++
 		}
