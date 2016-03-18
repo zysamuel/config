@@ -70,7 +70,6 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
 				if len(unconnectedClients) > i {
-					logger.Println(len(unconnectedClients), i)
 					if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
