@@ -695,11 +695,11 @@ func (clnt *AsicDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	}
 	return err, objCount, nextMarker, more, objs
 }
-*/
 
 func (clnt *ASICDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 	return nil, false
 }
+*/
 
 func (clnt *LACPDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 	return nil, false

@@ -123,7 +123,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
-				portConfig := objects[i].(models.PortConfig)
+				portConfig := objects[i].(models.Port)
 				objKey, _ := portConfig.GetKey()
 				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
