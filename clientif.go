@@ -705,10 +705,6 @@ func (clnt *LACPDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool
 	return nil, false
 }
 
-func (clnt *DHCPRELAYDClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
-	return nil, false
-}
-
 func (clnt *LocalClient) GetObject(obj models.ConfigObj) (models.ConfigObj, bool) {
 	return nil, false
 }
