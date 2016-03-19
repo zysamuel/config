@@ -20,11 +20,6 @@ func (mgr *ConfigMgr) InstantiateDbIf() error {
 
 	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
 	if err == nil {
-		dbCmd := "PRAGMA foreign_keys = ON;"
-		_, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
-		if err != nil {
-			logger.Println("Failed to SET Foreignkey pragma", err)
-		}
 		for key, obj := range models.ConfigObjectMap {
 			logger.Println("Creating DB for object", key)
 			err = obj.CreateDBTable(mgr.dbHdl)
