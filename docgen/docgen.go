@@ -158,7 +158,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructTyp
 	writeResourceOperation(structName, "post", docJsFile, str)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{objec-id}\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{object-id}\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, str)
 	writeResourceOperation(structName, "delete", docJsFile, str)
 	writeResourceOperation(structName, "patch", docJsFile, str)

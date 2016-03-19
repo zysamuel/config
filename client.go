@@ -69,17 +69,17 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 				if waitCount%100 == 0 {
 					logger.Println("Waiting to connect to these clients", unconnectedClients[i])
 				}
-				if len(unconnectedClients) == 0 {
-					mgr.reconncetTimer.Stop()
-					break
-				}
-				if len(unconnectedClients) < i {
+				if len(unconnectedClients) > i {
 					if mgr.clients[unconnectedClients[i]].IsConnectedToServer() {
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
 						mgr.clients[unconnectedClients[i]].ConnectToServer()
 					}
 				}
+			}
+			if len(unconnectedClients) == 0 {
+				mgr.reconncetTimer.Stop()
+				break
 			}
 			waitCount++
 		}
@@ -123,7 +123,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
-				portConfig := objects[i].(models.PortConfig)
+				portConfig := objects[i].(models.Port)
 				objKey, _ := portConfig.GetKey()
 				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
