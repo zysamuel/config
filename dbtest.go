@@ -255,7 +255,7 @@ func DbTestWriteRequestUser() error {
 	obj := models.UserConfig{UserName: "abcd" + strconv.Itoa(writeRound),
 		Password:    "password",
 		Description: "admin",
-		Previledge:  "prev"}
+		Privilege:  "prev"}
 	_, err := obj.StoreObjectInDb(gMgr.dbHdl)
 	if err != nil {
 		logger.Println("Failed to store User - round ", writeRound, err)

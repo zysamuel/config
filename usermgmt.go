@@ -36,7 +36,7 @@ func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
 			logger.Println("ERROR: more than  one admin present in UserConfig table ", err)
 			return false
 		}
-		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Previledge)
+		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
 		if err == nil {
 			found = true
 		}
@@ -47,7 +47,7 @@ func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
 		user.UserName = "admin"
 		user.Password = string(hashedPassword)
 		user.Description = "administrator"
-		user.Previledge = "w"
+		user.Privilege = "w"
 		if err != nil {
 			logger.Println("Failed to encrypt password for ", user.UserName)
 		}
@@ -70,7 +70,7 @@ func (mgr *ConfigMgr)ReadConfiguredUsersFromDb() (status bool) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&userConfig.UserName, &userConfig.Password, &userConfig.Description, &userConfig.Previledge); err != nil {
+		if err = rows.Scan(&userConfig.UserName, &userConfig.Password, &userConfig.Description, &userConfig.Privilege); err != nil {
 			fmt.Println("Db Scan failed when interating over UserConfig")
 		}
 		userData.userName = userConfig.UserName
@@ -159,7 +159,7 @@ func LoginUser(userName, password string) (sessionId uint64, status bool) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Previledge)
+		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
 		if err == nil {
 			found = true
 			break
