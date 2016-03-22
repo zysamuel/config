@@ -127,20 +127,11 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 	for _, fld := range str.Fields.List {
 		if fld.Names != nil {
 			switch fld.Type.(type) {
-
 			case *ast.ArrayType:
-				//fmt.Println("### Array Type attribute ", fld.Names[0].Name)
-				//arrayInfo := fld.Type.(*ast.ArrayType)
-				//info := ObjectMembersInfo{}
-				//info.IsArray = true
-				//objMembers[varName] = info
-				//idntType := arrayInfo.Elt.(*ast.Ident)
-				//varType := idntType.String()
-				//info.VarType = varType
-				//objMembers[varName] = info
-				//if fld.Tag != nil {
-				//	getSpecialTagsForAttribute(fld.Tag.Value, &info)
-				//}
+				//fmt.Printf("-- %s \n", fld.Names[0])
+				arrayInfo := fld.Type.(*ast.ArrayType)
+				idnt   := arrayInfo.Elt.(*ast.Ident)
+				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
 			case *ast.Ident:
 				//fmt.Printf("-- %s \n", fld.Names[0])
 				idnt := fld.Type.(*ast.Ident)
