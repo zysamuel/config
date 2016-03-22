@@ -113,7 +113,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 	logger.Println("Discovering system objects")
 
 	logger.Println("Discover ports")
-	resource := "PortConfig"
+	resource := "Port"
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		var objects []models.ConfigObj
 		var err error
@@ -123,20 +123,21 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
-				portConfig := objects[i].(models.Port)
+				portConfig := (*objects[i].(*models.Port))
 				objKey, _ := portConfig.GetKey()
 				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
 					_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
 					if err != nil {
-						logger.Println("Failed to store PortConfig in DB ", i, portConfig, err)
+						logger.Println("Failed to store Port in DB ", i, portConfig, err)
 					} else {
+						logger.Println("Stored Port ", portConfig.PortNum, " in DB")
 						uuid, err := StoreUuidToKeyMapInDb(portConfig)
 						if err != nil {
-							logger.Println("Failed to store uuid map for PortConfig in DB ", portConfig, err)
+							logger.Println("Failed to store uuid map for Port in DB ", portConfig, err)
 						} else {
-							logger.Println("Stored uuid map for PortConfig in DB ", portConfig, uuid)
+							logger.Println("Stored uuid map for Port in DB ", portConfig.PortNum, uuid)
 						}
 					}
 				}
