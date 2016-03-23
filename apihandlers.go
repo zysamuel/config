@@ -99,7 +99,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 	}
 	vars := mux.Vars(r)
 	uuid := vars["objId"]
-	//if objId is provided then read from DB
+	//if objId is provided then read objkey from DB
 	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", uuid).Scan(&objKey)
 	if err != nil {
 		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
@@ -147,7 +147,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
 		return
 	}
-	//if objId is not provided then get key fields provided in the request.
+	//Get key fields provided in the request.
 	objKey, err = obj.GetKey()
 	if err != nil {
 		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
@@ -302,6 +302,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
 	var success bool
+	var uuid string
 	logger.Println("Create Object Called")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -309,8 +310,10 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			objKey, _ := obj.GetKey()
 			_, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
 			if err == nil {
-				errCode = SRAlreadyConfigured
 				logger.Println("Config object is present")
+				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+				http.Error(w, SRErrString(SRAlreadyConfigured)+" Existing ObjectId: "+uuid, http.StatusInternalServerError)
+				return
 			} else if err == sql.ErrNoRows {
 				updateKeys, _ := GetUpdateKeys(body)
 				if len(updateKeys) == 0 {
