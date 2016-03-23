@@ -132,7 +132,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 					if err != nil {
 						logger.Println("Failed to store Port in DB ", i, portConfig, err)
 					} else {
-						uuid, err := StoreUuidToKeyMapInDb(portConfig)
+						_, err := StoreUuidToKeyMapInDb(portConfig)
 						if err != nil {
 							logger.Println("Failed to store uuid map for Port in DB ", portConfig, err)
 						}
