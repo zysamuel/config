@@ -32,7 +32,7 @@
   <script type="text/javascript">
   var spec = { "swagger": "2.0",                                                                                                     
   "info": {                                                                                                             
-		      "description": "This is a demo of ...\n",                                                                           
+		      "description": "This is list of all URIs(objects) that can be used in programming...\n",                                                                           
 				"version": "1.0.0",                                                                                                                                                                                       
 				"title": "FlexSwitch APIs",                                                                                                
 				"contact": {

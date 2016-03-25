@@ -127,20 +127,11 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 	for _, fld := range str.Fields.List {
 		if fld.Names != nil {
 			switch fld.Type.(type) {
-
 			case *ast.ArrayType:
-				//fmt.Println("### Array Type attribute ", fld.Names[0].Name)
-				//arrayInfo := fld.Type.(*ast.ArrayType)
-				//info := ObjectMembersInfo{}
-				//info.IsArray = true
-				//objMembers[varName] = info
-				//idntType := arrayInfo.Elt.(*ast.Ident)
-				//varType := idntType.String()
-				//info.VarType = varType
-				//objMembers[varName] = info
-				//if fld.Tag != nil {
-				//	getSpecialTagsForAttribute(fld.Tag.Value, &info)
-				//}
+				//fmt.Printf("-- %s \n", fld.Names[0])
+				arrayInfo := fld.Type.(*ast.ArrayType)
+				idnt   := arrayInfo.Elt.(*ast.Ident)
+				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
 			case *ast.Ident:
 				//fmt.Printf("-- %s \n", fld.Names[0])
 				idnt := fld.Type.(*ast.Ident)
@@ -158,7 +149,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructTyp
 	writeResourceOperation(structName, "post", docJsFile, str)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{objec-id}\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{object-id}\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, str)
 	writeResourceOperation(structName, "delete", docJsFile, str)
 	writeResourceOperation(structName, "patch", docJsFile, str)
@@ -166,7 +157,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructTyp
 }
 
 func WriteStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "s\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, str)
 	writePathCompletion(docJsFile)
 }
@@ -199,7 +190,6 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile strin
 					typ := spec.(*ast.TypeSpec)
 					str, ok := typ.Type.(*ast.StructType)
 					if typ.Name.Name == structName {
-						fmt.Printf("%s \n", typ.Name.Name)
 						if ok {
 							if objInfo.Access == "w" || objInfo.Access == "rw" {
 								WriteConfigObject(typ.Name.Name, docJsFile, str)
