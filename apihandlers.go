@@ -23,12 +23,13 @@ const (
 )
 
 type ConfigResponse struct {
-	UUId string `json:"ObjectId"`
+	UUId  string `json:"ObjectId"`
+	Error string `json:"Error"`
 }
 
 type ReturnObject struct {
-	ObjectId string `json:"ObjectId"`
-	models.ConfigObj
+	ObjectId         string `json:"ObjectId"`
+	models.ConfigObj `json:"Object"`
 }
 
 type GetBulkResponse struct {
@@ -303,7 +304,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var success bool
 	var uuid string
-	logger.Println("Create Object Called")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
@@ -312,7 +313,11 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				logger.Println("Config object is present")
 				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
-				http.Error(w, SRErrString(SRAlreadyConfigured)+" Existing ObjectId: "+uuid, http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
+				resp.UUId = uuid
+				resp.Error = SRErrString(SRAlreadyConfigured)
+				js, _ := json.Marshal(resp)
+				w.Write(js)
 				return
 			} else if err == sql.ErrNoRows {
 				updateKeys, _ := GetUpdateKeys(body)
@@ -324,16 +329,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					if success == true {
 						UUId, err := StoreUuidToKeyMapInDb(obj)
 						if err == nil {
-							w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 							w.WriteHeader(http.StatusCreated)
 							resp.UUId = UUId.String()
-							js, err := json.Marshal(resp)
-							if err != nil {
-								errCode = SRRespMarshalErr
-							} else {
-								w.Write(js)
-								errCode = SRSuccess
-							}
+							errCode = SRSuccess
 						} else {
 							errCode = SRIdStoreFail
 							logger.Println("Failed to store UuidToKey map ", obj, err)
@@ -352,11 +350,16 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 		errCode = SRObjMapError
 		logger.Println("Failed to get ObjectMap ", resource)
 	}
+
 	if errCode != SRSuccess {
-		logger.Println("returning error as http request failed")
-		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	resp.Error = SRErrString(errCode)
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("CreateObject failed to Marshal config response")
 	} else {
-		logger.Println("Create Object Request Processed successfully")
+		w.Write(js)
 	}
 	return
 }
