@@ -481,21 +481,27 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-			if success == true {
-				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-				w.WriteHeader(http.StatusOK)
-				resp.UUId = vars["objId"]
-				js, err := json.Marshal(resp)
-				if err != nil {
-					errCode = SRRespMarshalErr
+			mergedObjKey, _ := mergedObj.GetKey()
+			if objKey == mergedObjKey {
+				success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+				if success == true {
+					resp.UUId = vars["objId"]
+					js, err := json.Marshal(resp)
+					if err != nil {
+						errCode = SRRespMarshalErr
+					} else {
+						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+						w.WriteHeader(http.StatusOK)
+						w.Write(js)
+						errCode = SRSuccess
+					}
 				} else {
-					w.Write(js)
-					errCode = SRSuccess
+					errCode = SRServerError
+					logger.Println("UpdateObject failed for resource ", updateKeys, resource)
 				}
 			} else {
-				errCode = SRServerError
-				logger.Println("UpdateObject failed for resource ", updateKeys, resource)
+				errCode = SRUpdateKeyError
+				logger.Println("Cannot update key ", updateKeys, resource)
 			}
 		} else {
 			errCode = SRObjHdlError
@@ -505,8 +511,10 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		errCode = SRObjMapError
 		logger.Println("Config update failed t get ObjectMap ", resource)
 	}
+
 	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusNotModified)
+		errStr := SRErrString(errCode) + " ObjectId: " + vars["objId"]
+		http.Error(w, errStr, http.StatusInternalServerError)
 	}
 	return
 }
@@ -521,27 +529,33 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := GetConfigObj(r, objHdl)
 		objKey, _ = obj.GetKey()
+		gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
 		updateKeys, _ := GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-			if success == true {
-				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
-				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-				w.WriteHeader(http.StatusOK)
-				resp.UUId = uuid
-				js, err := json.Marshal(resp)
-				if err != nil {
-					errCode = SRRespMarshalErr
+			mergedObjKey, _ := mergedObj.GetKey()
+			if objKey == mergedObjKey {
+				success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+				if success == true {
+					resp.UUId = uuid
+					js, err := json.Marshal(resp)
+					if err != nil {
+						errCode = SRRespMarshalErr
+					} else {
+						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+						w.WriteHeader(http.StatusOK)
+						w.Write(js)
+						errCode = SRSuccess
+					}
 				} else {
-					w.Write(js)
-					errCode = SRSuccess
+					errCode = SRServerError
+					logger.Println("UpdateObject failed for resource ", updateKeys, resource)
 				}
 			} else {
-				errCode = SRServerError
-				logger.Println("UpdateObject failed for resource ", updateKeys, resource)
+				errCode = SRUpdateKeyError
+				logger.Println("Cannot update key ", updateKeys, resource)
 			}
 		} else {
 			errCode = SRObjHdlError
@@ -549,10 +563,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		errCode = SRObjMapError
-		logger.Println("Config update failed t get ObjectMap ", resource)
+		logger.Println("Config update failed cannot get ObjectMap ", resource)
 	}
+
 	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusNotModified)
+		errStr := SRErrString(errCode) + " ObjectId: " + uuid
+		http.Error(w, errStr, http.StatusInternalServerError)
 	}
 	return
 }
