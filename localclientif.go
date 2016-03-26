@@ -20,8 +20,8 @@ func (clnt *LocalClient) IsConnectedToServer() bool {
 	return true
 }
 
-func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-	var objId int64
+func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (error, bool) {
+	var err error
 	switch obj.(type) {
 	case models.UserConfig:
 		data := obj.(models.UserConfig)
@@ -34,7 +34,7 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		if ok := gMgr.CreateUser(data.UserName); ok {
 			// Store the encrypted password in DB
 			data.Password = string(hashedPassword)
-			objId, _ = data.StoreObjectInDb(dbHdl)
+			_, err = data.StoreObjectInDb(dbHdl)
 		}
 		break
 
@@ -44,10 +44,10 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 	default:
 		break
 	}
-	return objId, true
+	return err, true
 }
 
-func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) (error, bool) {
 	switch obj.(type) {
 	case models.UserConfig:
 		data := obj.(models.UserConfig)
@@ -63,7 +63,7 @@ func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	default:
 		break
 	}
-	return true
+	return nil, true
 }
 
 func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
@@ -81,7 +81,7 @@ func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
+func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) (error, bool) {
 	logger.Println("### Update Object called CONFD", attrSet, objKey)
 	ok := false
 	switch obj.(type) {
@@ -97,5 +97,9 @@ func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	default:
 		break
 	}
-	return ok
+	return nil, ok
+}
+
+func (clnt *LocalClient) GetObject(obj models.ConfigObj) (error, models.ConfigObj) {
+	return nil, nil
 }

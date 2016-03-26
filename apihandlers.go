@@ -87,7 +87,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var retObj ReturnObject
 	var err error
-	var success bool
+
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
@@ -107,7 +107,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
-		if retObj.ConfigObj, success = gMgr.objHdlMap[resource].owner.GetObject(obj); success == false {
+		if err, retObj.ConfigObj = gMgr.objHdlMap[resource].owner.GetObject(obj); err != nil {
 			errCode = SRServerError
 		}
 	} else {
@@ -137,7 +137,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var retObj ReturnObject
 	var err error
-	var success bool
+
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
@@ -155,7 +155,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
-		if retObj.ConfigObj, success = gMgr.objHdlMap[resource].owner.GetObject(obj); success == false {
+		if err, retObj.ConfigObj = gMgr.objHdlMap[resource].owner.GetObject(obj); err != nil {
 			errCode = SRServerError
 		}
 	} else {
@@ -304,6 +304,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var success bool
 	var uuid string
+	var err error
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -325,20 +327,21 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					errCode = SRNoContent
 					logger.Println("Nothing to configure")
 				} else {
-					_, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
-					if success == true {
-						UUId, err := StoreUuidToKeyMapInDb(obj)
-						if err == nil {
+					err, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+					if err == nil && success == true {
+						UUId, dbErr := StoreUuidToKeyMapInDb(obj)
+						if dbErr == nil {
 							w.WriteHeader(http.StatusCreated)
 							resp.UUId = UUId.String()
 							errCode = SRSuccess
 						} else {
 							errCode = SRIdStoreFail
-							logger.Println("Failed to store UuidToKey map ", obj, err)
+							logger.Println("Failed to store UuidToKey map ", obj, dbErr)
 						}
 					} else {
+						resp.Error = err.Error()
 						errCode = SRServerError
-						logger.Println("Failed to create object ", obj)
+						logger.Println("Failed to create object: ", obj, " due to error: ", err)
 					}
 				}
 			}
@@ -354,13 +357,15 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	resp.Error = SRErrString(errCode)
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
 	js, err := json.Marshal(resp)
 	if err != nil {
 		logger.Println("CreateObject failed to Marshal config response")
-	} else {
-		w.Write(js)
 	}
+	w.Write(js)
+
 	return
 }
 
@@ -369,38 +374,38 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var objKey string
 	var success bool
+	var err error
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
-	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	resp.UUId = vars["objId"]
+	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		resp.Error = SRErrString(SRNotFound)
+		js, _ := json.Marshal(resp)
+		w.Write(js)
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(nil, objHdl); err == nil {
 			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-			success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
-			if success == true {
+			err, success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
+			if err == nil && success == true {
 				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
-				_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+				_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 				if err != nil {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", vars["objId"], err)
 				} else {
-					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusGone)
-					resp.UUId = vars["objId"]
-					js, err := json.Marshal(resp)
-					if err != nil {
-						errCode = SRRespMarshalErr
-					} else {
-						w.Write(js)
-						errCode = SRSuccess
-					}
+					errCode = SRSuccess
 				}
 			} else {
+				resp.Error = err.Error()
 				errCode = SRServerError
-				logger.Println("DeleteObject returned failure ", obj)
+				logger.Println("DeleteObject returned failure ", obj, err)
 			}
 		} else {
 			errCode = SRObjHdlError
@@ -410,9 +415,19 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 		errCode = SRObjMapError
 		logger.Println("Failed to get ObjectMap ", resource)
 	}
+
 	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("CreateObject failed to Marshal config response")
+	}
+	w.Write(js)
+
 	return
 }
 
@@ -422,32 +437,36 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	var uuid string
+	var err error
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
 			objKey, _ = obj.GetKey()
-			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-			success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
-			if success == true {
-				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+			dbObj, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				resp.Error = SRErrString(SRNotFound)
+				js, _ := json.Marshal(resp)
+				w.Write(js)
+				return
+			}
+			gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+			resp.UUId = uuid
+			err, success = gMgr.objHdlMap[resource].owner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
+			if err == nil && success == true {
 				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + uuid + "\""
-				_, err := dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+				_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
 				if err != nil {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", uuid, err)
 				} else {
-					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusGone)
-					resp.UUId = uuid
-					js, err := json.Marshal(resp)
-					if err != nil {
-						errCode = SRRespMarshalErr
-					} else {
-						w.Write(js)
-						errCode = SRSuccess
-					}
+					errCode = SRSuccess
 				}
 			} else {
+				resp.Error = err.Error()
 				errCode = SRServerError
 				logger.Println("DeleteObject returned failure ", obj)
 			}
@@ -459,9 +478,19 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		errCode = SRObjMapError
 		logger.Println("Failed to get ObjectMap ", resource)
 	}
+
 	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("CreateObject failed to Marshal config response")
+	}
+	w.Write(js)
+
 	return
 }
 
@@ -470,11 +499,18 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var objKey string
 	var success bool
+	var err error
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
-	err := gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	resp.UUId = vars["objId"]
+	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
 	if err != nil {
-		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		resp.Error = SRErrString(SRNotFound)
+		js, _ := json.Marshal(resp)
+		w.Write(js)
 		return
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -486,19 +522,12 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			mergedObjKey, _ := mergedObj.GetKey()
 			if objKey == mergedObjKey {
-				success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-				if success == true {
-					resp.UUId = vars["objId"]
-					js, err := json.Marshal(resp)
-					if err != nil {
-						errCode = SRRespMarshalErr
-					} else {
-						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-						w.WriteHeader(http.StatusOK)
-						w.Write(js)
-						errCode = SRSuccess
-					}
+				err, success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+				if err == nil && success == true {
+					w.WriteHeader(http.StatusOK)
+					errCode = SRSuccess
 				} else {
+					resp.Error = err.Error()
 					errCode = SRServerError
 					logger.Println("UpdateObject failed for resource ", updateKeys, resource)
 				}
@@ -516,9 +545,17 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if errCode != SRSuccess {
-		errStr := SRErrString(errCode) + " ObjectId: " + vars["objId"]
-		http.Error(w, errStr, http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("CreateObject failed to Marshal config response")
+	}
+	w.Write(js)
+
 	return
 }
 
@@ -528,41 +565,40 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	var uuid string
+	var err error
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := GetConfigObj(r, objHdl)
 		objKey, _ = obj.GetKey()
-		gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
 		updateKeys, _ := GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-		if gerr == nil {
-			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
-			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			mergedObjKey, _ := mergedObj.GetKey()
-			if objKey == mergedObjKey {
-				success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
-				if success == true {
-					resp.UUId = uuid
-					js, err := json.Marshal(resp)
-					if err != nil {
-						errCode = SRRespMarshalErr
-					} else {
-						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-						w.WriteHeader(http.StatusOK)
-						w.Write(js)
-						errCode = SRSuccess
-					}
-				} else {
-					errCode = SRServerError
-					logger.Println("UpdateObject failed for resource ", updateKeys, resource)
-				}
+		if gerr != nil {
+			w.WriteHeader(http.StatusNotFound)
+			resp.Error = SRErrString(SRNotFound)
+			js, _ := json.Marshal(resp)
+			w.Write(js)
+			return
+		}
+		gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+		resp.UUId = uuid
+		diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
+		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
+		mergedObjKey, _ := mergedObj.GetKey()
+		if objKey == mergedObjKey {
+			err, success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+			if err == nil && success == true {
+				w.WriteHeader(http.StatusOK)
+				errCode = SRSuccess
 			} else {
-				errCode = SRUpdateKeyError
-				logger.Println("Cannot update key ", updateKeys, resource)
+				resp.Error = err.Error()
+				errCode = SRServerError
+				logger.Println("UpdateObject failed for resource ", updateKeys, resource)
 			}
 		} else {
-			errCode = SRObjHdlError
-			logger.Println("Config update failed in getting obj via objKey ", objKey, gerr)
+			errCode = SRUpdateKeyError
+			logger.Println("Cannot update key ", updateKeys, resource)
 		}
 	} else {
 		errCode = SRObjMapError
@@ -570,9 +606,17 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if errCode != SRSuccess {
-		errStr := SRErrString(errCode) + " ObjectId: " + uuid
-		http.Error(w, errStr, http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("CreateObject failed to Marshal config response")
+	}
+	w.Write(js)
+
 	return
 }
 
