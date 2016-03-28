@@ -33,19 +33,19 @@ func (clnt *LACPDClient) ConnectToServer() bool {
 func (clnt *LACPDClient) IsConnectedToServer() bool {
 	return clnt.IsConnected
 }
-func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
-	var objId int64
+func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (error, bool) {
+	var err error
 	switch obj.(type) {
 
 	case models.EthernetConfig:
 		data := obj.(models.EthernetConfig)
 		conf := lacpd.NewEthernetConfig()
 		models.ConvertlacpdEthernetConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.CreateEthernetConfig(conf)
+		_, err = clnt.ClientHdl.CreateEthernetConfig(conf)
 		if err != nil {
-			return int64(0), false
+			return err, false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		data.StoreObjectInDb(dbHdl)
 		break
 
 	case models.AggregationLacpConfig:
@@ -54,27 +54,27 @@ func (clnt *LACPDClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int6
 		models.ConvertlacpdAggregationLacpConfigObjToThrift(&data, conf)
 		_, err := clnt.ClientHdl.CreateAggregationLacpConfig(conf)
 		if err != nil {
-			return int64(0), false
+			return err, false
 		}
-		objId, _ = data.StoreObjectInDb(dbHdl)
+		data.StoreObjectInDb(dbHdl)
 		break
 	default:
 		break
 	}
 
-	return objId, true
+	return nil, true
 }
-func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
-
+func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) (error, bool) {
+	var err error
 	switch obj.(type) {
 
 	case models.EthernetConfig:
 		data := obj.(models.EthernetConfig)
 		conf := lacpd.NewEthernetConfig()
 		models.ConvertlacpdEthernetConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteEthernetConfig(conf)
+		_, err = clnt.ClientHdl.DeleteEthernetConfig(conf)
 		if err != nil {
-			return false
+			return err, false
 		}
 		data.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -83,9 +83,9 @@ func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		data := obj.(models.AggregationLacpConfig)
 		conf := lacpd.NewAggregationLacpConfig()
 		models.ConvertlacpdAggregationLacpConfigObjToThrift(&data, conf)
-		_, err := clnt.ClientHdl.DeleteAggregationLacpConfig(conf)
+		_, err = clnt.ClientHdl.DeleteAggregationLacpConfig(conf)
 		if err != nil {
-			return false
+			return err, false
 		}
 		data.DeleteObjectFromDb(objKey, dbHdl)
 		break
@@ -93,7 +93,7 @@ func (clnt *LACPDClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 		break
 	}
 
-	return true
+	return nil, true
 }
 func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, count int64) (err error,
 	objCount int64,
@@ -219,10 +219,10 @@ func (clnt *LACPDClient) GetBulkObject(obj models.ConfigObj, currMarker int64, c
 	return nil, objCount, nextMarker, more, objs
 
 }
-func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
-
+func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) (error, bool) {
+	var err error
+	var ok bool
 	logger.Println("### Update Object called LACPD", attrSet, objKey)
-	ok := false
 	switch obj.(type) {
 
 	case models.EthernetConfig:
@@ -235,11 +235,11 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertlacpdEthernetConfigObjToThrift(&origdata, origconf)
 		models.ConvertlacpdEthernetConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, attrSet)
-			if ok {
+			ok, err = clnt.ClientHdl.UpdateEthernetConfig(origconf, updateconf, attrSet)
+			if err == nil && ok == true {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
-				panic(err)
+				return err, false
 			}
 		}
 		break
@@ -254,11 +254,11 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 		models.ConvertlacpdAggregationLacpConfigObjToThrift(&origdata, origconf)
 		models.ConvertlacpdAggregationLacpConfigObjToThrift(&updatedata, updateconf)
 		if clnt.ClientHdl != nil {
-			ok, err := clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, attrSet)
-			if ok {
+			ok, err = clnt.ClientHdl.UpdateAggregationLacpConfig(origconf, updateconf, attrSet)
+			if err == nil && ok == true {
 				updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 			} else {
-				panic(err)
+				return err, false
 			}
 		}
 		break
@@ -266,6 +266,10 @@ func (clnt *LACPDClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	default:
 		break
 	}
-	return ok
+	return nil, true
 
+}
+
+func (clnt *LACPDClient) GetObject(obj models.ConfigObj) (error, models.ConfigObj) {
+	return nil, nil
 }

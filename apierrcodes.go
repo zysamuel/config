@@ -24,7 +24,7 @@ const (
 // SR error strings
 var ErrString = map[int]string{
 	SRFail:              "Configuration failed.",
-	SRSuccess:           "Configuration applied successfully.",
+	SRSuccess:           "None.",
 	SRSystemNotReady:    "System not ready.",
 	SRRespMarshalErr:    "Configuration applied successfully. However, failed to marshal response.",
 	SRNotFound:          "Failed to find entry.",
