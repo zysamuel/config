@@ -36,7 +36,7 @@
 	 "Port":11000},
 	
 	{"Name":"vxland",
-	 "Port":11059,
+	 "Port":11059},
 	
         {"Name":"local",
 	  "Port":0}
