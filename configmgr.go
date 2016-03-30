@@ -7,8 +7,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"database/sql"
+	"encoding/json"
 	"encoding/pem"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"math/big"
 	"models"
 	"net"
@@ -18,7 +20,6 @@ import (
 	"time"
 	//"strings"
 	//"strconv"
-	//"encoding/json"
 	//"encoding/base64"
 )
 
@@ -41,6 +42,11 @@ type ConfigMgr struct {
 
 type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
+}
+
+type ConfdGlobals struct {
+	Name  string `json: "Name"`
+	Value string `json: "Value"`
 }
 
 //
@@ -474,6 +480,31 @@ func (mgr *ConfigMgr) InstantiateRestRtr() *mux.Router {
 
 func (mgr *ConfigMgr) GetRestRtr() *mux.Router {
 	return mgr.pRestRtr
+}
+
+func (mgr *ConfigMgr) GetConfigHandlerPort(paramsDir string) (bool, string) {
+	var globals []ConfdGlobals
+	var port string
+
+	globalsFile := paramsDir + "/globals.json"
+	bytes, err := ioutil.ReadFile(globalsFile)
+	if err != nil {
+		logger.Println("Error in reading globals file", globalsFile)
+		return false, port
+	}
+
+	err = json.Unmarshal(bytes, &globals)
+	if err != nil {
+		logger.Println("Error in Unmarshalling Json")
+		return false, port
+	}
+	for _, global := range globals {
+		if global.Name == "httpport" {
+			port = global.Value
+			return true, port
+		}
+	}
+	return false, port
 }
 
 //

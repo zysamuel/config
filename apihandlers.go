@@ -82,8 +82,8 @@ func CheckIfSystemIsReady(w http.ResponseWriter) bool {
 }
 
 func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
-	var errCode int
 	var obj models.ConfigObj
+	var dbObj models.ConfigObj
 	var objKey string
 	var retObj ReturnObject
 	var err error
@@ -106,27 +106,25 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
 		return
 	}
-	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
-		if err, retObj.ConfigObj = gMgr.objHdlMap[resource].owner.GetObject(obj); err != nil {
-			errCode = SRServerError
-		}
+	if dbObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err != nil {
+		http.Error(w, err.Error()+" ObjectId: "+uuid, http.StatusNotFound)
+		return
 	} else {
-		if retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err != nil {
-			errCode = SRServerError
+		if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
+			if err, retObj.ConfigObj = gMgr.objHdlMap[resource].owner.GetObject(dbObj); err != nil {
+				http.Error(w, err.Error()+" ObjectId: "+uuid, http.StatusNotFound)
+				return
+			}
+		} else {
+			retObj.ConfigObj = dbObj
 		}
 	}
-	gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&retObj.ObjectId)
+	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
-	if err != nil {
-		errCode = SRRespMarshalErr
-	} else {
+	if err == nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
-		errCode = SRSuccess
-	}
-	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
 	}
 	return
 }
@@ -137,6 +135,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var retObj ReturnObject
 	var err error
+	var uuid string
 
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -163,18 +162,17 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 			errCode = SRServerError
 		}
 	}
-	gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&retObj.ObjectId)
+	gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
-	if err != nil {
-		errCode = SRRespMarshalErr
-	} else {
+	if err == nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
 		errCode = SRSuccess
 	}
 	if errCode != SRSuccess {
-		http.Error(w, SRErrString(errCode), http.StatusInternalServerError)
+		http.Error(w, err.Error()+" ObjectId: "+uuid, http.StatusInternalServerError)
 	}
 	return
 }

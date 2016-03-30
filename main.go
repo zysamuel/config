@@ -32,6 +32,8 @@ func main() {
 	go gMgr.DiscoverSystemObjects(clientsUp)
 	go gMgr.MonitorSystemStatus()
 	go gMgr.StartUserSessionHandler()
+
+	foundConfPort, confPort := gMgr.GetConfigHandlerPort(*paramsDir)
 	restRtr := gMgr.GetRestRtr()
 	/*
 		// TODO: uncomment this section for https server
@@ -44,7 +46,15 @@ func main() {
 				syslogger.Info("### CONF Mgr Failed to generate certs")
 			}
 		}
-		http.ListenAndServeTLS(":8080", certFile, keyFile, restRtr)
+		if foundConfPort {
+			http.ListenAndServeTLS(":"+confPort, certFile, keyFile, restRtr)
+		} else
+			http.ListenAndServeTLS(":8080", certFile, keyFile, restRtr)
+		}
 	*/
-	http.ListenAndServe(":8080", restRtr)
+	if foundConfPort {
+		http.ListenAndServe(":"+confPort, restRtr)
+	} else {
+		http.ListenAndServe(":8080", restRtr)
+	}
 }
