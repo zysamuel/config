@@ -4,13 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -64,12 +61,12 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }," + "\n")
 }
 
-func writeAttributeJson(attrName string, attrType string, dstFile *os.File, fld *ast.Field) {
+func writeAttributeJson(attrName string, attrInfo ObjectMembersInfo, dstFile *os.File) {
 	var attrTypeVal string
 	dstFile.WriteString(fourTabs + "{" + "\n")
 	dstFile.WriteString(fourTabs + "\"in\": \"formData\"," + "\n")
 	dstFile.WriteString(fourTabs + "\"name\":" + "\"" + attrName + "\"" + "," + "\n")
-	switch attrType {
+	switch attrInfo.VarType {
 	case "string":
 		attrTypeVal = "string"
 	case "int32", "uint32":
@@ -77,10 +74,18 @@ func writeAttributeJson(attrName string, attrType string, dstFile *os.File, fld 
 	default:
 		attrTypeVal = "string"
 	}
-	description, isRquired := getSpecialTagsForAttribute(fld)
+	//description := strings.Trim(attrInfo.Description, "\n")
+	description := strings.Replace(attrInfo.Description, "\n", " ", -1)
+
+	var isRequired bool
+	if attrInfo.DefaultVal == "" {
+		isRequired = true
+	} else {
+		isRequired = false
+	}
 	dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
 	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + description + "\"" + "," + "\n")
-	if isRquired {
+	if isRequired {
 		dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
 	} else {
 		dstFile.WriteString(fourTabs + "\"required\":" + "false," + "\n")
@@ -93,117 +98,50 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
-func getSpecialTagsForAttribute(fld *ast.Field) (description string, isRequired bool) {
-	reg, err := regexp.Compile("[`\"]")
-	if err != nil {
-		fmt.Println("Error in regex ", err)
-	}
-	if fld.Tag != nil {
-		tags := reg.ReplaceAllString(fld.Tag.Value, "")
-		splits := strings.Split(tags, ",")
-		for _, part := range splits {
-			keys := strings.Split(part, ":")
-			for idx, key := range keys {
-				alphas, err := regexp.Compile("[^A-Za-z]")
-				if err != nil {
-					fmt.Println("Error in regex ", err)
-				}
-				key = alphas.ReplaceAllString(key, "")
-				switch key {
-				case "DESCRIPTION":
-					description = keys[idx+1]
-					description = strings.Replace(description, "\n", " ", -1)
-				case "DEFAULT":
-					isRequired = false
-				}
-			}
-		}
-	}
-	return description, isRequired
-}
-
-func writeResourceOperation(structName string, operation string, docJsFile *os.File, str *ast.StructType) {
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
 	writeResourceHdr(structName, operation, docJsFile)
-	for _, fld := range str.Fields.List {
-		if fld.Names != nil {
-			switch fld.Type.(type) {
-			case *ast.ArrayType:
-				//fmt.Printf("-- %s \n", fld.Names[0])
-				arrayInfo := fld.Type.(*ast.ArrayType)
-				idnt   := arrayInfo.Elt.(*ast.Ident)
-				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
-			case *ast.Ident:
-				//fmt.Printf("-- %s \n", fld.Names[0])
-				idnt := fld.Type.(*ast.Ident)
-				writeAttributeJson(fld.Names[0].Name, idnt.String(), docJsFile, fld)
-			}
-		}
+	for attrName, attrInfo := range membersMap {
+		writeAttributeJson(attrName, attrInfo, docJsFile)
 	}
 	docJsFile.WriteString(twoTabs + " ], " + "\n")
 	writeEpilogueForStruct(structName, docJsFile)
 }
 
-func WriteConfigObject(structName string, docJsFile *os.File, str *ast.StructType) {
+func WriteConfigObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
 
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "post", docJsFile, str)
+	writeResourceOperation(structName, "post", docJsFile, membersMap)
 	writePathCompletion(docJsFile)
 
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{object-id}\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, str)
-	writeResourceOperation(structName, "delete", docJsFile, str)
-	writeResourceOperation(structName, "patch", docJsFile, str)
+	writeResourceOperation(structName, "get", docJsFile, membersMap)
+	writeResourceOperation(structName, "delete", docJsFile, membersMap)
+	writeResourceOperation(structName, "patch", docJsFile, membersMap)
 	writePathCompletion(docJsFile)
 }
 
-func WriteStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
+func WriteStateObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, str)
+	writeResourceOperation(structName, "get", docJsFile, membersMap)
 	writePathCompletion(docJsFile)
 }
 
-func WriteGlobalStateObject(structName string, docJsFile *os.File, str *ast.StructType) {
+func WriteGlobalStateObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, str)
 	writePathCompletion(docJsFile)
 }
 
-func WriteRestResourceDoc(docJsFile *os.File, structName string, inputFile string, objInfo ObjectInfoJson) {
-	fset := token.NewFileSet() // positions are relative to fset
-
-	// Parse the object file.
-	f, err := parser.ParseFile(fset,
-		inputFile,
-		nil,
-		parser.ParseComments)
-
-	if err != nil {
-		fmt.Println("Failed to parse input file ", inputFile, err)
-		return
-	}
-	for _, dec := range f.Decls {
-		tk, ok := dec.(*ast.GenDecl)
-		if ok {
-			for _, spec := range tk.Specs {
-				switch spec.(type) {
-				case *ast.TypeSpec:
-					typ := spec.(*ast.TypeSpec)
-					str, ok := typ.Type.(*ast.StructType)
-					if typ.Name.Name == structName {
-						if ok {
-							if objInfo.Access == "w" || objInfo.Access == "rw" {
-								WriteConfigObject(typ.Name.Name, docJsFile, str)
-							} else if objInfo.Access == "r" || objInfo.Access == "rw" {
-								if strings.Contains(typ.Name.Name, "Global") {
-									WriteGlobalStateObject(typ.Name.Name, docJsFile, str)
-								} else {
-									WriteStateObject(typ.Name.Name+"s", docJsFile, str)
-								}
-							}
-						}
-					}
-				}
-			}
+func WriteRestResourceDoc(docJsFile *os.File, structName string, membersMap map[string]ObjectMembersInfo, objInfo ObjectInfoJson) {
+	if objInfo.Access == "w" || objInfo.Access == "rw" {
+		WriteConfigObject(structName, docJsFile, membersMap)
+		//fmt.Println("Config Object: ", structName)
+	} else if objInfo.Access == "r" || objInfo.Access == "rw" {
+		if strings.Contains(structName, "Global") {
+			WriteGlobalStateObject(structName, docJsFile, membersMap)
+			//fmt.Println("Global Config Object: ", structName)
+		} else {
+			WriteStateObject(structName, docJsFile, membersMap)
+			//fmt.Println("State Object: ", structName)
 		}
 	}
 }
@@ -213,6 +151,15 @@ type ObjectInfoJson struct {
 	Owner        string `json:"owner"`
 	SrcFile      string `json:"srcfile"`
 	Multiplicity string `json:"multiplicity"`
+}
+
+type ObjectMembersInfo struct {
+	VarType     string `json:"type"`
+	IsKey       bool   `json:"isKey"`
+	IsArray     bool   `json:"isArray"`
+	Description string `json:"description"`
+	DefaultVal  string `json:"default"`
+	Position    int    `json:"position"`
 }
 
 func main() {
@@ -235,24 +182,45 @@ func main() {
 		fmt.Println(" Environment Variable SR_CODE_BASE has not been set")
 		return
 	}
+	idx := 0
 	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/genObjectConfig.json")
-	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/handCodedObjInfo.json")
-
+	membersInfoBase := base + "/reltools/codegentools/._genInfo/"
 	for _, infoFile := range jsonFilesList {
+		fmt.Println("Info File", infoFile)
 		var objMap map[string]ObjectInfoJson
 		objMap = make(map[string]ObjectInfoJson, 1)
 		bytes, err := ioutil.ReadFile(infoFile)
 		if err != nil {
 			fmt.Println("Error in reading Object configuration file", infoFile)
-			return
+			continue
 		}
 		err = json.Unmarshal(bytes, &objMap)
-		for objName, objInfo := range objMap {
-			WriteRestResourceDoc(docJsFile, objName,
-				base+"/snaproute/src/models/"+objInfo.SrcFile, objInfo)
+		//fmt.Println("Object Map ", objMap)
+		//return
+		objList := make([]string, 0)
+		for key, _ := range objMap {
+			objList = append(objList, key)
+		}
+		sort.Strings(objList)
+
+		//for objName, objInfo := range objMap {
+		for _, objName := range objList {
+		   idx++
+			objInfo := objMap[objName]
+			membersFile := membersInfoBase + objName + "Members.json"
+			var memberMap map[string]ObjectMembersInfo
+			memberMap = make(map[string]ObjectMembersInfo, 1)
+			bytes, err := ioutil.ReadFile(membersFile)
+			if err != nil {
+				fmt.Println("Error in reading Object configuration file", membersFile)
+				continue
+			}
+			err = json.Unmarshal(bytes, &memberMap)
+
+			WriteRestResourceDoc(docJsFile, objName, memberMap, objInfo)
 		}
 	}
-
+	fmt.Println("Total Objects ", idx)
 	docJsFile.WriteString(twoTabs + " } " + "\n")
 	docJsFile.WriteString(twoTabs + " }; " + "\n")
 	writeStaticPart("part2.txt", docJsFile)
