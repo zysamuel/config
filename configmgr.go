@@ -55,6 +55,14 @@ type ConfdGlobals struct {
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 	for key, _ := range models.ConfigObjectMap {
+		/*
+			rt = ApiRoute{key + "Action",
+				"POST",
+				mgr.apiBase + key,
+				HandleRestRouteAction,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+		*/
 		rt = ApiRoute{key + "Create",
 			"POST",
 			mgr.apiBase + key,
