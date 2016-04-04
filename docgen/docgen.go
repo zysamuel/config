@@ -95,7 +95,6 @@ func writeAttributeJson(attrInfo AttributeListItem, dstFile *os.File) {
 		dstFile.WriteString(fourTabs + "\"default\":" + "\"" + attrInfo.DefaultVal + "\",\n")
 	}
 	if attrInfo.Selections != "" {
-		fmt.Println("AttrName is ", attrInfo)
 		enumVals := strings.Split(attrInfo.Selections, "/")
 		enumStr := ""
 		for idx, val := range enumVals {
