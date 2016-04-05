@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -303,45 +302,52 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var uuid string
 	var err error
+	var obj models.ConfigObj
+	var objKey string
+	var body []byte
 
+	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		if body, obj, err := GetConfigObj(r, objHdl); err == nil {
-			objKey, _ := obj.GetKey()
-			_, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-			if err == nil {
-				logger.Println("Config object is present")
-				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+		if body, obj, err = GetConfigObj(r, objHdl); err == nil {
+			updateKeys, _ := GetUpdateKeys(body)
+			if len(updateKeys) == 0 {
+				errCode = SRNoContent
+				logger.Println("Nothing to configure")
+			} else {
+				objKey, _ = obj.GetKey()
+				dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+				dbObjKey, _ := dbObj.GetKey()
+				if dbObjKey == objKey {
+					errCode = SRAlreadyConfigured
+					logger.Println("Config object is present")
+					gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+				}
+			}
+			if errCode != SRSuccess {
 				w.WriteHeader(http.StatusInternalServerError)
 				resp.UUId = uuid
-				resp.Error = SRErrString(SRAlreadyConfigured)
+				resp.Error = SRErrString(errCode)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
 				return
-			} else if err == sql.ErrNoRows {
-				updateKeys, _ := GetUpdateKeys(body)
-				if len(updateKeys) == 0 {
-					errCode = SRNoContent
-					logger.Println("Nothing to configure")
+			}
+			err, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
+			if err == nil && success == true {
+				UUId, dbErr := StoreUuidToKeyMapInDb(obj)
+				if dbErr == nil {
+					w.WriteHeader(http.StatusCreated)
+					resp.UUId = UUId.String()
+					errCode = SRSuccess
 				} else {
-					err, success = gMgr.objHdlMap[resource].owner.CreateObject(obj, gMgr.dbHdl)
-					if err == nil && success == true {
-						UUId, dbErr := StoreUuidToKeyMapInDb(obj)
-						if dbErr == nil {
-							w.WriteHeader(http.StatusCreated)
-							resp.UUId = UUId.String()
-							errCode = SRSuccess
-						} else {
-							errCode = SRIdStoreFail
-							logger.Println("Failed to store UuidToKey map ", obj, dbErr)
-						}
-					} else {
-						resp.Error = err.Error()
-						errCode = SRServerError
-						logger.Println("Failed to create object: ", obj, " due to error: ", err)
-					}
+					errCode = SRIdStoreFail
+					logger.Println("Failed to store UuidToKey map ", obj, dbErr)
 				}
+			} else {
+				resp.Error = err.Error()
+				errCode = SRServerError
+				logger.Println("Failed to create object: ", obj, " due to error: ", err)
 			}
 		} else {
 			errCode = SRObjHdlError
