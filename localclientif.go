@@ -101,13 +101,15 @@ func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 }
 
 func (clnt *LocalClient) GetObject(obj models.ConfigObj) (error, models.ConfigObj) {
+	var retObj models.ConfigObj
 	switch obj.(type) {
 	case models.UserState:
 		logger.Println("### Get request called for UserState")
 		break
 	case models.SystemStatus:
 		logger.Println("### Get request called for SystemStatus")
-		break
+		retObj = gMgr.GetSystemStatus()
+		return nil, retObj
 	default:
 		break
 	}

@@ -87,6 +87,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 	var retObj ReturnObject
 	var err error
 
+	gMgr.apiCallStats.NumGetCalls++
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
@@ -124,6 +125,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
+		gMgr.apiCallStats.NumGetCallsSuccess++
 	}
 	return
 }
@@ -136,6 +138,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var uuid string
 
+	gMgr.apiCallStats.NumGetCalls++
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
@@ -169,6 +172,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
 		errCode = SRSuccess
+		gMgr.apiCallStats.NumGetCallsSuccess++
 	}
 	if errCode != SRSuccess {
 		http.Error(w, err.Error()+" ObjectId: "+uuid, http.StatusInternalServerError)
@@ -190,6 +194,7 @@ func BulkGetObjects(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request) {
 	var retObjs []ReturnObject
 	var errCode int
+	gMgr.apiCallStats.NumGetCalls++
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
 			objList, err := obj.GetAllObjFromDb(gMgr.dbHdl)
@@ -208,6 +213,7 @@ func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Reques
 					w.WriteHeader(http.StatusOK)
 					w.Write(js)
 					errCode = SRSuccess
+					gMgr.apiCallStats.NumGetCallsSuccess++
 				}
 			}
 		}
@@ -224,6 +230,7 @@ func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request
 	var stateObjects []models.ConfigObj
 	var resp GetBulkResponse
 	var err error
+	gMgr.apiCallStats.NumGetCalls++
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
@@ -253,6 +260,7 @@ func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request
 				w.WriteHeader(http.StatusOK)
 				w.Write(js)
 				errCode = SRSuccess
+				gMgr.apiCallStats.NumGetCallsSuccess++
 			}
 		}
 	}
@@ -306,6 +314,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var body []byte
 
+	gMgr.apiCallStats.NumCreateCalls++
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
@@ -340,6 +349,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					resp.UUId = UUId.String()
 					errCode = SRSuccess
+					gMgr.apiCallStats.NumCreateCallsSuccess++
 				} else {
 					errCode = SRIdStoreFail
 					logger.Println("Failed to store UuidToKey map ", obj, dbErr)
@@ -380,6 +390,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var err error
 
+	gMgr.apiCallStats.NumDeleteCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
@@ -405,6 +416,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 				} else {
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
+					gMgr.apiCallStats.NumDeleteCallsSuccess++
 				}
 			} else {
 				resp.Error = err.Error()
@@ -443,6 +455,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var uuid string
 	var err error
 
+	gMgr.apiCallStats.NumDeleteCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -468,6 +481,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				} else {
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
+					gMgr.apiCallStats.NumDeleteCallsSuccess++
 				}
 			} else {
 				resp.Error = err.Error()
@@ -505,6 +519,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var err error
 
+	gMgr.apiCallStats.NumUpdateCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	vars := mux.Vars(r)
@@ -530,6 +545,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				if err == nil && success == true {
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
+					gMgr.apiCallStats.NumUpdateCallsSuccess++
 				} else {
 					resp.Error = err.Error()
 					errCode = SRServerError
@@ -571,6 +587,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var uuid string
 	var err error
 
+	gMgr.apiCallStats.NumUpdateCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -595,6 +612,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			if err == nil && success == true {
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
+				gMgr.apiCallStats.NumUpdateCallsSuccess++
 			} else {
 				resp.Error = err.Error()
 				errCode = SRServerError
