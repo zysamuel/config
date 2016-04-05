@@ -38,6 +38,8 @@ type ConfigMgr struct {
 	users          []UserData
 	sessionId      uint64
 	sessionChan    chan uint64
+	bringUpTime    time.Time
+	apiCallStats   ApiCallStats
 }
 
 type LoginResponse struct {
@@ -550,6 +552,7 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
 	mgr.InstantiateDbIf()
+	mgr.bringUpTime = time.Now()
 	logger.Println("Initialization Done!")
 	return mgr
 }
