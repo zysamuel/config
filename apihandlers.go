@@ -88,7 +88,7 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	gMgr.apiCallStats.NumGetCalls++
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
 			http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
@@ -139,7 +139,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 	var uuid string
 
 	gMgr.apiCallStats.NumGetCalls++
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err = GetConfigObj(r, objHdl); err != nil {
 			http.Error(w, SRErrString(SRNotFound), http.StatusNotFound)
@@ -181,7 +181,7 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func BulkGetObjects(w http.ResponseWriter, r *http.Request) {
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
 	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
@@ -317,7 +317,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	gMgr.apiCallStats.NumCreateCalls++
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig)
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if body, obj, err = GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := GetUpdateKeys(body)
@@ -392,7 +392,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 
 	gMgr.apiCallStats.NumDeleteCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
 	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -457,7 +457,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 
 	gMgr.apiCallStats.NumDeleteCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
 			objKey, _ = obj.GetKey()
@@ -521,7 +521,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 
 	gMgr.apiCallStats.NumUpdateCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
 	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
@@ -589,7 +589,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 
 	gMgr.apiCallStats.NumUpdateCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := GetConfigObj(r, objHdl)
 		objKey, _ = obj.GetKey()
