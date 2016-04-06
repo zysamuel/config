@@ -115,3 +115,7 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj) (error, models.ConfigOb
 	}
 	return nil, nil
 }
+
+func (clnt *LocalClient) ExecuteAction(obj models.ConfigObj) error {
+	return nil
+}

@@ -108,14 +108,12 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			HandleRestRouteBulkGet,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-		/*
-			rt = ApiRoute{key + "Action",
-				"POST",
-				mgr.apiBaseAction + key,
-				HandleRestRouteAction,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-		*/
+		rt = ApiRoute{key + "Action",
+			"POST",
+			mgr.apiBaseAction + key,
+			HandleRestRouteAction,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
 	return true
 }
@@ -472,6 +470,31 @@ func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	BulkGetObjects(w, r)
+	return
+}
+
+func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ExecuteActionObject(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ExecuteActionObject(w, r)
 	return
 }
 

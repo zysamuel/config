@@ -39,6 +39,10 @@ type GetBulkResponse struct {
 	StateObjects  []ReturnObject
 }
 
+type ActionResponse struct {
+	Error string `json:"Error"`
+}
+
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
@@ -283,6 +287,52 @@ func ExtractGetBulkParams(r *http.Request) (currentIndex int64, objectCount int6
 		objectCount = MAX_OBJECTS_IN_GETBULK
 	}
 	return currentIndex, objectCount
+}
+
+func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
+	var resp ActionResponse
+	var errCode int
+	var err error
+	var obj models.ConfigObj
+
+	gMgr.apiCallStats.NumActionCalls++
+	errCode = SRSuccess
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseAction)
+	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
+		if _, obj, err = GetConfigObj(r, objHdl); err == nil {
+			err = gMgr.objHdlMap[resource].owner.ExecuteAction(obj)
+			if err == nil {
+				gMgr.apiCallStats.NumActionCallsSuccess++
+				w.WriteHeader(http.StatusOK)
+				errCode = SRSuccess
+			} else {
+				resp.Error = err.Error()
+				errCode = SRServerError
+				logger.Println("Failed to execute action: ", obj, " due to error: ", err)
+			}
+		} else {
+			errCode = SRObjHdlError
+			logger.Println("Failed to get object handle from http request ", objHdl, resource, err)
+		}
+	} else {
+		errCode = SRObjMapError
+		logger.Println("Failed to get ObjectMap ", resource)
+	}
+
+	if errCode != SRSuccess {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	if errCode != SRServerError {
+		resp.Error = SRErrString(errCode)
+	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		logger.Println("ExecuteAction failed to Marshal config response")
+	}
+	w.Write(js)
+
+	return
 }
 
 func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
