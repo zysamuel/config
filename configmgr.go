@@ -17,8 +17,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
-	//"strings"
 	//"strconv"
 	//"encoding/base64"
 )
@@ -284,14 +284,14 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			if CheckIfSystemIsReady(w) != true {
+			if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 				http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 				return
 			}
 			ConfigObjectCreate(w, r)
 		}
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -310,13 +310,13 @@ func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectDeleteForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -335,13 +335,13 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectDelete(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -360,13 +360,13 @@ func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectUpdateForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -385,13 +385,13 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectUpdate(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -410,13 +410,13 @@ func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		GetOneObjectForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -434,13 +434,13 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		GetOneObject(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -458,13 +458,13 @@ func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectsBulkGet(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -515,6 +515,16 @@ func (mgr *ConfigMgr) GetConfigHandlerPort(paramsDir string) (bool, string) {
 		}
 	}
 	return false, port
+}
+func IsLocalObject(r *http.Request) bool {
+	objName := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[0]
+	switch objName {
+	case "SystemStatus", "UserConfig", "UserState", "IPV4AddressBlock":
+		return true
+	default:
+		return false
+	}
+	return false
 }
 
 //

@@ -23,8 +23,8 @@ func (clnt *LocalClient) IsConnectedToServer() bool {
 func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (error, bool) {
 	var err error
 	switch obj.(type) {
-	case models.UserConfig:
-		data := obj.(models.UserConfig)
+	case models.User:
+		data := obj.(models.User)
 		// Hashing the password with the default cost of 10
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -49,8 +49,8 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (erro
 
 func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) (error, bool) {
 	switch obj.(type) {
-	case models.UserConfig:
-		data := obj.(models.UserConfig)
+	case models.User:
+		data := obj.(models.User)
 		// Delete user from configmgr's users table
 		if ok := gMgr.DeleteUser(data.UserName); ok {
 			data.DeleteObjectFromDb(objKey, dbHdl)
@@ -85,9 +85,9 @@ func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	logger.Println("### Update Object called CONFD", attrSet, objKey)
 	ok := false
 	switch obj.(type) {
-	case models.UserConfig:
-		//origdata := dbObj.(models.UserConfig)
-		updatedata := obj.(models.UserConfig)
+	case models.User:
+		//origdata := dbObj.(models.User)
+		updatedata := obj.(models.User)
 		updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
 		break
 

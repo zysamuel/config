@@ -76,7 +76,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	//}
 }
 
-func CheckIfSystemIsReady(w http.ResponseWriter) bool {
+func CheckIfSystemIsReady() bool {
 	return gMgr.IsReady()
 }
 
