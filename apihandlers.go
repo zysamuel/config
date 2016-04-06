@@ -122,10 +122,10 @@ func GetOneObjectForId(w http.ResponseWriter, r *http.Request) {
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
 	if err == nil {
+		gMgr.apiCallStats.NumGetCallsSuccess++
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
-		gMgr.apiCallStats.NumGetCallsSuccess++
 	}
 	return
 }
@@ -168,11 +168,11 @@ func GetOneObject(w http.ResponseWriter, r *http.Request) {
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
 	if err == nil {
+		gMgr.apiCallStats.NumGetCallsSuccess++
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(js)
 		errCode = SRSuccess
-		gMgr.apiCallStats.NumGetCallsSuccess++
 	}
 	if errCode != SRSuccess {
 		http.Error(w, err.Error()+" ObjectId: "+uuid, http.StatusInternalServerError)
@@ -209,11 +209,11 @@ func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Reques
 				if err != nil {
 					errCode = SRRespMarshalErr
 				} else {
+					gMgr.apiCallStats.NumGetCallsSuccess++
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusOK)
 					w.Write(js)
 					errCode = SRSuccess
-					gMgr.apiCallStats.NumGetCallsSuccess++
 				}
 			}
 		}
@@ -256,11 +256,11 @@ func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request
 				errCode = SRRespMarshalErr
 				logger.Println("### Error in marshalling JSON in getBulk for object ", resource, err)
 			} else {
+				gMgr.apiCallStats.NumGetCallsSuccess++
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(http.StatusOK)
 				w.Write(js)
 				errCode = SRSuccess
-				gMgr.apiCallStats.NumGetCallsSuccess++
 			}
 		}
 	}
@@ -346,10 +346,10 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if err == nil && success == true {
 				UUId, dbErr := StoreUuidToKeyMapInDb(obj)
 				if dbErr == nil {
+					gMgr.apiCallStats.NumCreateCallsSuccess++
 					w.WriteHeader(http.StatusCreated)
 					resp.UUId = UUId.String()
 					errCode = SRSuccess
-					gMgr.apiCallStats.NumCreateCallsSuccess++
 				} else {
 					errCode = SRIdStoreFail
 					logger.Println("Failed to store UuidToKey map ", obj, dbErr)
@@ -414,9 +414,9 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", vars["objId"], err)
 				} else {
+					gMgr.apiCallStats.NumDeleteCallsSuccess++
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
-					gMgr.apiCallStats.NumDeleteCallsSuccess++
 				}
 			} else {
 				resp.Error = err.Error()
@@ -479,9 +479,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", uuid, err)
 				} else {
+					gMgr.apiCallStats.NumDeleteCallsSuccess++
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
-					gMgr.apiCallStats.NumDeleteCallsSuccess++
 				}
 			} else {
 				resp.Error = err.Error()
@@ -543,9 +543,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			if objKey == mergedObjKey {
 				err, success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
 				if err == nil && success == true {
+					gMgr.apiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
-					gMgr.apiCallStats.NumUpdateCallsSuccess++
 				} else {
 					resp.Error = err.Error()
 					errCode = SRServerError
@@ -610,9 +610,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		if objKey == mergedObjKey {
 			err, success = gMgr.objHdlMap[resource].owner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
 			if err == nil && success == true {
+				gMgr.apiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
-				gMgr.apiCallStats.NumUpdateCallsSuccess++
 			} else {
 				resp.Error = err.Error()
 				errCode = SRServerError
