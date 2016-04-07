@@ -588,6 +588,20 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
+			anyUpdated := false
+			for _, updated := range diff {
+				if updated == true {
+					anyUpdated = true
+					break
+				}
+			}
+			if anyUpdated == false {
+				w.WriteHeader(http.StatusInternalServerError)
+				resp.Error = SRErrString(SRUpdateNoChange)
+				js, _ := json.Marshal(resp)
+				w.Write(js)
+				return
+			}
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			mergedObjKey, _ := mergedObj.GetKey()
 			if objKey == mergedObjKey {
@@ -655,6 +669,20 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
 		resp.UUId = uuid
 		diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
+		anyUpdated := false
+		for _, updated := range diff {
+			if updated == true {
+				anyUpdated = true
+				break
+			}
+		}
+		if anyUpdated == false {
+			w.WriteHeader(http.StatusInternalServerError)
+			resp.Error = SRErrString(SRUpdateNoChange)
+			js, _ := json.Marshal(resp)
+			w.Write(js)
+			return
+		}
 		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 		mergedObjKey, _ := mergedObj.GetKey()
 		if objKey == mergedObjKey {

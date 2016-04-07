@@ -19,6 +19,7 @@ const (
 	SRAuthFailed        = 12
 	SRAlreadyConfigured = 13
 	SRUpdateKeyError    = 14
+	SRUpdateNoChange    = 15
 )
 
 // SR error strings
@@ -38,6 +39,7 @@ var ErrString = map[int]string{
 	SRAuthFailed:        "User authentication failed.",
 	SRAlreadyConfigured: "Already configured. Delete and Update operations are allowed.",
 	SRUpdateKeyError:    "Cannot update key in an object.",
+	SRUpdateNoChange:    "Nothing to be updated.",
 }
 
 //Given a code reurn error string
