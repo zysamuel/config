@@ -92,14 +92,26 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Get",
 			"GET",
+			mgr.apiBaseConfig + key + "/" + "{objId}",
+			HandleRestRouteGetConfigForId,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Get",
+			"GET",
+			mgr.apiBaseConfig + key,
+			HandleRestRouteGetConfig,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Shoe",
+			"GET",
 			mgr.apiBaseState + key + "/" + "{objId}",
-			HandleRestRouteGetForId,
+			HandleRestRouteGetStateForId,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Show",
 			"GET",
 			mgr.apiBaseState + key,
-			HandleRestRouteGet,
+			HandleRestRouteGetState,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
@@ -400,7 +412,7 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -415,16 +427,16 @@ func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetOneObjectForId(w, r)
+		GetOneConfigObjectForId(w, r)
 	*/
 	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetOneObjectForId(w, r)
+	GetOneConfigObjectForId(w, r)
 }
 
-func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -439,13 +451,61 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetOneObject(w, r)
+		GetOneConfigObject(w, r)
 	*/
 	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetOneObject(w, r)
+	GetOneConfigObject(w, r)
+}
+
+func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetOneStateObjectForId(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	GetOneStateObjectForId(w, r)
+}
+
+func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetOneStateObject(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	GetOneStateObject(w, r)
 }
 
 func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
