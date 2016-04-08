@@ -32,6 +32,12 @@
 	{"Name":"sysd",
 	 "Port":10050},
 	
-	{"Name":"local",
+	{"Name":"lldpd",
+	 "Port":11000},
+	
+	{"Name":"vxland",
+	 "Port":11059},
+	
+        {"Name":"local",
 	  "Port":0}
 ]
