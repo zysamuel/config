@@ -1,39 +1,39 @@
 package main
 
 import (
-	"models"
-	"utils/crypto/bcrypt"
-	"time"
 	"fmt"
+	"models"
+	"time"
+	"utils/crypto/bcrypt"
 )
 
 const (
 	MAX_NUM_SESSIONS = 10
-	SESSION_TIMEOUT = 300
+	SESSION_TIMEOUT  = 300
 )
 
 type UserData struct {
-	userName        string
-	sessionId       uint64
-	sessionTimer   *time.Timer
-	lastLoginTime   time.Time
-	lastLoginIp     string
-	numAPICalled    uint32
+	userName      string
+	sessionId     uint64
+	sessionTimer  *time.Timer
+	lastLoginTime time.Time
+	lastLoginIp   string
+	numAPICalled  uint32
 }
 
-func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
+func (mgr *ConfigMgr) CreateDefaultUser() (status bool) {
 	var found bool
-	var user models.UserConfig
+	var user models.User
 	defaultPassword := []byte("admin123")
-	rows, err := mgr.dbHdl.Query("select * from UserConfig where UserName=?", "admin")
+	rows, err := mgr.dbHdl.Query("select * from User where UserName=?", "admin")
 	if err != nil {
-		logger.Println("ERROR: Error in reaing UserConfig table ", err)
+		logger.Println("ERROR: Error in reaing User table ", err)
 		return false
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if found {
-			logger.Println("ERROR: more than  one admin present in UserConfig table ", err)
+			logger.Println("ERROR: more than  one admin present in User table ", err)
 			return false
 		}
 		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
@@ -59,19 +59,19 @@ func (mgr *ConfigMgr)CreateDefaultUser() (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)ReadConfiguredUsersFromDb() (status bool) {
-	var userConfig models.UserConfig
+func (mgr *ConfigMgr) ReadConfiguredUsersFromDb() (status bool) {
+	var userConfig models.User
 	var userData UserData
-	dbCmd := "select * from UserConfig"
+	dbCmd := "select * from User"
 	rows, err := mgr.dbHdl.Query(dbCmd)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("DB method Query failed for 'UserConfig' with error UserConfig", dbCmd, err))
+		fmt.Println(fmt.Sprintf("DB method Query failed for 'User' with error User", dbCmd, err))
 		return false
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&userConfig.UserName, &userConfig.Password, &userConfig.Description, &userConfig.Privilege); err != nil {
-			fmt.Println("Db Scan failed when interating over UserConfig")
+			fmt.Println("Db Scan failed when interating over User")
 		}
 		userData.userName = userConfig.UserName
 		userData.sessionId = 0
@@ -80,7 +80,7 @@ func (mgr *ConfigMgr)ReadConfiguredUsersFromDb() (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)CreateUser(userName string) (status bool) {
+func (mgr *ConfigMgr) CreateUser(userName string) (status bool) {
 	var userData UserData
 	_, _, found := mgr.GetUserByUserName(userName)
 	if found {
@@ -93,7 +93,7 @@ func (mgr *ConfigMgr)CreateUser(userName string) (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)DeleteUser(userName string) (status bool) {
+func (mgr *ConfigMgr) DeleteUser(userName string) (status bool) {
 	var userData UserData
 	_, idx, found := mgr.GetUserByUserName(userName)
 	if found == false {
@@ -106,7 +106,7 @@ func (mgr *ConfigMgr)DeleteUser(userName string) (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
+func (mgr *ConfigMgr) StartUserSessionHandler() (status bool) {
 	logger.Println("Starting SessionHandler thread")
 	mgr.sessionChan = make(chan uint64, MAX_NUM_SESSIONS)
 	for {
@@ -124,7 +124,7 @@ func (mgr *ConfigMgr)StartUserSessionHandler() (status bool) {
 	return true
 }
 
-func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint64) (user UserData, idx int, found bool) {
+func (mgr *ConfigMgr) GetUserBySessionId(sessionId uint64) (user UserData, idx int, found bool) {
 	for i, user := range mgr.users {
 		if user.sessionId == sessionId {
 			return user, i, true
@@ -133,7 +133,7 @@ func (mgr *ConfigMgr)GetUserBySessionId(sessionId uint64) (user UserData, idx in
 	return user, 0, false
 }
 
-func (mgr *ConfigMgr)GetUserByUserName(userName string) (user UserData, idx int, found bool) {
+func (mgr *ConfigMgr) GetUserByUserName(userName string) (user UserData, idx int, found bool) {
 	for i, user := range mgr.users {
 		if user.userName == userName {
 			return user, i, true
@@ -142,7 +142,7 @@ func (mgr *ConfigMgr)GetUserByUserName(userName string) (user UserData, idx int,
 	return user, 0, false
 }
 
-func (user UserData)WaitOnSessionTimer() (err error) {
+func (user UserData) WaitOnSessionTimer() (err error) {
 	<-user.sessionTimer.C
 	logger.Printf("Session timeout for user %s session %d\n", user.userName, user.sessionId)
 	LogoutUser(user.userName, user.sessionId)
@@ -151,10 +151,10 @@ func (user UserData)WaitOnSessionTimer() (err error) {
 
 func LoginUser(userName, password string) (sessionId uint64, status bool) {
 	var found bool
-	var user models.UserConfig
-	rows, err := gMgr.dbHdl.Query("select * from UserConfig where UserName=?", userName)
+	var user models.User
+	rows, err := gMgr.dbHdl.Query("select * from User where UserName=?", userName)
 	if err != nil {
-		logger.Println("ERROR: Error in reaing UserConfig table ", err)
+		logger.Println("ERROR: Error in reaing User table ", err)
 		return 0, false
 	}
 	defer rows.Close()
@@ -178,7 +178,7 @@ func LoginUser(userName, password string) (sessionId uint64, status bool) {
 				userData.sessionId = gMgr.sessionId
 				gMgr.users[idx].sessionId = gMgr.sessionId
 				fmt.Printf("Password matched for %s: sessionId is %d\n", userData.userName, userData.sessionId)
-				gMgr.sessionChan <-userData.sessionId
+				gMgr.sessionChan <- userData.sessionId
 				fmt.Printf("SessionId is %d is sent over chan\n", userData.sessionId)
 				return userData.sessionId, true
 			} else {
