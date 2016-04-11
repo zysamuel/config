@@ -102,7 +102,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 			HandleRestRouteGetConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Shoe",
+		rt = ApiRoute{key + "Show",
 			"GET",
 			mgr.apiBaseState + key + "/" + "{objId}",
 			HandleRestRouteGetStateForId,
@@ -116,8 +116,14 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
 			"GET",
+			mgr.apiBaseConfig + key + "s",
+			HandleRestRouteBulkGetConfig,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "s",
+			"GET",
 			mgr.apiBaseState + key + "s",
-			HandleRestRouteBulkGet,
+			HandleRestRouteBulkGetState,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Action",
@@ -508,7 +514,7 @@ func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 	GetOneStateObject(w, r)
 }
 
-func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -523,13 +529,38 @@ func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		ConfigObjectsBulkGet(w, r)
+		BulkGetConfigObjects(w, r)
 	*/
 	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	BulkGetObjects(w, r)
+	BulkGetConfigObjects(w, r)
+	return
+}
+
+func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		BulkGetStateObjects(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	BulkGetStateObjects(w, r)
 	return
 }
 

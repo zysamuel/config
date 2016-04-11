@@ -36,7 +36,7 @@ type GetBulkResponse struct {
 	ObjCount      int64 `json:"ObjCount"`
 	CurrentMarker int64 `json:"CurrentMarker"`
 	NextMarker    int64 `json:"NextMarker"`
-	StateObjects  []ReturnObject
+	Objects       []ReturnObject
 }
 
 type ActionResponse struct {
@@ -251,41 +251,44 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func BulkGetObjects(w http.ResponseWriter, r *http.Request) {
-	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState)
+func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
+	var errCode int
+	var objKey string
+	var configObjects []models.ConfigObj
+	var resp GetBulkResponse
+	var err error
+	gMgr.apiCallStats.NumGetCalls++
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
-	if strings.Contains(gMgr.objHdlMap[resource].access, "r") {
-		StateObjectsBulkGet(resource, w, r)
-	} else {
-		ConfigObjectsBulkGet(resource, w, r)
-	}
-}
-
-func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request) {
-	var retObjs []ReturnObject
-	var errCode int
-	gMgr.apiCallStats.NumGetCalls++
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
-			objList, err := obj.GetAllObjFromDb(gMgr.dbHdl)
-			if err == nil {
-				retObjs = make([]ReturnObject, len(objList))
-				for idx, object := range objList {
-					retObjs[idx].ConfigObj = object
-					objKey, _ := object.GetKey()
-					gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&retObjs[idx].ObjectId)
-				}
-				js, err := json.Marshal(retObjs)
-				if err != nil {
-					errCode = SRRespMarshalErr
-				} else {
-					gMgr.apiCallStats.NumGetCallsSuccess++
-					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-					w.WriteHeader(http.StatusOK)
-					w.Write(js)
-					errCode = SRSuccess
-				}
+		_, obj, _ := GetConfigObj(nil, objHdl)
+		currentIndex, objCount := ExtractGetBulkParams(r)
+		if objCount > MAX_OBJECTS_IN_GETBULK {
+			http.Error(w, SRErrString(SRBulkGetTooLarge), http.StatusRequestEntityTooLarge)
+			logger.Println("Too many objects requested in bulkget ", objCount)
+			return
+		}
+		resp.CurrentMarker = currentIndex
+		err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
+			configObjects = obj.GetBulkObjFromDb(currentIndex, objCount, gMgr.dbHdl)
+		if err == nil {
+			resp.Objects = make([]ReturnObject, resp.ObjCount)
+			for idx, configObject := range configObjects {
+				resp.Objects[idx].ConfigObj = configObject
+				objKey, _ = configObject.GetKey()
+				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.Objects[idx].ObjectId)
+			}
+			js, err := json.Marshal(resp)
+			if err != nil {
+				errCode = SRRespMarshalErr
+				logger.Println("### Error in marshalling JSON in getBulk for object ", resource, err)
+			} else {
+				gMgr.apiCallStats.NumGetCallsSuccess++
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(http.StatusOK)
+				w.Write(js)
+				errCode = SRSuccess
 			}
 		}
 	}
@@ -295,13 +298,16 @@ func ConfigObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Reques
 	return
 }
 
-func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request) {
+func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var objKey string
 	var stateObjects []models.ConfigObj
 	var resp GetBulkResponse
 	var err error
 	gMgr.apiCallStats.NumGetCalls++
+	resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState)
+	resource = strings.Split(resource, "?")[0]
+	resource = resource[:len(resource)-1]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex, objCount := ExtractGetBulkParams(r)
@@ -316,11 +322,11 @@ func StateObjectsBulkGet(resource string, w http.ResponseWriter, r *http.Request
 			currentIndex,
 			objCount)
 		if err == nil {
-			resp.StateObjects = make([]ReturnObject, resp.ObjCount)
+			resp.Objects = make([]ReturnObject, resp.ObjCount)
 			for idx, stateObject := range stateObjects {
-				resp.StateObjects[idx].ConfigObj = stateObject
+				resp.Objects[idx].ConfigObj = stateObject
 				objKey, _ = stateObject.GetKey()
-				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.StateObjects[idx].ObjectId)
+				gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.Objects[idx].ObjectId)
 			}
 			js, err := json.Marshal(resp)
 			if err != nil {
