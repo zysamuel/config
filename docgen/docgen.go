@@ -16,6 +16,12 @@ var twoTabs string = "\t\t"
 var threeTabs string = "\t\t\t"
 var fourTabs string = "\t\t\t\t"
 
+const (
+	NO_ATTTRS = iota
+	KEY_ATTRS
+	ALL_ATTRS
+)
+
 func writeStaticPart(inputFile string, dstFile *os.File) {
 	hdr, err := os.Open(inputFile)
 	if err != nil {
@@ -114,10 +120,18 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
-func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem) {
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem, mode int) {
 	writeResourceHdr(structName, operation, docJsFile)
-	for _, attrInfo := range membersInfo {
-		writeAttributeJson(attrInfo, docJsFile)
+	switch mode {
+	case ALL_ATTRS, KEY_ATTRS:
+		for _, attrInfo := range membersInfo {
+			if mode == ALL_ATTRS {
+				writeAttributeJson(attrInfo, docJsFile)
+			}
+			if mode == KEY_ATTRS && attrInfo.IsKey == true {
+				writeAttributeJson(attrInfo, docJsFile)
+			}
+		}
 	}
 	docJsFile.WriteString(twoTabs + " ], " + "\n")
 	writeEpilogueForStruct(structName, docJsFile)
@@ -125,25 +139,31 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 
 func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "post", docJsFile, membersInfo)
+	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "\": { \n")
+	writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{object-id}\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo)
-	writeResourceOperation(structName, "delete", docJsFile, membersInfo)
-	writeResourceOperation(structName, "patch", docJsFile, membersInfo)
+	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "/{object-id}\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
+	writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS)
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
+	writePathCompletion(docJsFile)
+
+	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "/\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS)
+	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS)
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 }
 
 func WriteStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo)
+	docJsFile.WriteString(twoTabs + "\"/State/" + structName + "\": { \n")
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 }
 
 func WriteGlobalStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
-	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/State/" + structName + "\": { \n")
 	writePathCompletion(docJsFile)
 }
 
@@ -156,6 +176,40 @@ func WriteRestResourceDoc(docJsFile *os.File, structName string, membersInfo []A
 		} else {
 			WriteStateObject(structName, docJsFile, membersInfo)
 		}
+	}
+}
+
+func WriteObjectList(docJsFile *os.File, objMap map[string]ObjectInfoJson, objList []string, membersInfoBase string) {
+	idx := 0
+	for _, objName := range objList {
+		idx++
+		objInfo := objMap[objName]
+		membersFile := membersInfoBase + objName + "Members.json"
+		var memberMap map[string]ObjectMembersInfo
+		memberMap = make(map[string]ObjectMembersInfo, 1)
+		bytes, err := ioutil.ReadFile(membersFile)
+		if err != nil {
+			fmt.Println("Error in reading Object configuration file", membersFile)
+			continue
+		}
+		err = json.Unmarshal(bytes, &memberMap)
+
+		attrList := make([]AttributeListItem, len(memberMap))
+		for key, info := range memberMap {
+			var item AttributeListItem
+			item.AttrName = key
+			item.VarType = info.VarType
+			item.IsKey = info.IsKey
+			item.IsArray = info.IsArray
+			item.Description = info.Description
+			item.DefaultVal = info.DefaultVal
+			item.Position = info.Position
+			item.Selections = info.Selections
+			if item.Position > 0 {
+				attrList[item.Position-1] = item
+			}
+		}
+		WriteRestResourceDoc(docJsFile, objName, attrList, objInfo)
 	}
 }
 
@@ -214,42 +268,20 @@ func main() {
 			continue
 		}
 		err = json.Unmarshal(bytes, &objMap)
-		objList := make([]string, 0)
-		for key, _ := range objMap {
-			objList = append(objList, key)
-		}
-		sort.Strings(objList)
-
-		for _, objName := range objList {
+		cfgObjList := make([]string, 0)
+		stateObjList := make([]string, 0)
+		for key, objInfo := range objMap {
 			idx++
-			objInfo := objMap[objName]
-			membersFile := membersInfoBase + objName + "Members.json"
-			var memberMap map[string]ObjectMembersInfo
-			memberMap = make(map[string]ObjectMembersInfo, 1)
-			bytes, err := ioutil.ReadFile(membersFile)
-			if err != nil {
-				fmt.Println("Error in reading Object configuration file", membersFile)
-				continue
+			if objInfo.Access == "w" || objInfo.Access == "rw" {
+				cfgObjList = append(cfgObjList, key)
+			} else if objInfo.Access == "r" {
+				stateObjList = append(stateObjList, key)
 			}
-			err = json.Unmarshal(bytes, &memberMap)
-
-			attrList := make([]AttributeListItem, len(memberMap))
-			for key, info := range memberMap {
-				var item AttributeListItem
-				item.AttrName = key
-				item.VarType = info.VarType
-				item.IsKey = info.IsKey
-				item.IsArray = info.IsArray
-				item.Description = info.Description
-				item.DefaultVal = info.DefaultVal
-				item.Position = info.Position
-				item.Selections = info.Selections
-				if item.Position > 0 {
-					attrList[item.Position-1] = item
-				}
-			}
-			WriteRestResourceDoc(docJsFile, objName, attrList, objInfo)
 		}
+		sort.Strings(cfgObjList)
+		sort.Strings(stateObjList)
+		WriteObjectList(docJsFile, objMap, cfgObjList, membersInfoBase)
+		WriteObjectList(docJsFile, objMap, stateObjList, membersInfoBase)
 	}
 	fmt.Println("Total Objects ", idx)
 	docJsFile.WriteString(twoTabs + " } " + "\n")
