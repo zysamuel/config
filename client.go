@@ -3,8 +3,10 @@ package main
 import (
 	"asicd/asicdConstDefs"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"models"
+	"os"
 	"strconv"
 	"time"
 )
@@ -12,6 +14,19 @@ import (
 type ClientJson struct {
 	Name string `json:Name`
 	Port int    `json:Port`
+}
+
+type ApiCallStats struct {
+	NumCreateCalls        int32
+	NumCreateCallsSuccess int32
+	NumDeleteCalls        int32
+	NumDeleteCallsSuccess int32
+	NumUpdateCalls        int32
+	NumUpdateCallsSuccess int32
+	NumGetCalls           int32
+	NumGetCallsSuccess    int32
+	NumActionCalls        int32
+	NumActionCallsSuccess int32
 }
 
 //
@@ -90,6 +105,16 @@ func (mgr *ConfigMgr) ConnectToAllClients(clientsUp chan bool) bool {
 	return true
 }
 
+func (mgr *ConfigMgr) GetUnconnectedClients() []string {
+	unconnectedClients := make([]string, 0)
+	for clntName, client := range mgr.clients {
+		if client.IsConnectedToServer() == false {
+			unconnectedClients = append(unconnectedClients, clntName)
+		}
+	}
+	return unconnectedClients
+}
+
 //
 // This method is to check if config manager is ready to accept config requests
 //
@@ -146,4 +171,32 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 
 func (mgr *ConfigMgr) MonitorSystemStatus() bool {
 	return true
+}
+
+func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatus {
+	systemStatus := models.SystemStatus{}
+	systemStatus.Name, _ = os.Hostname()
+	systemStatus.Ready = mgr.IsReady()
+	if systemStatus.Ready == false {
+		reason := "Not connected to"
+		unconnectedClients := mgr.GetUnconnectedClients()
+		for i := 0; i < len(unconnectedClients); i++ {
+			reason = reason + " " + unconnectedClients[i]
+		}
+		systemStatus.Reason = reason
+	} else {
+		systemStatus.Reason = "None"
+	}
+	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
+	systemStatus.NumCreateCalls =
+		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
+	systemStatus.NumDeleteCalls =
+		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
+	systemStatus.NumUpdateCalls =
+		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
+	systemStatus.NumGetCalls =
+		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
+	systemStatus.NumActionCalls =
+		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+	return systemStatus
 }

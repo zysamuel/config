@@ -17,8 +17,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
-	//"strings"
 	//"strconv"
 	//"encoding/base64"
 )
@@ -27,6 +27,9 @@ type ConfigMgr struct {
 	clients        map[string]ClientIf
 	apiVer         string
 	apiBase        string
+	apiBaseConfig  string
+	apiBaseState   string
+	apiBaseAction  string
 	basePath       string
 	fullPath       string
 	pRestRtr       *mux.Router
@@ -38,6 +41,8 @@ type ConfigMgr struct {
 	users          []UserData
 	sessionId      uint64
 	sessionChan    chan uint64
+	bringUpTime    time.Time
+	apiCallStats   ApiCallStats
 }
 
 type LoginResponse struct {
@@ -57,50 +62,74 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	for key, _ := range models.ConfigObjectMap {
 		rt = ApiRoute{key + "Create",
 			"POST",
-			mgr.apiBase + key,
+			mgr.apiBaseConfig + key,
 			HandleRestRouteCreate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Delete",
 			"DELETE",
-			mgr.apiBase + key + "/" + "{objId}",
+			mgr.apiBaseConfig + key + "/" + "{objId}",
 			HandleRestRouteDeleteForId,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Delete",
 			"DELETE",
-			mgr.apiBase + key,
+			mgr.apiBaseConfig + key,
 			HandleRestRouteDelete,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
 			"PATCH",
-			mgr.apiBase + key + "/" + "{objId}",
+			mgr.apiBaseConfig + key + "/" + "{objId}",
 			HandleRestRouteUpdateForId,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Update",
 			"PATCH",
-			mgr.apiBase + key,
+			mgr.apiBaseConfig + key,
 			HandleRestRouteUpdate,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Get",
 			"GET",
-			mgr.apiBase + key + "/" + "{objId}",
-			HandleRestRouteGetForId,
+			mgr.apiBaseConfig + key + "/" + "{objId}",
+			HandleRestRouteGetConfigForId,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Get",
+			"GET",
+			mgr.apiBaseConfig + key,
+			HandleRestRouteGetConfig,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "Show",
 			"GET",
-			mgr.apiBase + key,
-			HandleRestRouteGet,
+			mgr.apiBaseState + key + "/" + "{objId}",
+			HandleRestRouteGetStateForId,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Show",
+			"GET",
+			mgr.apiBaseState + key,
+			HandleRestRouteGetState,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 		rt = ApiRoute{key + "s",
 			"GET",
-			mgr.apiBase + key + "s",
-			HandleRestRouteBulkGet,
+			mgr.apiBaseConfig + key + "s",
+			HandleRestRouteBulkGetConfig,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "s",
+			"GET",
+			mgr.apiBaseState + key + "s",
+			HandleRestRouteBulkGetState,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+		rt = ApiRoute{key + "Action",
+			"POST",
+			mgr.apiBaseAction + key,
+			HandleRestRouteAction,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
@@ -214,7 +243,7 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
-		resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBase)
+		resource := strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig)
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 		payload, _ := base64.StdEncoding.DecodeString(auth[1])
 		pair := strings.SplitN(string(payload), ":", 2)
@@ -274,14 +303,14 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			if CheckIfSystemIsReady(w) != true {
+			if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 				http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 				return
 			}
 			ConfigObjectCreate(w, r)
 		}
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -300,13 +329,13 @@ func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectDeleteForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -325,13 +354,13 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectDelete(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -350,13 +379,13 @@ func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectUpdateForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -375,13 +404,13 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
 		ConfigObjectUpdate(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
@@ -389,7 +418,7 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -400,20 +429,20 @@ func HandleRestRouteGetForId(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetOneObjectForId(w, r)
+		GetOneConfigObjectForId(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetOneObjectForId(w, r)
+	GetOneConfigObjectForId(w, r)
 }
 
-func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -424,20 +453,68 @@ func HandleRestRouteGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		GetOneObject(w, r)
+		GetOneConfigObject(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	GetOneObject(w, r)
+	GetOneConfigObject(w, r)
 }
 
-func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
+func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetOneStateObjectForId(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	GetOneStateObjectForId(w, r)
+}
+
+func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[1], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		GetOneStateObject(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	GetOneStateObject(w, r)
+}
+
+func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {
 	/*
 		// TODO: this will be uncommented for session authentication
 		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
@@ -448,17 +525,67 @@ func HandleRestRouteBulkGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
 			return
 		}
-		if CheckIfSystemIsReady(w) != true {
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 			return
 		}
-		ConfigObjectsBulkGet(w, r)
+		BulkGetConfigObjects(w, r)
 	*/
-	if CheckIfSystemIsReady(w) != true {
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
 		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
 		return
 	}
-	BulkGetObjects(w, r)
+	BulkGetConfigObjects(w, r)
+	return
+}
+
+func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		BulkGetStateObjects(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	BulkGetStateObjects(w, r)
+	return
+}
+
+func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
+	/*
+		// TODO: this will be uncommented for session authentication
+		auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+		sessionId, _ := strconv.ParseUint(pair[0], 10, 64)
+		if ok:= AuthenticateSessionId(sessionId); ok == false {
+			http.Error(w, SRErrString(SRAuthFailed), http.StatusUnauthorized)
+			return
+		}
+		if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+			http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+			return
+		}
+		ExecuteActionObject(w, r)
+	*/
+	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
+		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
+		return
+	}
+	ExecuteActionObject(w, r)
 	return
 }
 
@@ -506,6 +633,16 @@ func (mgr *ConfigMgr) GetConfigHandlerPort(paramsDir string) (bool, string) {
 	}
 	return false, port
 }
+func IsLocalObject(r *http.Request) bool {
+	objName := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[1]
+	switch objName {
+	case "SystemStatus", "User", "UserState", "IPV4AddressBlock":
+		return true
+	default:
+		return false
+	}
+	return false
+}
 
 //
 // This function would work as a classical constructor for the
@@ -517,6 +654,9 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	var err error
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
+	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
+	mgr.apiBaseState = mgr.apiBase + "state" + "/"
+	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Printf("ERROR: Unable to get absolute path for %s, error [%s]\n", paramsDir, err)
 		return nil
@@ -542,6 +682,7 @@ func NewConfigMgr(paramsDir string) *ConfigMgr {
 	mgr.InitializeRestRoutes()
 	mgr.InstantiateRestRtr()
 	mgr.InstantiateDbIf()
+	mgr.bringUpTime = time.Now()
 	logger.Println("Initialization Done!")
 	return mgr
 }

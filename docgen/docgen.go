@@ -61,16 +61,19 @@ func writeEpilogueForStruct(strName string, dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }," + "\n")
 }
 
-func writeAttributeJson(attrName string, attrInfo ObjectMembersInfo, dstFile *os.File) {
+func writeAttributeJson(attrInfo AttributeListItem, dstFile *os.File) {
 	var attrTypeVal string
 	dstFile.WriteString(fourTabs + "{" + "\n")
 	dstFile.WriteString(fourTabs + "\"in\": \"formData\"," + "\n")
-	dstFile.WriteString(fourTabs + "\"name\":" + "\"" + attrName + "\"" + "," + "\n")
+	dstFile.WriteString(fourTabs + "\"name\":" + "\"" + attrInfo.AttrName + "\"" + "," + "\n")
 	switch attrInfo.VarType {
 	case "string":
 		attrTypeVal = "string"
 	case "int32", "uint32":
 		attrTypeVal = "integer"
+
+	case "bool":
+		attrTypeVal = "boolean"
 	default:
 		attrTypeVal = "string"
 	}
@@ -89,6 +92,19 @@ func writeAttributeJson(attrName string, attrInfo ObjectMembersInfo, dstFile *os
 		dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
 	} else {
 		dstFile.WriteString(fourTabs + "\"required\":" + "false," + "\n")
+		dstFile.WriteString(fourTabs + "\"default\":" + "\"" + attrInfo.DefaultVal + "\",\n")
+	}
+	if attrInfo.Selections != "" {
+		enumVals := strings.Split(attrInfo.Selections, "/")
+		enumStr := ""
+		for idx, val := range enumVals {
+			if idx != 0 {
+				enumStr = enumStr + "," + "\"" + val + "\""
+			} else {
+				enumStr = enumStr + "\"" + val + "\""
+			}
+		}
+		dstFile.WriteString(fourTabs + "\"enum\":" + "[" + enumStr + "],\n")
 	}
 
 	dstFile.WriteString(fourTabs + "}," + "\n")
@@ -98,50 +114,47 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
-func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem) {
 	writeResourceHdr(structName, operation, docJsFile)
-	for attrName, attrInfo := range membersMap {
-		writeAttributeJson(attrName, attrInfo, docJsFile)
+	for _, attrInfo := range membersInfo {
+		writeAttributeJson(attrInfo, docJsFile)
 	}
 	docJsFile.WriteString(twoTabs + " ], " + "\n")
 	writeEpilogueForStruct(structName, docJsFile)
 }
 
-func WriteConfigObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
+func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "post", docJsFile, membersMap)
+	writeResourceOperation(structName, "post", docJsFile, membersInfo)
 	writePathCompletion(docJsFile)
 
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "/{object-id}\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersMap)
-	writeResourceOperation(structName, "delete", docJsFile, membersMap)
-	writeResourceOperation(structName, "patch", docJsFile, membersMap)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo)
+	writeResourceOperation(structName, "delete", docJsFile, membersInfo)
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo)
 	writePathCompletion(docJsFile)
 }
 
-func WriteStateObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
+func WriteStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersMap)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo)
 	writePathCompletion(docJsFile)
 }
 
-func WriteGlobalStateObject(structName string, docJsFile *os.File, membersMap map[string]ObjectMembersInfo) {
+func WriteGlobalStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 	docJsFile.WriteString(twoTabs + "\"/" + structName + "\": { \n")
 	writePathCompletion(docJsFile)
 }
 
-func WriteRestResourceDoc(docJsFile *os.File, structName string, membersMap map[string]ObjectMembersInfo, objInfo ObjectInfoJson) {
+func WriteRestResourceDoc(docJsFile *os.File, structName string, membersInfo []AttributeListItem, objInfo ObjectInfoJson) {
 	if objInfo.Access == "w" || objInfo.Access == "rw" {
-		WriteConfigObject(structName, docJsFile, membersMap)
-		//fmt.Println("Config Object: ", structName)
+		WriteConfigObject(structName, docJsFile, membersInfo)
 	} else if objInfo.Access == "r" || objInfo.Access == "rw" {
 		if strings.Contains(structName, "Global") {
-			WriteGlobalStateObject(structName, docJsFile, membersMap)
-			//fmt.Println("Global Config Object: ", structName)
+			WriteGlobalStateObject(structName, docJsFile, membersInfo)
 		} else {
-			WriteStateObject(structName, docJsFile, membersMap)
-			//fmt.Println("State Object: ", structName)
+			WriteStateObject(structName, docJsFile, membersInfo)
 		}
 	}
 }
@@ -160,6 +173,12 @@ type ObjectMembersInfo struct {
 	Description string `json:"description"`
 	DefaultVal  string `json:"default"`
 	Position    int    `json:"position"`
+	Selections  string `json:"selections"`
+}
+
+type AttributeListItem struct {
+	ObjectMembersInfo
+	AttrName string
 }
 
 func main() {
@@ -195,17 +214,14 @@ func main() {
 			continue
 		}
 		err = json.Unmarshal(bytes, &objMap)
-		//fmt.Println("Object Map ", objMap)
-		//return
 		objList := make([]string, 0)
 		for key, _ := range objMap {
 			objList = append(objList, key)
 		}
 		sort.Strings(objList)
 
-		//for objName, objInfo := range objMap {
 		for _, objName := range objList {
-		   idx++
+			idx++
 			objInfo := objMap[objName]
 			membersFile := membersInfoBase + objName + "Members.json"
 			var memberMap map[string]ObjectMembersInfo
@@ -217,7 +233,22 @@ func main() {
 			}
 			err = json.Unmarshal(bytes, &memberMap)
 
-			WriteRestResourceDoc(docJsFile, objName, memberMap, objInfo)
+			attrList := make([]AttributeListItem, len(memberMap))
+			for key, info := range memberMap {
+				var item AttributeListItem
+				item.AttrName = key
+				item.VarType = info.VarType
+				item.IsKey = info.IsKey
+				item.IsArray = info.IsArray
+				item.Description = info.Description
+				item.DefaultVal = info.DefaultVal
+				item.Position = info.Position
+				item.Selections = info.Selections
+				if item.Position > 0 {
+					attrList[item.Position-1] = item
+				}
+			}
+			WriteRestResourceDoc(docJsFile, objName, attrList, objInfo)
 		}
 	}
 	fmt.Println("Total Objects ", idx)
