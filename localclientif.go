@@ -20,6 +20,10 @@ func (clnt *LocalClient) IsConnectedToServer() bool {
 	return true
 }
 
+func (clnt *LocalClient) GetServerName() string {
+	return "local"
+}
+
 func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (error, bool) {
 	var err error
 	switch obj.(type) {

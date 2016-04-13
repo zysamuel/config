@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 	//"strconv"
 	//"encoding/base64"
@@ -310,10 +309,6 @@ func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
 			ConfigObjectCreate(w, r)
 		}
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ConfigObjectCreate(w, r)
 	return
 }
@@ -335,10 +330,6 @@ func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
 		}
 		ConfigObjectDeleteForId(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ConfigObjectDeleteForId(w, r)
 	return
 }
@@ -360,10 +351,6 @@ func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
 		}
 		ConfigObjectDelete(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ConfigObjectDelete(w, r)
 	return
 }
@@ -385,10 +372,6 @@ func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
 		}
 		ConfigObjectUpdateForId(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ConfigObjectUpdateForId(w, r)
 	return
 }
@@ -410,10 +393,6 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		ConfigObjectUpdate(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ConfigObjectUpdate(w, r)
 	return
 }
@@ -435,10 +414,6 @@ func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 		}
 		GetOneConfigObjectForId(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	GetOneConfigObjectForId(w, r)
 }
 
@@ -459,10 +434,6 @@ func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		GetOneConfigObject(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	GetOneConfigObject(w, r)
 }
 
@@ -483,10 +454,6 @@ func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
 		}
 		GetOneStateObjectForId(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	GetOneStateObjectForId(w, r)
 }
 
@@ -507,10 +474,6 @@ func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 		}
 		GetOneStateObject(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	GetOneStateObject(w, r)
 }
 
@@ -531,10 +494,6 @@ func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		BulkGetConfigObjects(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	BulkGetConfigObjects(w, r)
 	return
 }
@@ -556,10 +515,6 @@ func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
 		}
 		BulkGetStateObjects(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	BulkGetStateObjects(w, r)
 	return
 }
@@ -581,10 +536,6 @@ func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 		}
 		ExecuteActionObject(w, r)
 	*/
-	if IsLocalObject(r) != true && CheckIfSystemIsReady() != true {
-		http.Error(w, SRErrString(SRSystemNotReady), http.StatusServiceUnavailable)
-		return
-	}
 	ExecuteActionObject(w, r)
 	return
 }
@@ -632,16 +583,6 @@ func (mgr *ConfigMgr) GetConfigHandlerPort(paramsDir string) (bool, string) {
 		}
 	}
 	return false, port
-}
-func IsLocalObject(r *http.Request) bool {
-	objName := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBase), "/")[1]
-	switch objName {
-	case "SystemStatus", "User", "UserState", "IPV4AddressBlock":
-		return true
-	default:
-		return false
-	}
-	return false
 }
 
 //
