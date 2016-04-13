@@ -10,7 +10,7 @@ import (
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
 	Owner     string   `json:"Owner"`
-	Access    string   `json: "access"`
+	Access    string   `json: "Access"`
 	Listeners []string `json:"Listeners"`
 }
 
