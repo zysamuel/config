@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"math/big"
