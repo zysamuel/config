@@ -173,8 +173,8 @@ func (mgr *ConfigMgr) MonitorSystemStatus() bool {
 	return true
 }
 
-func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatus {
-	systemStatus := models.SystemStatus{}
+func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
+	systemStatus := models.SystemStatusState{}
 	systemStatus.Name, _ = os.Hostname()
 	systemStatus.Ready = mgr.IsReady()
 	if systemStatus.Ready == false {

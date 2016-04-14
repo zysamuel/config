@@ -110,7 +110,7 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj) (error, models.ConfigOb
 	case models.UserState:
 		logger.Println("### Get request called for UserState")
 		break
-	case models.SystemStatus:
+	case models.SystemStatusState:
 		logger.Println("### Get request called for SystemStatus")
 		retObj = gMgr.GetSystemStatus()
 		return nil, retObj
