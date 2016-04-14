@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"math/big"
@@ -17,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	//"strconv"
 	//"encoding/base64"
@@ -59,78 +61,84 @@ type ConfdGlobals struct {
 func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 	for key, _ := range models.ConfigObjectMap {
-		rt = ApiRoute{key + "Create",
-			"POST",
-			mgr.apiBaseConfig + key,
-			HandleRestRouteCreate,
+		objInfo := mgr.objHdlMap[key]
+		fmt.Println("ObjInfo is ", objInfo)
+		if objInfo.access == "w" || objInfo.access == "rw" {
+			rt = ApiRoute{key + "Create",
+				"POST",
+				mgr.apiBaseConfig + key,
+				HandleRestRouteCreate,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Delete",
+				"DELETE",
+				mgr.apiBaseConfig + key + "/" + "{objId}",
+				HandleRestRouteDeleteForId,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Delete",
+				"DELETE",
+				mgr.apiBaseConfig + key,
+				HandleRestRouteDelete,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Update",
+				"PATCH",
+				mgr.apiBaseConfig + key + "/" + "{objId}",
+				HandleRestRouteUpdateForId,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Update",
+				"PATCH",
+				mgr.apiBaseConfig + key,
+				HandleRestRouteUpdate,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Get",
+				"GET",
+				mgr.apiBaseConfig + key + "/" + "{objId}",
+				HandleRestRouteGetConfigForId,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Get",
+				"GET",
+				mgr.apiBaseConfig + key,
+				HandleRestRouteGetConfig,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "s",
+				"GET",
+				mgr.apiBaseConfig + key + "s",
+				HandleRestRouteBulkGetConfig,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+		} else if objInfo.access == "r" {
+			key = strings.TrimSuffix(key, "State")
+			rt = ApiRoute{key + "Show",
+				"GET",
+				mgr.apiBaseState + key + "/" + "{objId}",
+				HandleRestRouteGetStateForId,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Show",
+				"GET",
+				mgr.apiBaseState + key,
+				HandleRestRouteGetState,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "s",
+				"GET",
+				mgr.apiBaseState + key + "s",
+				HandleRestRouteBulkGetState,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
+			rt = ApiRoute{key + "Action",
+				"POST",
+				mgr.apiBaseAction + key,
+				HandleRestRouteAction,
+			}
+			mgr.restRoutes = append(mgr.restRoutes, rt)
 		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Delete",
-			"DELETE",
-			mgr.apiBaseConfig + key + "/" + "{objId}",
-			HandleRestRouteDeleteForId,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Delete",
-			"DELETE",
-			mgr.apiBaseConfig + key,
-			HandleRestRouteDelete,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Update",
-			"PATCH",
-			mgr.apiBaseConfig + key + "/" + "{objId}",
-			HandleRestRouteUpdateForId,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Update",
-			"PATCH",
-			mgr.apiBaseConfig + key,
-			HandleRestRouteUpdate,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Get",
-			"GET",
-			mgr.apiBaseConfig + key + "/" + "{objId}",
-			HandleRestRouteGetConfigForId,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Get",
-			"GET",
-			mgr.apiBaseConfig + key,
-			HandleRestRouteGetConfig,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Show",
-			"GET",
-			mgr.apiBaseState + key + "/" + "{objId}",
-			HandleRestRouteGetStateForId,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Show",
-			"GET",
-			mgr.apiBaseState + key,
-			HandleRestRouteGetState,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "s",
-			"GET",
-			mgr.apiBaseConfig + key + "s",
-			HandleRestRouteBulkGetConfig,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "s",
-			"GET",
-			mgr.apiBaseState + key + "s",
-			HandleRestRouteBulkGetState,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
-		rt = ApiRoute{key + "Action",
-			"POST",
-			mgr.apiBaseAction + key,
-			HandleRestRouteAction,
-		}
-		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
 	return true
 }
