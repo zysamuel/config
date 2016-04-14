@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	MAX_OBJECTS_IN_GETBULK = 30
+	MAX_OBJECTS_IN_GETBULK = 1024
 	MAX_JSON_LENGTH        = 4096
 )
 
