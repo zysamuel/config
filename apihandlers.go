@@ -539,7 +539,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
+	if err != nil && errCode != SRServerError {
 		resp.Error = SRErrString(errCode) + " " + err.Error()
 	}
 	js, err := json.Marshal(resp)

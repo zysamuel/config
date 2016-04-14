@@ -1334,7 +1334,7 @@ SwaggerClient.prototype.buildFromSpec = function (response) {
   this.basePath = response.basePath || '';
   this.consumes = response.consumes;
   //this.host = response.host || '';
-  this.host = 'your-switchip';
+  this.host = 'your-switchip:8080';
   this.info = response.info || {};
   this.produces = response.produces;
   this.schemes = response.schemes || [];
@@ -4468,7 +4468,8 @@ Operation.prototype.getBody = function (headers, args, opts) {
         if (encoded !== '') {
           encoded += ',';
         }
-        encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + "\"" + encodeURIComponent(value) + "\"";
+		  var valueStr = encodeURIComponent(value).replace("%",'')
+        encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + "\"" + valueStr + "\"";
       }
     }
     body = "{" + encoded + "}";
@@ -4890,6 +4891,8 @@ Operation.prototype.encodeQueryCollection = function (type, name, value) {
 };
 
 Operation.prototype.encodeQueryParam = function (arg) {
+  alert(arg);
+  alert(encodeURIComponent(arg));
   return encodeURIComponent(arg);
 };
 
