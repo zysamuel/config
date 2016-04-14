@@ -62,7 +62,6 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 	for key, _ := range models.ConfigObjectMap {
 		objInfo := mgr.objHdlMap[key]
-		fmt.Println("ObjInfo is ", objInfo)
 		if objInfo.access == "w" || objInfo.access == "rw" {
 			rt = ApiRoute{key + "Create",
 				"POST",
@@ -132,6 +131,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 				HandleRestRouteBulkGetState,
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
+		} else if objInfo.access == "x" {
 			rt = ApiRoute{key + "Action",
 				"POST",
 				mgr.apiBaseAction + key,
