@@ -118,8 +118,11 @@ func GetOneConfigObjectForId(w http.ResponseWriter, r *http.Request) {
 	gMgr.apiCallStats.NumGetCalls++
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err = GetConfigObj(r, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -158,8 +161,11 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 	gMgr.apiCallStats.NumGetCalls++
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err = GetConfigObj(r, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -195,8 +201,11 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState), "/")[0]
 	resource = resource + "State"
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err = GetConfigObj(r, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -240,8 +249,11 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseState), "/")[0]
 	resource = resource + "State"
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err = GetConfigObj(r, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -284,8 +296,11 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err := GetConfigObj(nil, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -335,8 +350,11 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	resource = resource[:len(resource)-1]
 	resource = resource + "State"
 	objHdl, ok := models.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
 	_, obj, err := GetConfigObj(nil, objHdl)
-	if !ok || err != nil {
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
