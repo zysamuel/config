@@ -49,6 +49,10 @@ type ErrorResponse struct {
 }
 
 func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
+	if obj == nil {
+		err = errors.New("Config Object is nil")
+		return body, retobj, err
+	}
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
 		if err != nil {
@@ -58,6 +62,7 @@ func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj mo
 			return body, retobj, err
 		}
 	}
+
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
 		err = errors.New("Failed to decode input json data")
