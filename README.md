@@ -18,3 +18,6 @@ Config Manager consists of the following components
 #### Objects 
 #### Clients 
 #### Authentication 
+![alt text](https://github.com/hgollapalli/config/blob/master/docs/SoftwareOverview.png "Architecture")
+
+
