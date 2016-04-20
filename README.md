@@ -7,7 +7,7 @@ all the protocol daemons and other infrastructure components.
 
 Complete system architecture is below.
 
-![alt text](https://github.com/hgollapalli/config/blob/master/docs/SoftwareOverview.png "Architecture")
+![alt text](https://github.com/SnapRoute/config/blob/master/docs/SoftwareOverview.png "Architecture")
 
 ## Modules
 
