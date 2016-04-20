@@ -12,10 +12,10 @@ Complete system architecture is below.
 ## Modules
 
 Config Manager consists of the following components
-... REST Receiver
-... Objects
-... Cleints
-... Authentication 
+*REST Receiver
+*Objects
+*Cleints
+*Authentication 
 
 #### REST Receiver
 #### Objects 
