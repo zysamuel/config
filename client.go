@@ -145,19 +145,18 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
-		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, mgr.dbHdl, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
 				portConfig := (*objects[i].(*models.Port))
-				objKey, _ := portConfig.GetKey()
-				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
+				_, err := portConfig.GetObjectFromDb(portConfig.GetKey(), mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
-					_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
+					err = portConfig.StoreObjectInDb(mgr.dbHdl)
 					if err != nil {
 						logger.Println("Failed to store Port in DB ", i, portConfig, err)
 					} else {
-						_, err := StoreUuidToKeyMapInDb(portConfig)
+						_, err := gMgr.dbHdl.StoreUUIDToObjKeyMap(portConfig.GetKey())
 						if err != nil {
 							logger.Println("Failed to store uuid map for Port in DB ", portConfig, err)
 						}

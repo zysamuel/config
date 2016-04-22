@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"database/sql"
 	"encoding/json"
 	"encoding/pem"
 	"github.com/gorilla/mux"
@@ -33,7 +32,7 @@ type ConfigMgr struct {
 	basePath       string
 	fullPath       string
 	pRestRtr       *mux.Router
-	dbHdl          *sql.DB
+	dbHdl          dbHandler
 	restRoutes     []ApiRoute
 	reconncetTimer *time.Ticker
 	objHdlMap      map[string]ConfigObjInfo

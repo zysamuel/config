@@ -3,16 +3,15 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	//"fmt"
 	"github.com/gorilla/mux"
-	"github.com/nu7hatch/gouuid"
 	"io"
 	"io/ioutil"
 	"models"
 	"net/http"
 	"strconv"
 	"strings"
-	"utils/dbutils"
+	//"utils/dbutils"
 	//"net/url"
 	//"path"
 )
@@ -134,12 +133,12 @@ func GetOneConfigObjectForId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uuid := vars["objId"]
 	//if objId is provided then read objkey from DB
-	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", uuid).Scan(&objKey)
+	objKey, err = gMgr.dbHdl.GetObjKeyFromUUID(uuid)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	if dbObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err != nil {
+	if dbObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	} else {
@@ -175,16 +174,12 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Get key fields provided in the request.
-	objKey, err = obj.GetKey()
-	if err != nil {
+	objKey = obj.GetKey()
+	if retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	if retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl); err != nil {
-		RespondErrorForApiCall(w, SRNotFound, err.Error())
-		return
-	}
-	gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+	uuid, err = gMgr.dbHdl.GetUUIDFromObjKey(objKey)
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
 	if err == nil {
@@ -197,7 +192,7 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
-	var obj models.ConfigObj
+	var obj, dbObj models.ConfigObj
 	var objKey string
 	var retObj ReturnObject
 	var err error
@@ -217,7 +212,7 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uuid := vars["objId"]
 	//if objId is provided then read objkey from DB
-	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", uuid).Scan(&objKey)
+	objKey, err = gMgr.dbHdl.GetObjKeyFromUUID(uuid)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -228,7 +223,11 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	if err, retObj.ConfigObj = resourceOwner.GetObject(obj); err != nil {
+	if dbObj, err = obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn); err != nil {
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	if err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -263,22 +262,19 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Get key fields provided in the request.
-	objKey, err = obj.GetKey()
-	if err != nil {
-		RespondErrorForApiCall(w, SRNotFound, err.Error())
-		return
-	}
+	objKey = obj.GetKey()
 	resourceOwner := gMgr.objHdlMap[resource].owner
 	if resourceOwner.IsConnectedToServer() == false {
 		errString := "Confd not connected to " + resourceOwner.GetServerName()
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	if err, retObj.ConfigObj = resourceOwner.GetObject(obj); err != nil {
+	if err, retObj.ConfigObj = resourceOwner.GetObject(obj, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+	cfgObjKey := strings.Replace(objKey, "State", "", 1)
+	uuid, err = gMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
 	if err == nil {
@@ -317,13 +313,13 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.CurrentMarker = currentIndex
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-		configObjects = obj.GetBulkObjFromDb(currentIndex, objCount, gMgr.dbHdl)
+		configObjects = obj.GetBulkObjFromDb(currentIndex, objCount, gMgr.dbHdl.Conn)
 	if err == nil {
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
 		for idx, configObject := range configObjects {
 			resp.Objects[idx].ConfigObj = configObject
-			objKey, _ = configObject.GetKey()
-			gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.Objects[idx].ObjectId)
+			objKey = configObject.GetKey()
+			resp.Objects[idx].ObjectId, err = gMgr.dbHdl.GetUUIDFromObjKey(objKey)
 		}
 		js, err := json.Marshal(resp)
 		if err != nil {
@@ -377,13 +373,14 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.CurrentMarker = currentIndex
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-		stateObjects = resourceOwner.GetBulkObject(obj, currentIndex, objCount)
+		stateObjects = resourceOwner.GetBulkObject(obj, gMgr.dbHdl.Conn, currentIndex, objCount)
 	if err == nil {
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
 		for idx, stateObject := range stateObjects {
 			resp.Objects[idx].ConfigObj = stateObject
-			objKey, _ = stateObject.GetKey()
-			gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&resp.Objects[idx].ObjectId)
+			objKey = stateObject.GetKey()
+			cfgObjKey := strings.Replace(objKey, "State", "", 1)
+			resp.Objects[idx].ObjectId, err = gMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 		}
 		js, err := json.Marshal(resp)
 		if err != nil {
@@ -470,25 +467,6 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func StoreUuidToKeyMapInDb(obj models.ConfigObj) (*uuid.UUID, error) {
-	UUId, err := uuid.NewV4()
-	if err != nil {
-		logger.Println("Failed to get UUID ", UUId, err)
-		return UUId, err
-	}
-	objKey, err := obj.GetKey()
-	if err != nil || len(objKey) == 0 {
-		logger.Println("Failed to get objKey after executing ", objKey, err)
-		return UUId, err
-	}
-	dbCmd := fmt.Sprintf(`INSERT INTO UuidMap (Uuid, Key) VALUES ('%v', '%v') ;`, UUId.String(), objKey)
-	_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
-	if err != nil {
-		logger.Println("Failed to insert uuid entry in db ", dbCmd, err)
-	}
-	return UUId, err
-}
-
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
@@ -510,13 +488,11 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				errCode = SRNoContent
 				logger.Println("Nothing to configure")
 			} else {
-				objKey, _ = obj.GetKey()
-				dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
-				dbObjKey, _ := dbObj.GetKey()
-				if dbObjKey == objKey {
+				objKey = obj.GetKey()
+				uuid, err = gMgr.dbHdl.GetUUIDFromObjKey(objKey)
+				if err == nil {
 					errCode = SRAlreadyConfigured
 					logger.Println("Config object is present")
-					gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
 				}
 			}
 			if errCode != SRSuccess {
@@ -533,13 +509,13 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.CreateObject(obj, gMgr.dbHdl)
+			err, success = resourceOwner.CreateObject(obj, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
-				UUId, dbErr := StoreUuidToKeyMapInDb(obj)
+				uuid, dbErr := gMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
 					gMgr.apiCallStats.NumCreateCallsSuccess++
 					w.WriteHeader(http.StatusCreated)
-					resp.UUId = UUId.String()
+					resp.UUId = uuid
 					errCode = SRSuccess
 				} else {
 					errCode = SRIdStoreFail
@@ -586,7 +562,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
-	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	objKey, err = gMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		resp.Error = SRErrString(SRNotFound)
@@ -596,17 +572,16 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(nil, objHdl); err == nil {
-			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+			dbObj, _ := obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn)
 			resourceOwner := gMgr.objHdlMap[resource].owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
+			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
-				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + vars["objId"] + "\""
-				_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+				err = gMgr.dbHdl.DeleteUUIDToObjKeyMap(vars["objId"], objKey)
 				if err != nil {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", vars["objId"], err)
@@ -657,8 +632,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		if _, obj, err := GetConfigObj(r, objHdl); err == nil {
-			objKey, _ = obj.GetKey()
-			dbObj, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+			objKey = obj.GetKey()
+			dbObj, err := obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				resp.Error = SRErrString(SRNotFound)
@@ -666,7 +641,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				w.Write(js)
 				return
 			}
-			gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+			uuid, err = gMgr.dbHdl.GetUUIDFromObjKey(objKey)
 			resp.UUId = uuid
 			resourceOwner := gMgr.objHdlMap[resource].owner
 			if resourceOwner.IsConnectedToServer() == false {
@@ -674,10 +649,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl)
+			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
-				dbCmd := "delete from " + "UuidMap" + " where Uuid = " + "\"" + uuid + "\""
-				_, err = dbutils.ExecuteSQLStmt(dbCmd, gMgr.dbHdl)
+				err = gMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
 				if err != nil {
 					errCode = SRIdDeleteFail
 					logger.Println("Failure in deleting Uuid map entry for ", uuid, err)
@@ -727,7 +701,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
-	err = gMgr.dbHdl.QueryRow("select Key from UuidMap where Uuid = ?", vars["objId"]).Scan(&objKey)
+	objKey, err = gMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		resp.Error = SRErrString(SRNotFound)
@@ -738,7 +712,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := GetConfigObj(r, objHdl)
 		updateKeys, _ := GetUpdateKeys(body)
-		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn)
 		if gerr == nil {
 			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			anyUpdated := false
@@ -756,7 +730,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			mergedObjKey, _ := mergedObj.GetKey()
+			mergedObjKey := mergedObj.GetKey()
 			if objKey == mergedObjKey {
 				resourceOwner := gMgr.objHdlMap[resource].owner
 				if resourceOwner.IsConnectedToServer() == false {
@@ -764,7 +738,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
-				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.Conn)
 				if err == nil && success == true {
 					gMgr.apiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -815,9 +789,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := GetConfigObj(r, objHdl)
-		objKey, _ = obj.GetKey()
+		objKey = obj.GetKey()
 		updateKeys, _ := GetUpdateKeys(body)
-		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl)
+		dbObj, gerr := obj.GetObjectFromDb(objKey, gMgr.dbHdl.Conn)
 		if gerr != nil {
 			w.WriteHeader(http.StatusNotFound)
 			resp.Error = SRErrString(SRNotFound)
@@ -825,7 +799,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			w.Write(js)
 			return
 		}
-		gMgr.dbHdl.QueryRow("select Uuid from UuidMap where Key = ?", objKey).Scan(&uuid)
+		uuid, err = gMgr.dbHdl.GetUUIDFromObjKey(objKey)
 		resp.UUId = uuid
 		diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 		anyUpdated := false
@@ -843,7 +817,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-		mergedObjKey, _ := mergedObj.GetKey()
+		mergedObjKey := mergedObj.GetKey()
 		if objKey == mergedObjKey {
 			resourceOwner := gMgr.objHdlMap[resource].owner
 			if resourceOwner.IsConnectedToServer() == false {
@@ -851,7 +825,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl)
+			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
 				gMgr.apiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
