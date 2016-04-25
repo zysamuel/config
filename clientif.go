@@ -18,4 +18,6 @@ type ClientIf interface {
 		objs []models.ConfigObj)
 	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) (error, bool)
 	GetObject(obj models.ConfigObj) (error, models.ConfigObj)
+	ExecuteAction(obj models.ConfigObj) error
+	GetServerName() string
 }

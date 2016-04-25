@@ -433,6 +433,7 @@ this["Handlebars"]["templates"]["operation"] = Handlebars.template({"1":function
   },"23":function(depth0,helpers,partials,data) {
   return "";
 },"25":function(depth0,helpers,partials,data) {
+  return "          <div class='sandbox_header'>\n            <input class='submit' type='button' value='Show me curl!' data-sw-translate/>\n            <a href='#' class='response_hider' style='display:none' data-sw-translate>Hide Response</a>\n            <span class='response_throbber' style='display:none'></span>\n          </div>\n";
   },"27":function(depth0,helpers,partials,data) {
   return "          <h4 data-sw-translate>Request Headers</h4>\n          <div class='block request_headers'></div>\n";
   },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
@@ -499,7 +500,7 @@ this["Handlebars"]["templates"]["operation"] = Handlebars.template({"1":function
   buffer += "        </form>\n        <div class='response' style='display:none'>\n          <h4 class='curl'>Curl</h4>\n          <div class='block curl'></div>\n          <h4 data-sw-translate>Request URL</h4>\n          <div class='block request_url'></div>\n";
   stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.showRequestHeaders : depth0), {"name":"if","hash":{},"fn":this.program(27, data),"inverse":this.noop,"data":data});
   if (stack1 != null) { buffer += stack1; }
-  return buffer + "          <h4 data-sw-translate>Response Body</h4>\n          <div class='block response_body'></div>\n          <h4 data-sw-translate>Response Code</h4>\n          <div class='block response_code'></div>\n          <h4 data-sw-translate>Response Headers</h4>\n          <div class='block response_headers'></div>\n        </div>\n      </div>\n    </li>\n  </ul>\n";
+  return buffer ;
 },"useData":true});
 this["Handlebars"]["templates"]["param_list"] = Handlebars.template({"1":function(depth0,helpers,partials,data) {
   return " required";
@@ -1332,7 +1333,8 @@ SwaggerClient.prototype.buildFromSpec = function (response) {
   this.apisArray = [];
   this.basePath = response.basePath || '';
   this.consumes = response.consumes;
-  this.host = response.host || '';
+  //this.host = response.host || '';
+  this.host = 'your-switchip:8080';
   this.info = response.info || {};
   this.produces = response.produces;
   this.schemes = response.schemes || [];
@@ -4453,6 +4455,7 @@ Operation.prototype.getBody = function (headers, args, opts) {
       body = '{}';
     }
   }
+  body = '{}';
 
   // handle form params
   if (hasFormParams) {
@@ -4463,14 +4466,13 @@ Operation.prototype.getBody = function (headers, args, opts) {
 
       if (typeof value !== 'undefined') {
         if (encoded !== '') {
-          encoded += '&';
+          encoded += ',';
         }
-
-        encoded += encodeURIComponent(key) + '=' + encodeURIComponent(value);
+		  var valueStr = encodeURIComponent(value).replace("%",'')
+        encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + "\"" + valueStr + "\"";
       }
     }
-
-    body = encoded;
+    body = "{" + encoded + "}";
   } else if (headers['Content-Type'] && headers['Content-Type'].indexOf('multipart/form-data') >= 0) {
     if (opts.useJQuery) {
       var bodyParam = new FormData();
@@ -4621,6 +4623,7 @@ Operation.prototype.execute = function (arg1, arg2, arg3, arg4, parent) {
   var body = this.getBody(contentTypeHeaders, args, opts);
   var url = this.urlify(args);
 
+
   if(url.indexOf('.{format}') > 0) {
     if(headers) {
       var format = headers.Accept || headers.accept;
@@ -4732,7 +4735,7 @@ Operation.prototype.setContentTypes = function (args, opts) {
       } else if (definedFileParams.length > 0) { // if a file, must be multipart/form-data
         consumes = 'multipart/form-data';
       } else {                                   // default to x-www-from-urlencoded
-        consumes = 'application/x-www-form-urlencoded';
+        consumes = 'application/json';
       }
     }
   }
@@ -4801,19 +4804,18 @@ Operation.prototype.asCurl = function (args1, args2) {
       results.push('--header \'' + key + ': ' + value + '\'');
     }
   }
-
   if (obj.body) {
     var body;
 
     if (_.isObject(obj.body)) {
-      body = JSON.stringify(obj.body);
+      //body = JSON.stringify(obj.body);
+      body = obj.body;
     } else {
       body = obj.body;
     }
 
     results.push('-d \'' + body.replace(/\'/g, '\\u0027') + '\'');
   }
-
   return 'curl ' + (results.join(' ')) + ' \'' + obj.url + '\'';
 };
 
@@ -4889,6 +4891,8 @@ Operation.prototype.encodeQueryCollection = function (type, name, value) {
 };
 
 Operation.prototype.encodeQueryParam = function (arg) {
+  alert(arg);
+  alert(encodeURIComponent(arg));
   return encodeURIComponent(arg);
 };
 
