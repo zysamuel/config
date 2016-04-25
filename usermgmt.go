@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"models"
+	//"fmt"
+	//"models"
 	"time"
-	"utils/crypto/bcrypt"
+	//"utils/crypto/bcrypt"
 )
 
 const (
@@ -22,61 +22,64 @@ type UserData struct {
 }
 
 func (mgr *ConfigMgr) CreateDefaultUser() (status bool) {
-	var found bool
-	var user models.User
-	defaultPassword := []byte("admin123")
-	rows, err := mgr.dbHdl.Query("select * from User where UserName=?", "admin")
-	if err != nil {
-		logger.Println("ERROR: Error in reaing User table ", err)
-		return false
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if found {
-			logger.Println("ERROR: more than  one admin present in User table ", err)
-			return false
-		}
-		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
-		if err == nil {
-			found = true
-		}
-	}
-	if found == false {
-		logger.Println("Creating default user")
-		hashedPassword, err := bcrypt.GenerateFromPassword(defaultPassword, bcrypt.DefaultCost)
-		user.UserName = "admin"
-		user.Password = string(hashedPassword)
-		user.Description = "administrator"
-		user.Privilege = "w"
-		if err != nil {
-			logger.Println("Failed to encrypt password for ", user.UserName)
-		}
-		if ok := mgr.CreateUser(user.UserName); ok == false {
-			logger.Println("Failed to create default user")
-		}
-		_, _ = user.StoreObjectInDb(mgr.dbHdl)
-	}
+	/*
+		var found bool
+		var user models.User
+		defaultPassword := []byte("admin123")
+			rows, err := mgr.dbHdl.Query("select * from User where UserName=?", "admin")
+			if err != nil {
+				logger.Println("ERROR: Error in reaing User table ", err)
+				return false
+			}
+			defer rows.Close()
+			for rows.Next() {
+				if found {
+					logger.Println("ERROR: more than  one admin present in User table ", err)
+					return false
+				}
+				err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
+				if err == nil {
+					found = true
+				}
+			}
+			if found == false {
+				logger.Println("Creating default user")
+				hashedPassword, err := bcrypt.GenerateFromPassword(defaultPassword, bcrypt.DefaultCost)
+				user.UserName = "admin"
+				user.Password = string(hashedPassword)
+				user.Description = "administrator"
+				user.Privilege = "w"
+				if err != nil {
+					logger.Println("Failed to encrypt password for ", user.UserName)
+				}
+				if ok := mgr.CreateUser(user.UserName); ok == false {
+					logger.Println("Failed to create default user")
+				}
+				_ = user.StoreObjectInDb(mgr.dbHdl)
+			}*/
 	return true
 }
 
 func (mgr *ConfigMgr) ReadConfiguredUsersFromDb() (status bool) {
-	var userConfig models.User
-	var userData UserData
-	dbCmd := "select * from User"
-	rows, err := mgr.dbHdl.Query(dbCmd)
-	if err != nil {
-		fmt.Println(fmt.Sprintf("DB method Query failed for 'User' with error User", dbCmd, err))
-		return false
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&userConfig.UserName, &userConfig.Password, &userConfig.Description, &userConfig.Privilege); err != nil {
-			fmt.Println("Db Scan failed when interating over User")
+	/*
+		var userConfig models.User
+		var userData UserData
+		dbCmd := "select * from User"
+		rows, err := mgr.dbHdl.Query(dbCmd)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("DB method Query failed for 'User' with error User", dbCmd, err))
+			return false
 		}
-		userData.userName = userConfig.UserName
-		userData.sessionId = 0
-		mgr.users = append(mgr.users, userData)
-	}
+		defer rows.Close()
+		for rows.Next() {
+			if err = rows.Scan(&userConfig.UserName, &userConfig.Password, &userConfig.Description, &userConfig.Privilege); err != nil {
+				fmt.Println("Db Scan failed when interating over User")
+			}
+			userData.userName = userConfig.UserName
+			userData.sessionId = 0
+			mgr.users = append(mgr.users, userData)
+		}
+	*/
 	return true
 }
 
@@ -150,42 +153,43 @@ func (user UserData) WaitOnSessionTimer() (err error) {
 }
 
 func LoginUser(userName, password string) (sessionId uint64, status bool) {
-	var found bool
-	var user models.User
-	rows, err := gMgr.dbHdl.Query("select * from User where UserName=?", userName)
-	if err != nil {
-		logger.Println("ERROR: Error in reaing User table ", err)
-		return 0, false
-	}
-	defer rows.Close()
-	for rows.Next() {
-		err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
-		if err == nil {
-			found = true
-			break
-		}
-	}
-	if found {
-		// Comparing the password with the hash
-		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	/*
+		var found bool
+		var user models.User
+		rows, err := gMgr.dbHdl.Query("select * from User where UserName=?", userName)
 		if err != nil {
-			logger.Println("Password didn't match for ", userName, err)
+			logger.Println("ERROR: Error in reaing User table ", err)
 			return 0, false
-		} else {
-			userData, idx, found := gMgr.GetUserByUserName(userName)
-			if found {
-				gMgr.sessionId += 1
-				userData.sessionId = gMgr.sessionId
-				gMgr.users[idx].sessionId = gMgr.sessionId
-				fmt.Printf("Password matched for %s: sessionId is %d\n", userData.userName, userData.sessionId)
-				gMgr.sessionChan <- userData.sessionId
-				fmt.Printf("SessionId is %d is sent over chan\n", userData.sessionId)
-				return userData.sessionId, true
-			} else {
-				logger.Println("Didn't find user in configmgr's users table")
+		}
+		defer rows.Close()
+		for rows.Next() {
+			err = rows.Scan(&user.UserName, &user.Password, &user.Description, &user.Privilege)
+			if err == nil {
+				found = true
+				break
 			}
 		}
-	}
+		if found {
+			// Comparing the password with the hash
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+			if err != nil {
+				logger.Println("Password didn't match for ", userName, err)
+				return 0, false
+			} else {
+				userData, idx, found := gMgr.GetUserByUserName(userName)
+				if found {
+					gMgr.sessionId += 1
+					userData.sessionId = gMgr.sessionId
+					gMgr.users[idx].sessionId = gMgr.sessionId
+					fmt.Printf("Password matched for %s: sessionId is %d\n", userData.userName, userData.sessionId)
+					gMgr.sessionChan <- userData.sessionId
+					fmt.Printf("SessionId is %d is sent over chan\n", userData.sessionId)
+					return userData.sessionId, true
+				} else {
+					logger.Println("Didn't find user in configmgr's users table")
+				}
+			}
+		}*/
 	return 0, false
 }
 

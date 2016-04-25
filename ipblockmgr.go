@@ -1,8 +1,8 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"models"
 )
 
@@ -29,17 +29,17 @@ func GetIpBlockMgr() *IpBlockMgr {
 	return gIpBlockMgr
 }
 
-func (ipbMgr *IpBlockMgr) CreateObject(obj models.ConfigObj, dbHdl *sql.DB) (int64, bool) {
+func (ipbMgr *IpBlockMgr) CreateObject(obj models.ConfigObj, dbHdl redis.Conn) (int64, bool) {
 	var ipblk models.IPV4AddressBlock
 	ipblk = obj.(models.IPV4AddressBlock)
 	fmt.Println(" Create Object called", ipblk)
 	return 0, true
 }
 
-func (ipbMgr *IpBlockMgr) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *sql.DB) bool {
+func (ipbMgr *IpBlockMgr) DeleteObject(obj models.ConfigObj, objKey string, dbHdl redis.Conn) bool {
 	return true
 }
 
-func (ipbMgr *IpBlockMgr) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *sql.DB) bool {
+func (ipbMgr *IpBlockMgr) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl redis.Conn) bool {
 	return true
 }
