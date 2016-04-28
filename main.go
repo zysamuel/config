@@ -23,6 +23,7 @@ func main() {
 	flag.Parse()
 	gMgr = NewConfigMgr(*paramsDir)
 	if gMgr == nil {
+		syslogger.Info("Failed to initialize CONF Mgr. Exiting!!!")
 		return
 	}
 	clientsUp := make(chan bool, 1)
@@ -57,4 +58,5 @@ func main() {
 	} else {
 		http.ListenAndServe(":8080", restRtr)
 	}
+	syslogger.Info("CONF Mgr. Exiting!!!")
 }
