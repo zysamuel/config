@@ -4,6 +4,7 @@ import (
 	"asicd/asicdCommonDefs"
 	"encoding/json"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"io/ioutil"
 	"models"
 	"os"
@@ -179,23 +180,45 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	if systemStatus.Ready == false {
 		reason := "Not connected to"
 		unconnectedClients := mgr.GetUnconnectedClients()
-		for i := 0; i < len(unconnectedClients); i++ {
-			reason = reason + " " + unconnectedClients[i]
+		for idx := 0; idx < len(unconnectedClients); idx++ {
+			reason = reason + " " + unconnectedClients[idx]
 		}
 		systemStatus.Reason = reason
 	} else {
 		systemStatus.Reason = "None"
 	}
+	systemStatus.SwVersion = mgr.swVersion
 	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
 	systemStatus.NumDeleteCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
 	systemStatus.NumUpdateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
 	systemStatus.NumGetCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
 	systemStatus.NumActionCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+
+	systemStatus.FlexDaemons = make([]models.DaemonState, 0)
+	// Read DaemonStates from db
+	var daemonState models.DaemonState
+	keyStr := "DaemonState*"
+	keys, err := redis.Strings(mgr.dbHdl.Do("KEYS", keyStr))
+	if err == nil {
+		for idx := 0; idx < len(keys); idx++ {
+			keyType, err := redis.String(mgr.dbHdl.Do("Type", keys[idx]))
+			if err == nil {
+				if keyType != "hash" {
+					continue
+				}
+				val, err := redis.Values(mgr.dbHdl.Do("HGETALL", keys[idx]))
+				if err == nil && len(val) != 0 {
+					_ = redis.ScanStruct(val, &daemonState)
+				}
+				systemStatus.FlexDaemons = append(systemStatus.FlexDaemons, daemonState)
+			}
+		}
+	}
 	return systemStatus
 }
