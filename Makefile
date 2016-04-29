@@ -1,6 +1,7 @@
 RM=rm -f
 DESTDIR=$(SR_CODE_BASE)/snaproute/src/out/bin
 PARAMSDIR=$(DESTDIR)/params
+SYSPROFILE=$(DESTDIR)/sysprofile
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 
@@ -29,11 +30,13 @@ exe: $(SRCS)
 
 install:
 	 @$(MKDIR) $(PARAMSDIR)
+	 @$(MKDIR) $(SYSPROFILE)
 	 @$(RSYNC) docsui $(PARAMSDIR)
 	 @echo $(DESTDIR)
 	 install params/* $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objectconfig.json $(PARAMSDIR)
 	 install $(SR_CODE_BASE)/snaproute/src/models/genObjectConfig.json $(PARAMSDIR)
+	 install $(SR_CODE_BASE)/snaproute/src/models/systemProfile.json $(SYSPROFILE)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
