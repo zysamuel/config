@@ -4,7 +4,6 @@ import (
 	"asicd/asicdCommonDefs"
 	"encoding/json"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"io/ioutil"
 	"models"
 	"os"
@@ -200,25 +199,12 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	systemStatus.NumActionCalls =
 		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
 
-	systemStatus.FlexDaemons = make([]models.DaemonState, 0)
 	// Read DaemonStates from db
 	var daemonState models.DaemonState
-	keyStr := "DaemonState*"
-	keys, err := redis.Strings(mgr.dbHdl.Do("KEYS", keyStr))
-	if err == nil {
-		for idx := 0; idx < len(keys); idx++ {
-			keyType, err := redis.String(mgr.dbHdl.Do("Type", keys[idx]))
-			if err == nil {
-				if keyType != "hash" {
-					continue
-				}
-				val, err := redis.Values(mgr.dbHdl.Do("HGETALL", keys[idx]))
-				if err == nil && len(val) != 0 {
-					_ = redis.ScanStruct(val, &daemonState)
-				}
-				systemStatus.FlexDaemons = append(systemStatus.FlexDaemons, daemonState)
-			}
-		}
+	daemonStates, _ := daemonState.GetAllObjFromDb(mgr.dbHdl)
+	systemStatus.FlexDaemons = make([]models.DaemonState, len(daemonStates))
+	for idx, daemonState := range daemonStates {
+		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
 	}
 	return systemStatus
 }
