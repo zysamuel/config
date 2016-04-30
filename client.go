@@ -179,23 +179,32 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	if systemStatus.Ready == false {
 		reason := "Not connected to"
 		unconnectedClients := mgr.GetUnconnectedClients()
-		for i := 0; i < len(unconnectedClients); i++ {
-			reason = reason + " " + unconnectedClients[i]
+		for idx := 0; idx < len(unconnectedClients); idx++ {
+			reason = reason + " " + unconnectedClients[idx]
 		}
 		systemStatus.Reason = reason
 	} else {
 		systemStatus.Reason = "None"
 	}
+	systemStatus.SwVersion = mgr.swVersion
 	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
 	systemStatus.NumDeleteCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
 	systemStatus.NumUpdateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
 	systemStatus.NumGetCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
 	systemStatus.NumActionCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+
+	// Read DaemonStates from db
+	var daemonState models.DaemonState
+	daemonStates, _ := daemonState.GetAllObjFromDb(mgr.dbHdl)
+	systemStatus.FlexDaemons = make([]models.DaemonState, len(daemonStates))
+	for idx, daemonState := range daemonStates {
+		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
+	}
 	return systemStatus
 }
