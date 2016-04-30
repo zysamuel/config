@@ -143,17 +143,17 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 
 func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 
-	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
 	writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "/{object-id}\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/{object-id}\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
 	writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS)
 	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/Config/" + structName + "/\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS)
 	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS)
 	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
@@ -161,6 +161,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []Attr
 }
 
 func WriteStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
+	structName = strings.TrimSuffix(structName, "State")
 	for idx, attrInfo := range membersInfo {
 		if strings.Contains(strings.ToLower(attrInfo.QueryParam), "optional") {
 			docJsFile.WriteString(twoTabs + "\"/state/" + structName + "/{" + attrInfo.AttrName + "}\" : {\n")
@@ -176,6 +177,7 @@ func WriteStateObject(structName string, docJsFile *os.File, membersInfo []Attri
 }
 
 func WriteGlobalStateObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
+	structName = strings.TrimSuffix(structName, "State")
 	docJsFile.WriteString(twoTabs + "\"/state/" + structName + "\": { \n")
 	writePathCompletion(docJsFile)
 }
