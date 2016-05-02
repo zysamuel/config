@@ -60,7 +60,7 @@ func (d dbHandler) GetObjKeyFromUUID(uuid string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	objKey = strings.Trim(objKey, "UID")
+	objKey = strings.TrimRight(objKey, "UID")
 	return objKey, nil
 }
 
