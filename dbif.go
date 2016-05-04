@@ -1,47 +1,76 @@
 package main
 
 import (
-	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
-	"models"
-	"utils/dbutils"
+	"github.com/garyburd/redigo/redis"
+	"github.com/nu7hatch/gouuid"
+	"strings"
 )
 
-var UsrConfDbName string
+type dbHandler struct {
+	redis.Conn
+}
 
-//
-//  This method creates new rest router interface
-//
+func (d dbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
+	UUId, err := uuid.NewV4()
+	if err != nil {
+		logger.Println("Failed to get UUID ", err)
+		return "", err
+	}
+	_, err = d.Do("SET", UUId.String(), objKey)
+	if err != nil {
+		logger.Println("Failed to insert uuid to objkey entry in db ", err)
+		return "", err
+	}
+	objKeyWithUUIDPrefix := "UUID" + objKey
+	_, err = d.Do("SET", objKeyWithUUIDPrefix, UUId.String())
+	if err != nil {
+		logger.Println("Failed to insert objkey to uuid entry in db ", err)
+		return "", err
+	}
+	return UUId.String(), nil
+
+}
+
+func (d dbHandler) DeleteUUIDToObjKeyMap(uuid, objKey string) error {
+	_, err := d.Do("DEL", uuid)
+	if err != nil {
+		logger.Println("Failed to delete uuid to objkey entry in db ", err)
+		return err
+	}
+	objKeyWithUUIDPrefix := "UUID" + objKey
+	_, err = d.Do("DEL", objKeyWithUUIDPrefix)
+	if err != nil {
+		logger.Println("Failed to delete objkey to uuid entry in db ", err)
+		return err
+	}
+	return nil
+}
+
+func (d dbHandler) GetUUIDFromObjKey(objKey string) (string, error) {
+	objKeyWithUUIDPrefix := "UUID" + objKey
+	uuid, err := redis.String(d.Do("GET", objKeyWithUUIDPrefix))
+	if err != nil {
+		return "", err
+	}
+	return uuid, nil
+}
+
+func (d dbHandler) GetObjKeyFromUUID(uuid string) (string, error) {
+	objKey, err := redis.String(d.Do("GET", uuid))
+	if err != nil {
+		return "", err
+	}
+	objKey = strings.TrimRight(objKey, "UID")
+	return objKey, nil
+}
+
+//  This method initializes the db handler
 func (mgr *ConfigMgr) InstantiateDbIf() error {
 	var err error
-	var DbName string = "/UsrConfDb.db"
 
-	UsrConfDbName = mgr.fullPath + DbName
-
-	mgr.dbHdl, err = sql.Open("sqlite3", UsrConfDbName)
-	if err == nil {
-		for key, obj := range models.ConfigObjectMap {
-			logger.Println("Creating DB for object", key)
-			err = obj.CreateDBTable(mgr.dbHdl)
-			if err != nil {
-				logger.Println("Failed to create DB for object", key)
-			}
-		}
-	} else {
-		logger.Println("### Failed to open DB", UsrConfDbName, err)
-	}
-
-	/*
-	 * Created a table in DB to store UUID to ConfigObject key mapping.
-	 */
-	logger.Println("Creating table for UUID")
-	dbCmd := "CREATE TABLE IF NOT EXISTS UuidMap " +
-		"(Uuid varchar(255) PRIMARY KEY ," +
-		"Key varchar(255))"
-
-	_, err = dbutils.ExecuteSQLStmt(dbCmd, mgr.dbHdl)
+	mgr.dbHdl.Conn, err = redis.Dial("tcp", ":6379")
 	if err != nil {
-		logger.Println("Failed to create DB for object UUID")
+		logger.Println("Failed to dial out to Redis server")
 	}
 	return nil
 }
