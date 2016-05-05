@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/garyburd/redigo/redis"
 	"models"
 	"utils/crypto/bcrypt"
+	"utils/dbutils"
 )
 
 type LocalClient struct {
@@ -24,7 +24,7 @@ func (clnt *LocalClient) GetServerName() string {
 	return "local"
 }
 
-func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl redis.Conn) (error, bool) {
+func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
 	var err error
 	switch obj.(type) {
 	case models.User:
@@ -51,7 +51,7 @@ func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl redis.Conn) (e
 	return err, true
 }
 
-func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl redis.Conn) (error, bool) {
+func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
 	switch obj.(type) {
 	case models.User:
 		data := obj.(models.User)
@@ -70,7 +70,7 @@ func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl
 	return nil, true
 }
 
-func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl redis.Conn, currMarker int64, count int64) (err error,
+func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
 	more bool,
@@ -85,7 +85,7 @@ func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl redis.Conn, c
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl redis.Conn) (error, bool) {
+func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
 	logger.Println("### Update Object called CONFD", attrSet, objKey)
 	ok := false
 	switch obj.(type) {
@@ -104,7 +104,7 @@ func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigO
 	return nil, ok
 }
 
-func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl redis.Conn) (error, models.ConfigObj) {
+func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj) {
 	var retObj models.ConfigObj
 	switch obj.(type) {
 	case models.UserState:
