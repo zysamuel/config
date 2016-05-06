@@ -4,11 +4,10 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/nu7hatch/gouuid"
 	"strings"
-	"utils/dbutils"
 )
 
 type dbHandler struct {
-	*dbutils.DBUtil
+	redis.Conn
 }
 
 func (d dbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
@@ -69,8 +68,7 @@ func (d dbHandler) GetObjKeyFromUUID(uuid string) (string, error) {
 func (mgr *ConfigMgr) InstantiateDbIf() error {
 	var err error
 
-	mgr.dbHdl.DBUtil = dbutils.NewDBUtil(nil)
-	err = mgr.dbHdl.DBUtil.Connect()
+	mgr.dbHdl.Conn, err = redis.Dial("tcp", ":6379")
 	if err != nil {
 		logger.Println("Failed to dial out to Redis server")
 	}

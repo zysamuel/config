@@ -145,7 +145,7 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdCommonDefs.MAX_SYS_PORTS)
-		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, mgr.dbHdl.DBUtil, currentIndex, objCount)
+		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, mgr.dbHdl, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
 				portConfig := (*objects[i].(*models.Port))

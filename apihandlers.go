@@ -227,7 +227,7 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	if err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gMgr.dbHdl.DBUtil); err != nil {
+	if err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -269,7 +269,7 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	if err, retObj.ConfigObj = resourceOwner.GetObject(obj, gMgr.dbHdl.DBUtil); err != nil {
+	if err, retObj.ConfigObj = resourceOwner.GetObject(obj, gMgr.dbHdl.Conn); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -373,7 +373,7 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.CurrentMarker = currentIndex
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
-		stateObjects = resourceOwner.GetBulkObject(obj, gMgr.dbHdl.DBUtil, currentIndex, objCount)
+		stateObjects = resourceOwner.GetBulkObject(obj, gMgr.dbHdl.Conn, currentIndex, objCount)
 	if err == nil {
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
 		for idx, stateObject := range stateObjects {
@@ -509,7 +509,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.CreateObject(obj, gMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.CreateObject(obj, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
 				uuid, dbErr := gMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
@@ -579,7 +579,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
 				err = gMgr.dbHdl.DeleteUUIDToObjKeyMap(vars["objId"], objKey)
 				if err != nil {
@@ -649,7 +649,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.DeleteObject(dbObj, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
 				err = gMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
 				if err != nil {
@@ -738,7 +738,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
-				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.DBUtil)
+				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.Conn)
 				if err == nil && success == true {
 					gMgr.apiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -825,7 +825,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gMgr.dbHdl.Conn)
 			if err == nil && success == true {
 				gMgr.apiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
