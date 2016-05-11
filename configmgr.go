@@ -41,7 +41,6 @@ type ConfigMgr struct {
 	sessionId      uint64
 	sessionChan    chan uint64
 	bringUpTime    time.Time
-	swVersion      string
 	apiCallStats   ApiCallStats
 	swVersion      SwVersion
 }

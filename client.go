@@ -37,15 +37,15 @@ type Repo struct {
 }
 
 type Version struct {
-	major string `json:major`
-	minor string `json:minor`
-	patch string `json:patch`
-	build string `json:build`
+	Major string `json:major`
+	Minor string `json:minor`
+	Patch string `json:patch`
+	Build string `json:build`
 }
 
 type SwVersion struct {
-	Version string
-	Repos   []Repo
+	SwVersion string
+	Repos     []Repo
 }
 
 //
@@ -205,7 +205,6 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	} else {
 		systemStatus.Reason = "None"
 	}
-	systemStatus.SwVersion = mgr.swVersion
 	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
 		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
@@ -229,7 +228,7 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 }
 
 func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
-	type version Version
+	var version Version
 	pkgInfoFile := paramsDir + "/pkgInfo.json"
 	bytes, err := ioutil.ReadFile(pkgInfoFile)
 	if err != nil {
@@ -242,7 +241,8 @@ func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
 		logger.Println("Error in Unmarshalling pkgInfo Json")
 		return err
 	}
-	mgr.swVersion.Version = version.major + "." + version.minor + "." + version.patch + "." + version.build
+	logger.Println("Version is ", version)
+	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
 
 	buildInfoFile := paramsDir + "/buildInfo.json"
 	bytes, err = ioutil.ReadFile(buildInfoFile)
@@ -261,8 +261,10 @@ func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
 
 func (mgr *ConfigMgr) GetSystemSwVersion() models.SystemSwVersionState {
 	systemSwVersion := models.SystemSwVersionState{}
-	systemSwVersion.FlexswitchVersion = mgr.swVersion.Version
-	for i := 0; i < len(mgr.swVersion.Repos); i++ {
+	systemSwVersion.FlexswitchVersion = mgr.swVersion.SwVersion
+	numRepos := len(mgr.swVersion.Repos)
+	systemSwVersion.Repos = make([]models.RepoInfo, numRepos)
+	for i := 0; i < numRepos; i++ {
 		systemSwVersion.Repos[i].Name = mgr.swVersion.Repos[i].Name
 		systemSwVersion.Repos[i].Sha1 = mgr.swVersion.Repos[i].Sha1
 		systemSwVersion.Repos[i].Branch = mgr.swVersion.Repos[i].Branch

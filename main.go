@@ -26,7 +26,7 @@ func main() {
 		syslogger.Info("Failed to initialize CONF Mgr. Exiting!!!")
 		return
 	}
-	err := gMgr.ReadSystemSwVersion(paramsDir)
+	err = gMgr.ReadSystemSwVersion(*paramsDir)
 	if err != nil {
 		syslogger.Info("Failed to read sw version")
 	}
