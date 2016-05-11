@@ -114,6 +114,10 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) 
 		logger.Println("### Get request called for SystemStatus")
 		retObj = gMgr.GetSystemStatus()
 		return nil, retObj
+	case models.SystemSwVersionState:
+		logger.Println("### Get request called for SystemSwVersion")
+		retObj = gMgr.GetSystemSwVersion()
+		return nil, retObj
 	default:
 		break
 	}

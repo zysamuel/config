@@ -29,6 +29,25 @@ type ApiCallStats struct {
 	NumActionCallsSuccess int32
 }
 
+type Repo struct {
+	Name   string `json:Name`
+	Sha1   string `json:Sha1`
+	Branch string `json:Branch`
+	Time   string `json:Time`
+}
+
+type Version struct {
+	Major string `json:major`
+	Minor string `json:minor`
+	Patch string `json:patch`
+	Build string `json:build`
+}
+
+type SwVersion struct {
+	SwVersion string
+	Repos     []Repo
+}
+
 //
 //  This method reads the config file and connects to all the clients in the list
 //
@@ -186,7 +205,6 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	} else {
 		systemStatus.Reason = "None"
 	}
-	systemStatus.SwVersion = mgr.swVersion
 	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
 		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
@@ -207,4 +225,50 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
 	}
 	return systemStatus
+}
+
+func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
+	var version Version
+	pkgInfoFile := paramsDir + "/pkgInfo.json"
+	bytes, err := ioutil.ReadFile(pkgInfoFile)
+	if err != nil {
+		logger.Println("Error in reading configuration file", pkgInfoFile)
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &version)
+	if err != nil {
+		logger.Println("Error in Unmarshalling pkgInfo Json")
+		return err
+	}
+	logger.Println("Version is ", version)
+	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
+
+	buildInfoFile := paramsDir + "/buildInfo.json"
+	bytes, err = ioutil.ReadFile(buildInfoFile)
+	if err != nil {
+		logger.Println("Error in reading configuration file", buildInfoFile)
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &mgr.swVersion.Repos)
+	if err != nil {
+		logger.Println("Error in Unmarshalling buildInfo Json")
+		return err
+	}
+	return nil
+}
+
+func (mgr *ConfigMgr) GetSystemSwVersion() models.SystemSwVersionState {
+	systemSwVersion := models.SystemSwVersionState{}
+	systemSwVersion.FlexswitchVersion = mgr.swVersion.SwVersion
+	numRepos := len(mgr.swVersion.Repos)
+	systemSwVersion.Repos = make([]models.RepoInfo, numRepos)
+	for i := 0; i < numRepos; i++ {
+		systemSwVersion.Repos[i].Name = mgr.swVersion.Repos[i].Name
+		systemSwVersion.Repos[i].Sha1 = mgr.swVersion.Repos[i].Sha1
+		systemSwVersion.Repos[i].Branch = mgr.swVersion.Repos[i].Branch
+		systemSwVersion.Repos[i].Time = mgr.swVersion.Repos[i].Time
+	}
+	return systemSwVersion
 }
