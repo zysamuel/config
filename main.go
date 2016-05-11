@@ -1,41 +1,40 @@
 package main
 
 import (
+	"config/server"
 	"flag"
-	"log"
-	"log/syslog"
+	"fmt"
 	"net/http"
-	"os"
+	"utils/keepalive"
+	"utils/logging"
 )
 
-var logger *log.Logger
-var gMgr *ConfigMgr
-
 func main() {
-	logger = log.New(os.Stdout, "ConfigMgr:", log.Ldate|log.Ltime|log.Lshortfile)
-	syslogger, err := syslog.New(syslog.LOG_NOTICE|syslog.LOG_INFO|syslog.LOG_DAEMON, "ConfigMgr")
-	if err == nil {
-		syslogger.Info("### CONF Mgr started")
-		logger.SetOutput(syslogger)
+	fmt.Println("Starting ConfigMgr daemon")
+	paramsDir := flag.String("params", "./params", "Directory Location for config files")
+	flag.Parse()
+	paramsDirName := *paramsDir
+	if paramsDirName[len(paramsDirName)-1] != '/' {
+		paramsDirName = paramsDirName + "/"
 	}
 
-	paramsDir := flag.String("params", "", "Directory Location for config files")
-	flag.Parse()
-	gMgr = NewConfigMgr(*paramsDir)
-	if gMgr == nil {
-		syslogger.Info("Failed to initialize CONF Mgr. Exiting!!!")
+	fmt.Println("ConfigMgr: Start logger")
+	logger, err := logging.NewLogger("confd", "ConfigMgr", true)
+	if err != nil {
+		fmt.Println("Failed to start logger. Nothing will be logged ...")
+	}
+
+	configMgr := server.NewConfigMgr(*paramsDir, logger)
+	if configMgr == nil {
+		logger.Err("Failed to initialize CONF Mgr. Exiting!!!")
 		return
 	}
-	clientsUp := make(chan bool, 1)
-	go gMgr.CreateDefaultUser()
-	go gMgr.ReadConfiguredUsersFromDb()
-	go gMgr.ConnectToAllClients(clientsUp)
-	go gMgr.DiscoverSystemObjects(clientsUp)
-	go gMgr.MonitorSystemStatus()
-	go gMgr.StartUserSessionHandler()
 
-	foundConfPort, confPort := gMgr.GetConfigHandlerPort(*paramsDir)
-	restRtr := gMgr.GetRestRtr()
+	foundConfPort, confPort := server.GetConfigHandlerPort(*paramsDir)
+	restRtr := configMgr.ApiMgr.GetRestRtr()
+
+	// Start keepalive routine
+	go keepalive.InitKeepAlive("confd", paramsDirName)
 	/*
 		// TODO: uncomment this section for https server
 		certFile := *paramsDir+"/cert.pem"
@@ -58,5 +57,5 @@ func main() {
 	} else {
 		http.ListenAndServe(":8080", restRtr)
 	}
-	syslogger.Info("CONF Mgr. Exiting!!!")
+	logger.Info("CONF Mgr. Exiting!!!")
 }
