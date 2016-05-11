@@ -164,19 +164,18 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		_, obj, _ := GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdCommonDefs.MAX_SYS_PORTS)
-		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
+		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, mgr.dbHdl.DBUtil, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
 				portConfig := (*objects[i].(*models.Port))
-				objKey, _ := portConfig.GetKey()
-				_, err := portConfig.GetObjectFromDb(objKey, mgr.dbHdl)
+				_, err := portConfig.GetObjectFromDb(portConfig.GetKey(), mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
-					_, err = portConfig.StoreObjectInDb(mgr.dbHdl)
+					err = portConfig.StoreObjectInDb(mgr.dbHdl)
 					if err != nil {
 						logger.Println("Failed to store Port in DB ", i, portConfig, err)
 					} else {
-						_, err := StoreUuidToKeyMapInDb(portConfig)
+						_, err := gMgr.dbHdl.StoreUUIDToObjKeyMap(portConfig.GetKey())
 						if err != nil {
 							logger.Println("Failed to store uuid map for Port in DB ", portConfig, err)
 						}
@@ -199,24 +198,33 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	if systemStatus.Ready == false {
 		reason := "Not connected to"
 		unconnectedClients := mgr.GetUnconnectedClients()
-		for i := 0; i < len(unconnectedClients); i++ {
-			reason = reason + " " + unconnectedClients[i]
+		for idx := 0; idx < len(unconnectedClients); idx++ {
+			reason = reason + " " + unconnectedClients[idx]
 		}
 		systemStatus.Reason = reason
 	} else {
 		systemStatus.Reason = "None"
 	}
+	systemStatus.SwVersion = mgr.swVersion
 	systemStatus.UpTime = time.Since(mgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumCreateCalls, mgr.apiCallStats.NumCreateCallsSuccess)
 	systemStatus.NumDeleteCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumDeleteCalls, mgr.apiCallStats.NumDeleteCallsSuccess)
 	systemStatus.NumUpdateCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumUpdateCalls, mgr.apiCallStats.NumUpdateCallsSuccess)
 	systemStatus.NumGetCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumGetCalls, mgr.apiCallStats.NumGetCallsSuccess)
 	systemStatus.NumActionCalls =
-		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+		fmt.Sprintf("Total %d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
+
+	// Read DaemonStates from db
+	var daemonState models.DaemonState
+	daemonStates, _ := daemonState.GetAllObjFromDb(mgr.dbHdl)
+	systemStatus.FlexDaemons = make([]models.DaemonState, len(daemonStates))
+	for idx, daemonState := range daemonStates {
+		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
+	}
 	return systemStatus
 }
 

@@ -14,4 +14,5 @@ var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"sysd":       &SYSDClient{},
 	"vxland":     &VXLANDClient{},
 	"lldpd":      &LLDPDClient{},
+	"dhcpd":      &DHCPDClient{},
 }
