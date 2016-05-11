@@ -1,7 +1,7 @@
 package main
 
 import (
-	"asicd/asicdConstDefs"
+	"asicd/asicdCommonDefs"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +27,25 @@ type ApiCallStats struct {
 	NumGetCallsSuccess    int32
 	NumActionCalls        int32
 	NumActionCallsSuccess int32
+}
+
+type Repo struct {
+	Name   string `json:Name`
+	Sha1   string `json:Sha1`
+	Branch string `json:Branch`
+	Time   string `json:Time`
+}
+
+type Version struct {
+	major string `json:major`
+	minor string `json:minor`
+	patch string `json:patch`
+	build string `json:build`
+}
+
+type SwVersion struct {
+	Version string
+	Repos   []Repo
 }
 
 //
@@ -143,8 +162,8 @@ func (mgr *ConfigMgr) DiscoverSystemObjects(clientsUp chan bool) bool {
 		var objects []models.ConfigObj
 		var err error
 		_, obj, _ := GetConfigObj(nil, objHdl)
-		currentIndex := int64(asicdConstDefs.MIN_SYS_PORTS)
-		objCount := int64(asicdConstDefs.MAX_SYS_PORTS)
+		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
+		objCount := int64(asicdCommonDefs.MAX_SYS_PORTS)
 		err, _, _, _, objects = gMgr.objHdlMap[resource].owner.GetBulkObject(obj, currentIndex, objCount)
 		if err == nil {
 			for i := 0; i < len(objects); i++ {
@@ -199,4 +218,47 @@ func (mgr *ConfigMgr) GetSystemStatus() models.SystemStatusState {
 	systemStatus.NumActionCalls =
 		fmt.Sprintf("%d Success %d", mgr.apiCallStats.NumActionCalls, mgr.apiCallStats.NumActionCallsSuccess)
 	return systemStatus
+}
+
+func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
+	type version Version
+	pkgInfoFile := paramsDir + "/pkgInfo.json"
+	bytes, err := ioutil.ReadFile(pkgInfoFile)
+	if err != nil {
+		logger.Println("Error in reading configuration file", pkgInfoFile)
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &version)
+	if err != nil {
+		logger.Println("Error in Unmarshalling pkgInfo Json")
+		return err
+	}
+	mgr.swVersion.Version = version.major + "." + version.minor + "." + version.patch + "." + version.build
+
+	buildInfoFile := paramsDir + "/buildInfo.json"
+	bytes, err = ioutil.ReadFile(buildInfoFile)
+	if err != nil {
+		logger.Println("Error in reading configuration file", buildInfoFile)
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &mgr.swVersion.Repos)
+	if err != nil {
+		logger.Println("Error in Unmarshalling buildInfo Json")
+		return err
+	}
+	return nil
+}
+
+func (mgr *ConfigMgr) GetSystemSwVersion() models.SystemSwVersionState {
+	systemSwVersion := models.SystemSwVersionState{}
+	systemSwVersion.FlexswitchVersion = mgr.swVersion.Version
+	for i := 0; i < len(mgr.swVersion.Repos); i++ {
+		systemSwVersion.Repos[i].Name = mgr.swVersion.Repos[i].Name
+		systemSwVersion.Repos[i].Sha1 = mgr.swVersion.Repos[i].Sha1
+		systemSwVersion.Repos[i].Branch = mgr.swVersion.Repos[i].Branch
+		systemSwVersion.Repos[i].Time = mgr.swVersion.Repos[i].Time
+	}
+	return systemSwVersion
 }

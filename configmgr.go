@@ -43,6 +43,7 @@ type ConfigMgr struct {
 	sessionChan    chan uint64
 	bringUpTime    time.Time
 	apiCallStats   ApiCallStats
+	swVersion      SwVersion
 }
 
 type LoginResponse struct {
