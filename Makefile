@@ -5,24 +5,9 @@ SYSPROFILE=$(DESTDIR)/sysprofile
 MKDIR=mkdir -p
 RSYNC=rsync -rupE
 GOLDFLAGS=-r /opt/flexswitch/sharedlib
-
-CLIENTIF_FILES = $(shell ls  *clientif.go)
-SRCS=$(CLIENTIF_FILES)\
-	  apihandlers.go\
-	  apierrcodes.go\
-	  ipcutils.go\
-	  client.go\
-	  clientmap.go\
-	  objif.go\
-	  logger.go\
-	  restroutes.go\
-	  configmgr.go\
-	  dbif.go\
-	  ipblockmgr.go\
-	  usermgmt.go\
-	  main.go
-
+SRCS=main.go
 COMP_NAME=confd
+
 all: gencode exe install 
 
 exe: $(SRCS)

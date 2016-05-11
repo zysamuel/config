@@ -1,15 +1,15 @@
-package main
+package apis
 
 import (
+	"config/objects"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"github.com/gorilla/mux"
-	"io/ioutil"
 	"math/big"
 	"models"
 	"net"
@@ -18,50 +18,81 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	//"strconv"
-	//"encoding/base64"
+	"utils/logging"
 )
 
-type ConfigMgr struct {
-	clients        map[string]ClientIf
-	apiVer         string
-	apiBase        string
-	apiBaseConfig  string
-	apiBaseState   string
-	apiBaseAction  string
-	basePath       string
-	fullPath       string
-	pRestRtr       *mux.Router
-	dbHdl          dbHandler
-	restRoutes     []ApiRoute
-	reconncetTimer *time.Ticker
-	objHdlMap      map[string]ConfigObjInfo
-	systemReady    bool
-	users          []UserData
-	sessionId      uint64
-	sessionChan    chan uint64
-	bringUpTime    time.Time
-	swVersion      string
-	apiCallStats   ApiCallStats
+type ApiRoute struct {
+	Name        string
+	Method      string
+	Pattern     string
+	HandlerFunc http.HandlerFunc
+}
+
+type ApiRoutes []ApiRoute
+
+type ApiMgr struct {
+	logger        *logging.Writer
+	objectMgr     *objects.ObjectMgr
+	dbHdl         *objects.DbHandler
+	apiVer        string
+	apiBase       string
+	apiBaseConfig string
+	apiBaseState  string
+	apiBaseAction string
+	basePath      string
+	fullPath      string
+	pRestRtr      *mux.Router
+	restRoutes    []ApiRoute
+	ApiCallStats  ApiCallStats
+}
+
+var gApiMgr *ApiMgr
+
+type ApiCallStats struct {
+	NumCreateCalls        int32
+	NumCreateCallsSuccess int32
+	NumDeleteCalls        int32
+	NumDeleteCallsSuccess int32
+	NumUpdateCalls        int32
+	NumUpdateCallsSuccess int32
+	NumGetCalls           int32
+	NumGetCallsSuccess    int32
+	NumActionCalls        int32
+	NumActionCallsSuccess int32
 }
 
 type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
 }
 
-type ConfdGlobals struct {
-	Name  string `json: "Name"`
-	Value string `json: "Value"`
+func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr) *ApiMgr {
+	var err error
+	mgr := new(ApiMgr)
+	mgr.logger = logger
+	mgr.dbHdl = dbHdl
+	mgr.objectMgr = objectMgr
+	mgr.apiVer = "v1"
+	mgr.apiBase = "/public/" + mgr.apiVer + "/"
+	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
+	mgr.apiBaseState = mgr.apiBase + "state" + "/"
+	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
+	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
+		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
+		return nil
+	}
+	mgr.basePath, _ = filepath.Split(mgr.fullPath)
+	gApiMgr = mgr
+	return mgr
 }
 
 //
 //  This method reads the model data and creates rest route interfaces.
 //
-func (mgr *ConfigMgr) InitializeRestRoutes() bool {
+func (mgr *ApiMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
 	for key, _ := range models.ConfigObjectMap {
-		objInfo := mgr.objHdlMap[key]
-		if objInfo.access == "w" || objInfo.access == "rw" {
+		objInfo := mgr.objectMgr.ObjHdlMap[key]
+		if objInfo.Access == "w" || objInfo.Access == "rw" {
 			rt = ApiRoute{key + "Create",
 				"POST",
 				mgr.apiBaseConfig + key,
@@ -110,7 +141,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 				HandleRestRouteBulkGetConfig,
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
-		} else if objInfo.access == "r" {
+		} else if objInfo.Access == "r" {
 			key = strings.TrimSuffix(key, "State")
 			rt = ApiRoute{key + "Show",
 				"GET",
@@ -130,7 +161,7 @@ func (mgr *ConfigMgr) InitializeRestRoutes() bool {
 				HandleRestRouteBulkGetState,
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
-		} else if objInfo.access == "x" {
+		} else if objInfo.Access == "x" {
 			rt = ApiRoute{key + "Action",
 				"POST",
 				mgr.apiBaseAction + key,
@@ -169,7 +200,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
-			logger.Printf("Unable to marshal ECDSA private key: %v", err)
+			gApiMgr.logger.Err(fmt.Sprintln("Unable to marshal ECDSA private key: %v", err))
 			return nil
 		}
 		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
@@ -184,7 +215,7 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 	validFor := 365 * 24 * time.Hour
 	priv, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		logger.Printf("failed to generate private key: %s\n", err)
+		gApiMgr.logger.Err(fmt.Sprintln("failed to generate private key: %s\n", err))
 		return err
 	}
 
@@ -195,7 +226,7 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		logger.Printf("failed to generate serial number: %s\n", err)
+		gApiMgr.logger.Err(fmt.Sprintln("failed to generate serial number: %s\n", err))
 		return err
 	}
 
@@ -224,13 +255,13 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
-		logger.Printf("Failed to create certificate: %s\n", err)
+		gApiMgr.logger.Err(fmt.Sprintln("Failed to create certificate: %s\n", err))
 		return err
 	}
 
 	certOut, err := os.Create(certPath)
 	if err != nil {
-		logger.Printf("failed to open "+certPath+" for writing: %s\n", err)
+		gApiMgr.logger.Err(fmt.Sprintln("failed to open "+certPath+" for writing: %s\n", err))
 		return err
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
@@ -238,7 +269,7 @@ func ConfigMgrGenerate(certPath string, keyPath string) error {
 
 	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		logger.Println("failed to open "+keyPath+" for writing:", err)
+		gApiMgr.logger.Err(fmt.Sprintln("failed to open "+keyPath+" for writing:", err))
 		return err
 	}
 	pem.Encode(keyOut, pemBlockForKey(priv))
@@ -547,10 +578,22 @@ func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func Logger(inner http.Handler, name string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		inner.ServeHTTP(w, r)
+		gApiMgr.logger.Info(fmt.Sprintln("%s\t%s\t%s\t%s\n",
+			r.Method,
+			r.RequestURI,
+			name,
+			time.Since(start)))
+	})
+}
+
 //
 //  This method creates new rest router interface
 //
-func (mgr *ConfigMgr) InstantiateRestRtr() *mux.Router {
+func (mgr *ApiMgr) InstantiateRestRtr() *mux.Router {
 	mgr.pRestRtr = mux.NewRouter().StrictSlash(true)
 	mgr.pRestRtr.PathPrefix("/api-docs/").Handler(http.StripPrefix("/api-docs/",
 		http.FileServer(http.Dir(mgr.fullPath+"/docsui"))))
@@ -563,74 +606,6 @@ func (mgr *ConfigMgr) InstantiateRestRtr() *mux.Router {
 	return mgr.pRestRtr
 }
 
-func (mgr *ConfigMgr) GetRestRtr() *mux.Router {
+func (mgr *ApiMgr) GetRestRtr() *mux.Router {
 	return mgr.pRestRtr
-}
-
-func (mgr *ConfigMgr) GetConfigHandlerPort(paramsDir string) (bool, string) {
-	var globals []ConfdGlobals
-	var port string
-
-	globalsFile := paramsDir + "/globals.json"
-	bytes, err := ioutil.ReadFile(globalsFile)
-	if err != nil {
-		logger.Println("Error in reading globals file", globalsFile)
-		return false, port
-	}
-
-	err = json.Unmarshal(bytes, &globals)
-	if err != nil {
-		logger.Println("Error in Unmarshalling Json")
-		return false, port
-	}
-	for _, global := range globals {
-		if global.Name == "httpport" {
-			port = global.Value
-			return true, port
-		}
-	}
-	return false, port
-}
-
-//
-// This function would work as a classical constructor for the
-// configMgr object
-//
-func NewConfigMgr(paramsDir string) *ConfigMgr {
-	var rc bool
-	mgr := new(ConfigMgr)
-	var err error
-	mgr.apiVer = "v1"
-	mgr.apiBase = "/public/" + mgr.apiVer + "/"
-	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
-	mgr.apiBaseState = mgr.apiBase + "state" + "/"
-	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
-	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
-		logger.Printf("ERROR: Unable to get absolute path for %s, error [%s]\n", paramsDir, err)
-		return nil
-	}
-	mgr.basePath, _ = filepath.Split(mgr.fullPath)
-
-	objectConfigFiles := [...]string{paramsDir + "/objectconfig.json",
-		paramsDir + "/genObjectConfig.json"}
-	paramsFile := paramsDir + "/clients.json"
-
-	rc = mgr.InitializeClientHandles(paramsFile)
-	if rc == false {
-		logger.Println("ERROR: Error in Initializing Client handles")
-		return nil
-	}
-
-	mgr.CreateObjectMap()
-	rc = mgr.InitializeObjectHandles(objectConfigFiles[:])
-	if rc == false {
-		logger.Println("ERROR: Error in Initializing Object handles")
-		return nil
-	}
-	mgr.InitializeRestRoutes()
-	mgr.InstantiateRestRtr()
-	mgr.InstantiateDbIf()
-	mgr.bringUpTime = time.Now()
-	logger.Println("Initialization Done!")
-	return mgr
 }

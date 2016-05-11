@@ -1,4 +1,4 @@
-package main
+package clients
 
 var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"asicd":      &ASICDClient{},
