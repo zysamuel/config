@@ -18,7 +18,6 @@ type ConfigMgr struct {
 	logger      *logging.Writer
 	dbHdl       *objects.DbHandler
 	bringUpTime time.Time
-	swVersion   string
 	users       []UserData
 	sessionId   uint64
 	sessionChan chan uint64
@@ -111,7 +110,6 @@ func GetSystemStatus() models.SystemStatusState {
 	} else {
 		systemStatus.Reason = "None"
 	}
-	systemStatus.SwVersion = gConfigMgr.swVersion
 	systemStatus.UpTime = time.Since(gConfigMgr.bringUpTime).String()
 	systemStatus.NumCreateCalls =
 		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumCreateCalls, gConfigMgr.ApiMgr.ApiCallStats.NumCreateCallsSuccess)
