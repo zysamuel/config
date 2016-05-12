@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"models"
 	"os"
+	"strings"
 	"time"
 	"utils/logging"
 )
@@ -18,12 +19,32 @@ type ConfigMgr struct {
 	logger      *logging.Writer
 	dbHdl       *objects.DbHandler
 	bringUpTime time.Time
+	swVersion   SwVersion
 	users       []UserData
 	sessionId   uint64
 	sessionChan chan uint64
 	ApiMgr      *apis.ApiMgr
 	clientMgr   *clients.ClientMgr
 	objectMgr   *objects.ObjectMgr
+}
+
+type Repo struct {
+	Name   string `json:Name`
+	Sha1   string `json:Sha1`
+	Branch string `json:Branch`
+	Time   string `json:Time`
+}
+
+type Version struct {
+	Major string `json:major`
+	Minor string `json:minor`
+	Patch string `json:patch`
+	Build string `json:build`
+}
+
+type SwVersion struct {
+	SwVersion string
+	Repos     []Repo
 }
 
 var gConfigMgr *ConfigMgr
@@ -68,7 +89,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.logger = logger
 
 	paramsFile := paramsDir + "/clients.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus)
+	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion)
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/objectconfig.json",
@@ -83,6 +104,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.bringUpTime = time.Now()
 	logger.Info("Initialization Done!")
 
+	go mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients()
 	go mgr.DiscoverSystemObjects()
 
@@ -130,6 +152,20 @@ func GetSystemStatus() models.SystemStatusState {
 		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
 	}
 	return systemStatus
+}
+
+func GetSystemSwVersion() models.SystemSwVersionState {
+	systemSwVersion := models.SystemSwVersionState{}
+	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
+	numRepos := len(gConfigMgr.swVersion.Repos)
+	systemSwVersion.Repos = make([]models.RepoInfo, numRepos)
+	for i := 0; i < numRepos; i++ {
+		systemSwVersion.Repos[i].Name = gConfigMgr.swVersion.Repos[i].Name
+		systemSwVersion.Repos[i].Sha1 = gConfigMgr.swVersion.Repos[i].Sha1
+		systemSwVersion.Repos[i].Branch = gConfigMgr.swVersion.Repos[i].Branch
+		systemSwVersion.Repos[i].Time = gConfigMgr.swVersion.Repos[i].Time
+	}
+	return systemSwVersion
 }
 
 func (mgr *ConfigMgr) DiscoverPorts() error {
@@ -186,5 +222,37 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 func (mgr *ConfigMgr) DiscoverSystemObjects() error {
 	mgr.logger.Info("Discover system objects")
 	mgr.DiscoverPorts()
+	return nil
+}
+
+func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
+	var version Version
+	infoDir := strings.TrimSuffix(paramsDir, "params/")
+	pkgInfoFile := infoDir + "pkgInfo.json"
+	bytes, err := ioutil.ReadFile(pkgInfoFile)
+	if err != nil {
+		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", pkgInfoFile))
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &version)
+	if err != nil {
+		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
+		return err
+	}
+	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
+
+	buildInfoFile := infoDir + "buildInfo.json"
+	bytes, err = ioutil.ReadFile(buildInfoFile)
+	if err != nil {
+		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", buildInfoFile))
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &mgr.swVersion.Repos)
+	if err != nil {
+		mgr.logger.Err("Error in Unmarshalling buildInfo Json")
+		return err
+	}
 	return nil
 }
