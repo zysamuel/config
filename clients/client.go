@@ -12,13 +12,15 @@ import (
 )
 
 type SystemStatusCB func() models.SystemStatusState
+type SystemSwVersionCB func() models.SystemSwVersionState
 
 type ClientMgr struct {
-	logger         *logging.Writer
-	Clients        map[string]ClientIf
-	reconncetTimer *time.Ticker
-	systemReady    bool
-	systemStatusCB SystemStatusCB
+	logger            *logging.Writer
+	Clients           map[string]ClientIf
+	reconncetTimer    *time.Ticker
+	systemReady       bool
+	systemStatusCB    SystemStatusCB
+	systemSwVersionCB SystemSwVersionCB
 }
 
 var gClientMgr *ClientMgr
@@ -41,10 +43,11 @@ type ClientIf interface {
 	GetServerName() string
 }
 
-func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB) *ClientMgr {
+func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB
+	mgr.systemSwVersionCB = systemSwVersionCB
 	if rc := mgr.InitializeClientHandles(paramsFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil

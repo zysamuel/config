@@ -95,6 +95,9 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) 
 	case models.SystemStatusState:
 		retObj = gClientMgr.systemStatusCB()
 		return nil, retObj
+	case models.SystemSwVersionState:
+		retObj = gClientMgr.systemSwVersionCB()
+		return nil, retObj
 	default:
 		break
 	}
