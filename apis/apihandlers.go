@@ -693,13 +693,14 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
-	var objKey string
+	var objKey,op string
 	var success bool
 	var err error
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gApiMgr.apiBaseConfig), "/")[0]
+	fmt.Println("url string: ", r.URL.String(), " resource : ", resource, " body ", r.Body)
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
 	objKey, err = gApiMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
@@ -712,6 +713,12 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
+		if !strings.Contains(string(body), "op:") {
+			op = "replace"
+		} else {
+			op = strings.SplitAfter(string(body), "op:")[0]
+		}
+		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
 		if gerr == nil {
@@ -739,7 +746,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
-				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gApiMgr.dbHdl.DBUtil)
+				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, op, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -780,7 +787,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
-	var objKey string
+	var objKey,op string
 	var success bool
 	var uuid string
 	var err error
@@ -790,6 +797,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
+		if !strings.Contains(string(body), "op:") {
+			op = "replace"
+		} else {
+			op = strings.SplitAfter(string(body), "op:")[0]
+		}
+		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		objKey = obj.GetKey()
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
@@ -826,7 +839,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, objKey, gApiMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, op, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
