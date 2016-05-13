@@ -24,13 +24,13 @@ func main() {
 		fmt.Println("Failed to start logger. Nothing will be logged ...")
 	}
 
-	configMgr := server.NewConfigMgr(*paramsDir, logger)
+	configMgr := server.NewConfigMgr(paramsDirName, logger)
 	if configMgr == nil {
 		logger.Err("Failed to initialize CONF Mgr. Exiting!!!")
 		return
 	}
 
-	foundConfPort, confPort := server.GetConfigHandlerPort(*paramsDir)
+	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
 	restRtr := configMgr.ApiMgr.GetRestRtr()
 
 	// Start keepalive routine
