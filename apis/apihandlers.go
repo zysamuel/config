@@ -693,7 +693,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
-	var objKey,op string
+	var objKey, op string
 	var success bool
 	var err error
 
@@ -713,10 +713,19 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
-		if !strings.Contains(string(body), "op:") {
+		if !strings.Contains(string(body), "\"op\":") {
 			op = "replace"
 		} else {
-			op = strings.SplitAfter(string(body), "op:")[0]
+			op = strings.SplitAfter(string(body), "\"op\":")[1]
+			fmt.Println("op = ", op)
+			op = strings.SplitAfter(op,",")[0]
+			fmt.Println("op = ", op)
+			op = strings.TrimSpace(op)
+			fmt.Println("op = ", op)
+			op = strings.TrimPrefix(op, "\"")
+			fmt.Println("op = ", op)
+			op = strings.TrimSuffix(op, "\",")
+			fmt.Println("op = ", op)
 		}
 		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		updateKeys, _ := objects.GetUpdateKeys(body)
@@ -747,6 +756,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, op, objKey, gApiMgr.dbHdl.DBUtil)
+				fmt.Println("Returned after update object call - err: ", err, " success = ", success)
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -787,7 +797,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var resp ConfigResponse
 	var errCode int
-	var objKey,op string
+	var objKey, op string
 	var success bool
 	var uuid string
 	var err error
@@ -797,10 +807,19 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(r.URL.String(), gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
-		if !strings.Contains(string(body), "op:") {
+		if !strings.Contains(string(body), "\"op\":") {
 			op = "replace"
 		} else {
-			op = strings.SplitAfter(string(body), "op:")[0]
+			op = strings.SplitAfter(string(body), "\"op\":")[1]
+			fmt.Println("op = ", op)
+			op = strings.SplitAfter(op,",")[0]
+			fmt.Println("op = ", op)
+			op = strings.TrimSpace(op)
+			fmt.Println("op = ", op)
+			op = strings.TrimPrefix(op, "\"")
+			fmt.Println("op = ", op)
+			op = strings.TrimSuffix(op, "\",")
+			fmt.Println("op = ", op)
 		}
 		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		objKey = obj.GetKey()
