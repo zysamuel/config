@@ -10,7 +10,9 @@ import (
 	"io/ioutil"
 	"models"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 	"utils/logging"
 )
@@ -107,6 +109,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	go mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients()
 	go mgr.DiscoverSystemObjects()
+	go mgr.SigHandler()
 
 	// These user management routines are not used right now.
 	//go mgr.CreateDefaultUser()
@@ -116,6 +119,24 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	gConfigMgr = mgr
 
 	return mgr
+}
+
+func (mgr *ConfigMgr) SigHandler() {
+	sigChan := make(chan os.Signal, 1)
+	signalList := []os.Signal{syscall.SIGHUP}
+	signal.Notify(sigChan, signalList...)
+
+	for {
+		select {
+		case signal := <-sigChan:
+			switch signal {
+			case syscall.SIGHUP:
+				mgr.logger.Info("Exting!!!")
+				os.Exit(0)
+			default:
+			}
+		}
+	}
 }
 
 func GetSystemStatus() models.SystemStatusState {
