@@ -1,7 +1,30 @@
-package main
+//
+//Copyright [2016] [SnapRoute Inc]
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//	 Unless required by applicable law or agreed to in writing, software
+//	 distributed under the License is distributed on an "AS IS" BASIS,
+//	 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	 See the License for the specific language governing permissions and
+//	 limitations under the License.
+//
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
+//                                                                                                           
+
+package server
 
 import (
-	//"fmt"
+	"fmt"
 	//"models"
 	"time"
 	//"utils/crypto/bcrypt"
@@ -87,7 +110,7 @@ func (mgr *ConfigMgr) CreateUser(userName string) (status bool) {
 	var userData UserData
 	_, _, found := mgr.GetUserByUserName(userName)
 	if found {
-		logger.Printf("User %s already exists\n", userName)
+		gConfigMgr.logger.Err(fmt.Sprintln("User %s already exists\n", userName))
 		return false
 	}
 	userData.userName = userName
@@ -100,7 +123,7 @@ func (mgr *ConfigMgr) DeleteUser(userName string) (status bool) {
 	var userData UserData
 	_, idx, found := mgr.GetUserByUserName(userName)
 	if found == false {
-		logger.Printf("User %s does not exists\n", userName)
+		gConfigMgr.logger.Err(fmt.Sprintln("User %s does not exists\n", userName))
 		return false
 	}
 	userData.userName = userName
@@ -110,17 +133,17 @@ func (mgr *ConfigMgr) DeleteUser(userName string) (status bool) {
 }
 
 func (mgr *ConfigMgr) StartUserSessionHandler() (status bool) {
-	logger.Println("Starting SessionHandler thread")
+	gConfigMgr.logger.Debug("Starting SessionHandler thread")
 	mgr.sessionChan = make(chan uint64, MAX_NUM_SESSIONS)
 	for {
 		select {
 		case sessionId := <-mgr.sessionChan:
-			logger.Println("SessionHandler - received sessionid ", sessionId)
+			gConfigMgr.logger.Info(fmt.Sprintln("SessionHandler - received sessionid ", sessionId))
 			_, idx, found := mgr.GetUserBySessionId(sessionId)
 			if found {
-				logger.Println("SessionHandler - starting session timer for ", sessionId)
-				gMgr.users[idx].sessionTimer = time.NewTimer(time.Second * SESSION_TIMEOUT)
-				go gMgr.users[idx].WaitOnSessionTimer()
+				gConfigMgr.logger.Debug(fmt.Sprintln("SessionHandler - starting session timer for ", sessionId))
+				gConfigMgr.users[idx].sessionTimer = time.NewTimer(time.Second * SESSION_TIMEOUT)
+				go gConfigMgr.users[idx].WaitOnSessionTimer()
 			}
 		}
 	}
@@ -147,7 +170,7 @@ func (mgr *ConfigMgr) GetUserByUserName(userName string) (user UserData, idx int
 
 func (user UserData) WaitOnSessionTimer() (err error) {
 	<-user.sessionTimer.C
-	logger.Printf("Session timeout for user %s session %d\n", user.userName, user.sessionId)
+	gConfigMgr.logger.Debug(fmt.Sprintln("Session timeout for user %s session %d\n", user.userName, user.sessionId))
 	LogoutUser(user.userName, user.sessionId)
 	return nil
 }
@@ -194,22 +217,22 @@ func LoginUser(userName, password string) (sessionId uint64, status bool) {
 }
 
 func LogoutUser(userName string, sessionId uint64) (status bool) {
-	user, idx, found := gMgr.GetUserByUserName(userName)
+	user, idx, found := gConfigMgr.GetUserByUserName(userName)
 	if found {
 		if user.sessionId != sessionId {
-			logger.Println("Logout: Failed due to session handle mismatch - ", sessionId, user.sessionId)
+			gConfigMgr.logger.Err(fmt.Sprintln("Logout: Failed due to session handle mismatch - ", sessionId, user.sessionId))
 			return false
 		}
-		gMgr.users[idx].sessionTimer.Stop()
-		gMgr.users[idx].sessionId = 0
+		gConfigMgr.users[idx].sessionTimer.Stop()
+		gConfigMgr.users[idx].sessionId = 0
 	}
 	return true
 }
 
 func AuthenticateSessionId(sessionId uint64) (status bool) {
-	_, idx, found := gMgr.GetUserBySessionId(sessionId)
+	_, idx, found := gConfigMgr.GetUserBySessionId(sessionId)
 	if found {
-		gMgr.users[idx].sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
+		gConfigMgr.users[idx].sessionTimer.Reset(time.Second * SESSION_TIMEOUT)
 		return true
 	}
 	return false
