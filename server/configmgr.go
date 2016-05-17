@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package server
 
@@ -129,8 +129,10 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.bringUpTime = time.Now()
 	logger.Info("Initialization Done!")
 
+	cltNameCh := make(chan string, 100)
 	go mgr.ReadSystemSwVersion(paramsDir)
-	go mgr.clientMgr.ConnectToAllClients()
+	go mgr.clientMgr.ConnectToAllClients(cltNameCh)
+	go mgr.InitalizeGlobalConfig(cltNameCh)
 	go mgr.DiscoverSystemObjects()
 	go mgr.SigHandler()
 
@@ -258,6 +260,44 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 	}
 	mgr.logger.Debug("Ports discovered")
 	return nil
+}
+
+func (mgr *ConfigMgr) InitalizeGlobalConfig(clientNameCh <-chan string) {
+	clientName := <-clientNameCh
+	if clientName == "Client_Init_Done" {
+		return
+	}
+	mgr.logger.Info("Do Global Init for Client:" + clientName)
+	for key, value := range mgr.objectMgr.ObjHdlMap {
+		if value.PerVRF == false {
+			continue
+		}
+		client := value.Owner
+		if client.GetServerName() != clientName {
+			continue
+		}
+		mgr.logger.Info(fmt.Sprintln("Object: ", key, "is global object"))
+		if objHdl, ok := models.ConfigObjectMap[key]; ok {
+			var body []byte // @dummy body for default objects
+			obj, _ := objHdl.UnmarshalObject(body)
+			_, err := objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
+			if err != nil {
+				err = obj.StoreObjectInDb(mgr.dbHdl)
+				if err != nil {
+					mgr.logger.Err(fmt.Sprintln("Failed to store global obj", key,
+						"in db, error:", err))
+				}
+			}
+			_, err = mgr.dbHdl.GetUUIDFromObjKey(obj.GetKey())
+			if err != nil {
+				_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(obj.GetKey())
+				if err != nil {
+					mgr.logger.Err(fmt.Sprintln("Failed to store uuid map for Port in DB ",
+						obj, err))
+				}
+			}
+		}
+	}
 }
 
 //
