@@ -762,17 +762,12 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			op = "replace"
 		} else {
 			op = strings.SplitAfter(string(body), "\"op\":")[1]
-			fmt.Println("op = ", op)
 			op = strings.SplitAfter(op,",")[0]
-			fmt.Println("op = ", op)
 			op = strings.TrimSpace(op)
-			fmt.Println("op = ", op)
 			op = strings.TrimPrefix(op, "\"")
-			fmt.Println("op = ", op)
 			op = strings.TrimSuffix(op, "\",")
 			fmt.Println("op = ", op)
 		}
-		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
 		if gerr == nil {
@@ -857,17 +852,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			op = "replace"
 		} else {
 			op = strings.SplitAfter(string(body), "\"op\":")[1]
-			fmt.Println("op = ", op)
 			op = strings.SplitAfter(op,",")[0]
-			fmt.Println("op = ", op)
 			op = strings.TrimSpace(op)
-			fmt.Println("op = ", op)
 			op = strings.TrimPrefix(op, "\"")
-			fmt.Println("op = ", op)
 			op = strings.TrimSuffix(op, "\",")
 			fmt.Println("op = ", op)
 		}
-		fmt.Println("body = ", body, " bodyStr ", string(body), " op: ", op)
 		objKey = obj.GetKey()
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
