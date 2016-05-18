@@ -46,19 +46,19 @@ var gObjectMgr *ObjectMgr
 //
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
-	Owner     string   `json:"Owner"`
-	Access    string   `json:"Access"`
-	Listeners []string `json:"Listeners"`
-	PerVRF    bool     `json:"perVRF"`
+	Owner      string   `json:"Owner"`
+	Access     string   `json:"Access"`
+	Listeners  []string `json:"Listeners"`
+	AutoCreate bool     `json:"autoCreate"`
 }
 
 //
 // This structure represents the in memory layout of all the config object handlers
 type ConfigObjInfo struct {
-	Owner     clients.ClientIf
-	Access    string
-	PerVRF    bool
-	Listeners []clients.ClientIf
+	Owner      clients.ClientIf
+	Access     string
+	AutoCreate bool
+	Listeners  []clients.ClientIf
 }
 
 const (
@@ -141,11 +141,11 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 
 		for k, v := range objMap {
 			mgr.logger.Info(fmt.Sprintf("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
-				v.Access, " Global Object ", v.PerVRF))
+				v.Access, " Auto Create ", v.AutoCreate))
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
-			entry.PerVRF = v.PerVRF
+			entry.AutoCreate = v.AutoCreate
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}

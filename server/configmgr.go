@@ -352,7 +352,6 @@ func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
-			//clientName := <-clientNameCh
 			if clientName == "Client_Init_Done" {
 				close(mgr.cltNameCh)
 				return
@@ -360,7 +359,7 @@ func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
 			mgr.logger.Info("Do Global Init for Client:" + clientName)
 			for key, value := range mgr.objectMgr.ObjHdlMap {
 				client := value.Owner
-				if value.PerVRF && client.GetServerName() == clientName {
+				if value.AutoCreate && client.GetServerName() == clientName {
 					mgr.ConfigureGlobalConfig(paramsDir, key, client)
 				}
 			}
