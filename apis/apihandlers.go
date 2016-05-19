@@ -844,10 +844,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	fmt.Println("urlStr ", urlStr, " r.URL.String() = ", r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
+		fmt.Println("body: ", body)
 		if !strings.Contains(string(body), "\"op\":") {
 			op = "replace"
 		} else {
