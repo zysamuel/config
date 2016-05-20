@@ -45,9 +45,6 @@ type ConfigMgr struct {
 	dbHdl       *objects.DbHandler
 	bringUpTime time.Time
 	swVersion   SwVersion
-	users       []UserData
-	sessionId   uint64
-	sessionChan chan uint64
 	ApiMgr      *apis.ApiMgr
 	clientMgr   *clients.ClientMgr
 	objectMgr   *objects.ObjectMgr
