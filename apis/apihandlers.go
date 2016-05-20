@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package apis
 
@@ -762,7 +762,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			op = "replace"
 		} else {
 			op = strings.SplitAfter(string(body), "\"op\":")[1]
-			op = strings.SplitAfter(op,",")[0]
+			op = strings.SplitAfter(op, ",")[0]
 			op = strings.TrimSpace(op)
 			op = strings.TrimPrefix(op, "\"")
 			op = strings.TrimSuffix(op, "\",")
@@ -852,7 +852,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			op = "replace"
 		} else {
 			op = strings.SplitAfter(string(body), "\"op\":")[1]
-			op = strings.SplitAfter(op,",")[0]
+			op = strings.SplitAfter(op, ",")[0]
 			op = strings.TrimSpace(op)
 			op = strings.TrimPrefix(op, "\"")
 			op = strings.TrimSuffix(op, "\",")

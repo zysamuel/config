@@ -82,7 +82,7 @@ func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj mo
 
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		err = errors.New("Failed to decode input json data")
+		fmt.Println("UnmarshalObject returnexd error", err, "for ojbect info", retobj)
 	}
 	return body, retobj, err
 }
