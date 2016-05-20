@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package main
 
@@ -52,29 +52,12 @@ func main() {
 		logger.Err("Failed to initialize CONF Mgr. Exiting!!!")
 		return
 	}
-
-	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
 	restRtr := configMgr.ApiMgr.GetRestRtr()
 
 	// Start keepalive routine
 	go keepalive.InitKeepAlive("confd", paramsDirName)
-	/*
-		// TODO: uncomment this section for https server
-		certFile := *paramsDir+"/cert.pem"
-		keyFile := *paramsDir+"/key.pem"
-		err = ConfigMgrCheck(certFile, keyFile)
-		if err != nil {
-			err = ConfigMgrGenerate(certFile, keyFile)
-			if err != nil {
-				syslogger.Info("### CONF Mgr Failed to generate certs")
-			}
-		}
-		if foundConfPort {
-			http.ListenAndServeTLS(":"+confPort, certFile, keyFile, restRtr)
-		} else
-			http.ListenAndServeTLS(":8080", certFile, keyFile, restRtr)
-		}
-	*/
+
+	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
 	if foundConfPort {
 		http.ListenAndServe(":"+confPort, restRtr)
 	} else {
