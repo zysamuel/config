@@ -21,7 +21,8 @@ Implementation
 ==============
 ConfigMgr runs as confd daemon. main() function initializes logging level for confd and then initializes server sub-package by calling NewConfigMgr method. 
 
-.. code-block::go
+::
+
     configMgr := server.NewConfigMgr(paramsDirName, logger)
 
 paramsDirName is the path where json configuration files are present. logger is the logging handles that was returned when NewLogger() function was invoked to initialize logging.
@@ -32,7 +33,8 @@ Server Sub-Package
 
 Server sub-package operates on ConfigMgr object -
 
-.. code-block::go
+::
+
     ConfigMgr struct {
           logger      *logging.Writer       // Logger handle
           dbHdl       *objects.DbHandler    // Handle for DB operations
@@ -49,27 +51,32 @@ ConfigMgr object is initialized in NewConfigMgr function.
 
 Other functions implemented in server sub-package are -
 
-.. code-block::go
+::
+
     func GetSystemStatus() models.SystemStatusState
 
 This function handles SystemStatus Get call.
 
-.. code-block::go
+::
+
     func GetSystemSwVersion() models.SystemSwVersionState
 
 This function handles SystemSwVersion Get call.
 
-.. code-block::go
+::
+
     func (mgr *ConfigMgr) SigHandler()
 
 This function waits for OS signal. Right now, if SIGHUP is received then confd daemon is brought down.
 
-.. code-block::go
+::
+
     func (mgr *ConfigMgr) DiscoverPorts() error
 
 This function queries asicd to get all the ports present. Then it stores the Port objects in DB that can be updated by calling Port API. When ConfigMgr comes up and connects to asicd, this function is called.
 
-.. code-block::go
+::
+
     func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string)
 
 This function initializes global configuration objects of all modules and stores in DB with default values set. Global config objects can only be updated.
@@ -79,7 +86,8 @@ Clients Sub-Package
 
 Clients sub-package operates on ClientMgr object -
 
-.. code-block::go
+::
+
     type ClientMgr struct {
         logger            *logging.Writer       // Logger handle
         Clients           map[string]ClientIf   // Handles for all backend servers
@@ -91,7 +99,8 @@ Clients sub-package operates on ClientMgr object -
 
 Any backend server that wants to connect to ConfigMgr should implement ClientIf interface.
 
-.. code-block::go
+::
+
     type ClientIf interface {
         Initialize(name string, address string)
         ConnectToServer() bool
@@ -112,7 +121,8 @@ Apis Sub-Package
 
 Apis sub-package initializes the REST routes for APIs supported on all the objects and serves all REST API requests. It operates on ApiMgr object -
 
-.. code-block::go
+::
+
     type ApiMgr struct {
         logger        *logging.Writer      // Logger handle
         objectMgr     *objects.ObjectMgr   // Handle to objects sub-package manager
@@ -137,7 +147,8 @@ Objects Sub-Package
 
 Objects sub-package initializes objects for which REST APIs are supported. It operates on ObjectMgr object.
 
-.. code-block::go
+::
+
     type ObjectMgr struct {
         logger    *logging.Writer            // Logger handle
         ObjHdlMap map[string]ConfigObjInfo   // All the objects
