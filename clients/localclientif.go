@@ -13,19 +13,18 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package clients
 
 import (
 	"models"
-	//"utils/crypto/bcrypt"
 	"utils/dbutils"
 )
 
@@ -49,36 +48,10 @@ func (clnt *LocalClient) GetServerName() string {
 
 func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
 	var err error
-	switch obj.(type) {
-	case models.User:
-		//data := obj.(models.User)
-		// Hashing the password with the default cost of 10
-		//hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-		// Create user in configmgr's users table
-		//if ok := gMgr.CreateUser(data.UserName); ok {
-		// Store the encrypted password in DB
-		//data.Password = string(hashedPassword)
-		//err = data.StoreObjectInDb(dbHdl)
-		//}
-		break
-	default:
-		break
-	}
 	return err, true
 }
 
 func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
-	switch obj.(type) {
-	case models.User:
-		//data := obj.(models.User)
-		// Delete user from configmgr's users table
-		//if ok := gMgr.DeleteUser(data.UserName); ok {
-		//	data.DeleteObjectFromDb(dbHdl)
-		//}
-		break
-	default:
-		break
-	}
 	return nil, true
 }
 
@@ -87,34 +60,16 @@ func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUt
 	nextMarker int64,
 	more bool,
 	objs []models.ConfigObj) {
-	switch obj.(type) {
-	case models.UserState:
-		break
-	default:
-		break
-	}
 	return nil, objCount, nextMarker, more, objs
 }
 
 func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op string, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
-	ok := false
-	switch obj.(type) {
-	case models.User:
-		//origdata := dbObj.(models.User)
-		//updatedata := obj.(models.User)
-		//updatedata.UpdateObjectInDb(dbObj, attrSet, dbHdl)
-		break
-	default:
-		break
-	}
-	return nil, ok
+	return nil, true
 }
 
 func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj) {
 	var retObj models.ConfigObj
 	switch obj.(type) {
-	case models.UserState:
-		break
 	case models.SystemStatusState:
 		retObj = gClientMgr.systemStatusCB()
 		return nil, retObj
