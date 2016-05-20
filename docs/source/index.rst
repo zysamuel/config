@@ -28,7 +28,7 @@ paramsDirName is the path where json configuration files are present. logger is 
 main() function initializes KeepAlive sub-module for confd. KeepAlive runs as a go routine which periodically sends out keepalive message to system daemon. After server sub-package initialization is done, main function gets the http port and REST routes to serve and waits for http request for REST APIs by calling ListenAndServe method from http package.
 
 Server Sub-Package
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Server sub-package operates on ConfigMgr object -
 
@@ -75,7 +75,7 @@ This function queries asicd to get all the ports present. Then it stores the Por
 This function initializes global configuration objects of all modules and stores in DB with default values set. Global config objects can only be updated.
 
 Clients Sub-Package
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 Clients sub-package operates on ClientMgr object -
 
@@ -108,7 +108,7 @@ Any backend server that wants to connect to ConfigMgr should implement ClientIf 
 All these interface methods can be auto generated using codegen tools described in reltools repository.
 
 Apis Sub-Package
-----------------
+^^^^^^^^^^^^^^^^
 
 Apis sub-package initializes the REST routes for APIs supported on all the objects and serves all REST API requests. It operates on ApiMgr object -
 
@@ -133,7 +133,7 @@ Every object model should define which element(s) is(are) key by adding a KEY ta
 When a Create call is made for a configuration object, response includes an object identifier. That object identifier can be used to make Delete, Update, or Get calls without providing key element(s).
 
 Objects Sub-Package
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 Objects sub-package initializes objects for which REST APIs are supported. It operates on ObjectMgr object.
 
