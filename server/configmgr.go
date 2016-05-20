@@ -80,6 +80,7 @@ type SwitchCfgJson struct {
 	Version     string `json:"Version"`
 	MgmtIp      string `json:"MgmtIp"`
 	Description string `json:"Description"`
+	Vrf         string `json:"Vrf"`
 }
 
 var gConfigMgr *ConfigMgr
@@ -272,8 +273,8 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 	return nil
 }
 
-func (mgr *ConfigMgr) ConstructSystemParams(paramsDir string) []byte { //, data *models.SystemParams) {
-	sysInfo := &models.SystemParams{}
+func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
+	sysInfo := &models.SystemParam{}
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
@@ -292,6 +293,7 @@ func (mgr *ConfigMgr) ConstructSystemParams(paramsDir string) []byte { //, data 
 	sysInfo.Version = cfg.Version
 	sysInfo.Description = cfg.Description
 	sysInfo.Hostname = cfg.Hostname
+	sysInfo.Vrf = cfg.Vrf
 	rbyte, err := json.Marshal(sysInfo)
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error marshalling system info, err:", err))
@@ -305,13 +307,15 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 		var body []byte // @dummy body for default objects
 		obj, _ := objHdl.UnmarshalObject(body)
 		_, err := objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
+		// @TODO: AVOY/HARI we need to fix default value for key... today we do not support default value for
+		//keys
 		if err != nil {
 			var success bool
 			// If no object found then we need to call daemons with default parameters...
 			// SystemParam is unique case where we will use SystemProfile.json to parse the
 			// information
-			if key == "SystemParams" {
-				sysBody := mgr.ConstructSystemParams(paramsDir) //, &data)
+			if key == "SystemParam" {
+				sysBody := mgr.ConstructSystemParam(paramsDir)
 				sysObj, _ := objHdl.UnmarshalObject(sysBody)
 				err, success = client.CreateObject(sysObj, mgr.dbHdl.DBUtil)
 				if err == nil && success == true {
