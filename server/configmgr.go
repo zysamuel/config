@@ -137,18 +137,11 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.bringUpTime = time.Now()
 	logger.Info("Initialization Done!")
 
-	mgr.cltNameCh = make(chan string, 100)
 	go mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.InitalizeGlobalConfig(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
 	go mgr.DiscoverSystemObjects()
 	go mgr.SigHandler()
-
-	// These user management routines are not used right now.
-	//go mgr.CreateDefaultUser()
-	//go mgr.ReadConfiguredUsersFromDb()
-	//go mgr.StartUserSessionHandler()
-
 	gConfigMgr = mgr
 
 	return mgr
@@ -349,7 +342,7 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 }
 
 func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
-
+	mgr.cltNameCh = make(chan string, 100)
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
