@@ -11,7 +11,7 @@ ConfigMgr has four sub-packages - server, clients, apis, and objects.
 
 Sub-Packages
 ^^^^^^^^^^^^
-.. image:: ConfigMg.png
+.. image:: ConfigMgr.png
 
 Server package is responsible for initializing ConfigMgr and other sub-packages. It also serves API calls for SystemStatus and SystemSwVersion objects.
 Clients package is responsible for establishing thrift connections to all backend servers. It keeps on retrying for ever If connection to backend server can not be established.
