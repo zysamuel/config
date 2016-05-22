@@ -35,9 +35,6 @@
 	{"Name":"lldpd",
 	 "Port":10011},
 	
-	{"Name":"vxland",
-	 "Port":10012},
-	
 	{"Name":"dhcpd",
 	 "Port":10013},
 
