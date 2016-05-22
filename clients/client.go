@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package clients
 
@@ -60,7 +60,7 @@ type ClientIf interface {
 	CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
 	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
 	GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []models.ConfigObj)
-	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
+	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op string, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
 	GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj)
 	ExecuteAction(obj models.ConfigObj) error
 	GetServerName() string
@@ -111,7 +111,7 @@ func (mgr *ClientMgr) InitializeClientHandles(paramsFile string) bool {
 //
 //  This method connects to all the config daemon's clients
 //
-func (mgr *ClientMgr) ConnectToAllClients() bool {
+func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
 	unconnectedClients := make([]string, 0)
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
@@ -122,6 +122,10 @@ func (mgr *ClientMgr) ConnectToAllClients() bool {
 			unconnectedClients = append(unconnectedClients, clntName)
 			//unconnectedClients[idx] = clntName
 			idx++
+		} else {
+			// connected to one client... now lets do global init for that client
+			//mgr.InitializeGlobalConfig(clntName)
+			clntNameCh <- clntName
 		}
 	}
 	waitCount := 0
@@ -137,6 +141,7 @@ func (mgr *ClientMgr) ConnectToAllClients() bool {
 				}
 				if len(unconnectedClients) > i {
 					if mgr.Clients[unconnectedClients[i]].IsConnectedToServer() {
+						clntNameCh <- unconnectedClients[i]
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
 						mgr.Clients[unconnectedClients[i]].ConnectToServer()
@@ -152,6 +157,7 @@ func (mgr *ClientMgr) ConnectToAllClients() bool {
 	}
 	mgr.logger.Info("Connected to all clients")
 	mgr.systemReady = true
+	clntNameCh <- "Client_Init_Done"
 	return true
 }
 

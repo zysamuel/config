@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package objects
 
@@ -46,17 +46,19 @@ var gObjectMgr *ObjectMgr
 //
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
-	Owner     string   `json:"Owner"`
-	Access    string   `json: "Access"`
-	Listeners []string `json:"Listeners"`
+	Owner      string   `json:"Owner"`
+	Access     string   `json:"Access"`
+	Listeners  []string `json:"Listeners"`
+	AutoCreate bool     `json:"autoCreate"`
 }
 
 //
 // This structure represents the in memory layout of all the config object handlers
 type ConfigObjInfo struct {
-	Owner     clients.ClientIf
-	Access    string
-	Listeners []clients.ClientIf
+	Owner      clients.ClientIf
+	Access     string
+	AutoCreate bool
+	Listeners  []clients.ClientIf
 }
 
 const (
@@ -80,7 +82,7 @@ func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj mo
 
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		err = errors.New("Failed to decode input json data")
+		fmt.Println("UnmarshalObject returnexd error", err, "for ojbect info", retobj)
 	}
 	return body, retobj, err
 }
@@ -138,10 +140,12 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Info(fmt.Sprintf("For Object [ %s ] Primary owner is [ %s ] access is %s\n", k, v.Owner, v.Access))
+			mgr.logger.Info(fmt.Sprintf("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+				v.Access, " Auto Create ", v.AutoCreate))
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
+			entry.AutoCreate = v.AutoCreate
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
