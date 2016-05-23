@@ -844,22 +844,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
-	fmt.Println("urlStr ", urlStr, " r.URL.String() = ", r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
 		fmt.Println("body: ", body)
-		if !strings.Contains(string(body), "\"op\":") {
-			op = "replace"
-		} else {
-			op = strings.SplitAfter(string(body), "\"op\":")[1]
-			op = strings.SplitAfter(op, ",")[0]
-			op = strings.TrimSpace(op)
-			op = strings.TrimPrefix(op, "\"")
-			op = strings.TrimSuffix(op, "\",")
-			fmt.Println("op = ", op)
-		}
+		fmt.Println("obj = ",obj)
 		objKey = obj.GetKey()
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
@@ -868,10 +858,62 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			resp.Error = SRErrString(SRNotFound)
 			js, _ := json.Marshal(resp)
 			w.Write(js)
-			return
 		}
 		uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(objKey)
 		resp.UUId = uuid
+		fmt.Println("body: ", string(body))
+		if strings.Contains(string(body), "\"patch\":") {
+			fmt.Println("this is a patch update")
+			patches := strings.SplitAfter(string(body), "\"patch\":")[1]
+			fmt.Println("patches = ", patches)
+			patches = strings.TrimSuffix(patches, "}")
+			patchStr, err := objects.GetPatch([]byte (patches))
+			if err != nil {
+				fmt.Println("error unmarshaling patches:",err)
+				return
+			}
+			fmt.Println("patches =" , patchStr, "len(patchStr) = ", len(patchStr))
+			patchOpInfoSlice := make([]models.PatchOpInfo,0)
+			for _,ops := range patchStr {
+				opStr,err := objects.GetOp(ops)
+			    if err != nil {
+				    fmt.Println("error unmarshaling op:",err)
+				    return
+			    }
+				fmt.Println("patch op = ", opStr)
+				pathStr,err := objects.GetPath(ops)
+			    if err != nil {
+				    fmt.Println("error unmarshaling path:",err)
+				    return
+			    }
+				fmt.Println("path = ", pathStr)
+				patchObj,err := objects.GetValue(ops,objHdl)
+			    if err != nil {
+				    fmt.Println("error unmarshaling path:",err)
+				    return
+			    }
+				fmt.Println("value = ", patchObj)
+				patchOpInfo := models.PatchOpInfo{opStr, pathStr, patchObj}
+				patchOpInfoSlice = append(patchOpInfoSlice,patchOpInfo)
+			}
+			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
+			if resourceOwner.IsConnectedToServer() == false {
+				errString := "Confd not connected to " + resourceOwner.GetServerName()
+				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				return
+			}
+			err, success = resourceOwner.UpdateObject(dbObj, dbObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			if err == nil && success == true {
+				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
+				w.WriteHeader(http.StatusOK)
+				errCode = SRSuccess
+			} else {
+				resp.Error = err.Error()
+				errCode = SRServerError
+				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
+			}
+			return
+		} 
 		diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 		anyUpdated := false
 		for _, updated := range diff {
@@ -887,6 +929,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			w.Write(js)
 			return
 		}
+	
 		mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 		mergedObjKey := mergedObj.GetKey()
 		if objKey == mergedObjKey {
