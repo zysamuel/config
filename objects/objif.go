@@ -33,6 +33,7 @@ import (
 	"models"
 	"net/http"
 	"utils/logging"
+	"strings"
 )
 
 type ObjectMgr struct {
@@ -40,6 +41,11 @@ type ObjectMgr struct {
 	ObjHdlMap map[string]ConfigObjInfo
 	clientMgr *clients.ClientMgr
 }
+
+type PatchOp map[string]*json.RawMessage
+
+// Patch is an ordered collection of patch-ops.
+type Patch []PatchOp
 
 var gObjectMgr *ObjectMgr
 
@@ -108,7 +114,56 @@ func CreateObjectMap() {
 		models.ConfigObjectMap[objName] = obj
 	}
 }
-
+func GetValue(op PatchOp, obj models.ConfigObj) (valueStr interface{}, err error ) {
+	value, ok := op["value"]
+	if !ok {
+		fmt.Println("No value")
+		return valueStr, errors.New("Unknown")
+	}
+	//valueStr,err = obj.UnmarshalObject(*value)
+	fmt.Println("value: ", string(*value))
+	err = json.Unmarshal(*value,&valueStr)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling patches:",err)
+		return valueStr, err
+	}
+    return valueStr, err
+}
+func GetPatch(patches []byte) (patch Patch, err error ) {
+	err = json.Unmarshal(patches, &patch)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling patches:",err)
+		return patch, err
+	}
+    return patch, err
+}
+func GetPath(op PatchOp) (pathStr string, err error ) {
+	path, ok := op["path"]
+	if !ok {
+		fmt.Println("No path")
+		return pathStr, errors.New("Unknown")
+	}
+	err = json.Unmarshal(*path, &pathStr)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling path:",err)
+		return pathStr, err
+	}
+	pathStr = strings.Split(pathStr, "/")[1]
+    return pathStr, err
+}
+func GetOp(patchOp PatchOp) (opStr string, err error ) {
+	op, ok := patchOp["op"]
+	if !ok {
+		fmt.Println("No op")
+		return opStr, errors.New("Unknown")
+	}
+	err = json.Unmarshal(*op, &opStr)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling patches:",err)
+		return opStr, err
+	}
+    return opStr, err
+}
 func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
 	mgr.logger = logger
