@@ -140,7 +140,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Info(fmt.Sprintf("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
 				v.Access, " Auto Create ", v.AutoCreate))
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]

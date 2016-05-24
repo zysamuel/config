@@ -135,20 +135,18 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.ApiMgr.InstantiateRestRtr()
 
 	mgr.bringUpTime = time.Now()
+	// Initialize channel to receive connected client name.
+	// When confd connects to a client, it creates global objects owned by that client and
+	// stores default logging level in DB, if it does not exist.
+	// Global objects and logging objects can only be updated by user.
+	mgr.cltNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
-	mgr.cltNameCh = make(chan string, 100)
 	go mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.InitalizeGlobalConfig(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
 	go mgr.DiscoverSystemObjects()
 	go mgr.SigHandler()
-
-	// These user management routines are not used right now.
-	//go mgr.CreateDefaultUser()
-	//go mgr.ReadConfiguredUsersFromDb()
-	//go mgr.StartUserSessionHandler()
-
 	gConfigMgr = mgr
 
 	return mgr
@@ -299,11 +297,13 @@ func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
 }
 
 func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client clients.ClientIf) {
+	var obj models.ConfigObj
+	var err error
 	mgr.logger.Info(fmt.Sprintln("Object: ", key, "is global object"))
 	if objHdl, ok := models.ConfigObjectMap[key]; ok {
 		var body []byte // @dummy body for default objects
-		obj, _ := objHdl.UnmarshalObject(body)
-		_, err := objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
+		obj, _ = objHdl.UnmarshalObject(body)
+		_, err = objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
 		// @TODO: AVOY/HARI we need to fix default value for key... today we do not support default value for
 		//keys
 		if err != nil {
@@ -348,8 +348,41 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 	}
 }
 
-func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
+func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
+	var data models.ComponentLogging
+	var modName string
+	var err error
 
+	// Client name for confd is configured as "local" in json file.
+	if compName == "local" {
+		modName = "confd"
+	} else {
+		modName = compName
+	}
+
+	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
+	if objHdl, ok := models.ConfigObjectMap["ComponentLogging"]; ok {
+		var body []byte // @dummy body for default objects
+		obj, _ := objHdl.UnmarshalObject(body)
+		data = obj.(models.ComponentLogging)
+		data.Module = modName
+		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
+	}
+	if err != nil {
+		// ComponentLogging is not created in DB. Create with dsefault logging level and store in DB
+		err = mgr.dbHdl.StoreObjectInDb(data)
+		if err == nil {
+			_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(data.GetKey())
+			if err != nil {
+				mgr.logger.Err(fmt.Sprintln(
+					"Failed to store uuid map for ComponentLogging in DB ",
+					data, err))
+			}
+		}
+	}
+}
+
+func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
@@ -364,6 +397,7 @@ func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
 					mgr.ConfigureGlobalConfig(paramsDir, key, client)
 				}
 			}
+			mgr.ConfigureComponentLoggingLevel(clientName)
 		}
 	}
 }
