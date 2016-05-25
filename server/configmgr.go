@@ -143,9 +143,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	logger.Info("Initialization Done!")
 
 	go mgr.ReadSystemSwVersion(paramsDir)
-	go mgr.InitalizeGlobalConfig(paramsDir)
+	go mgr.AutoCreateConfigObjects(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
-	go mgr.DiscoverSystemObjects()
 	go mgr.SigHandler()
 	gConfigMgr = mgr
 
@@ -222,20 +221,6 @@ func GetSystemSwVersion() models.SystemSwVersionState {
 
 func (mgr *ConfigMgr) DiscoverPorts() error {
 	mgr.logger.Debug("Discovering ports")
-	asicdConnectionCheckTimer := time.NewTicker(time.Millisecond * 1000)
-	i := 0
-	for t := range asicdConnectionCheckTimer.C {
-		_ = t
-		if mgr.clientMgr.IsConnectedClient("asicd") {
-			asicdConnectionCheckTimer.Stop()
-			break
-		} else {
-			if i%100 == 0 {
-				mgr.logger.Info("Not connected to asicd yet to get all ports")
-			}
-		}
-		i++
-	}
 	// Get ports present on this system and store in DB for user to update port parameters
 	resource := "Port"
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
@@ -382,13 +367,17 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 	}
 }
 
-func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
+func (mgr *ConfigMgr) AutoCreateConfigObjects(paramsDir string) {
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
 			if clientName == "Client_Init_Done" {
 				close(mgr.cltNameCh)
 				return
+			}
+			mgr.ConfigureComponentLoggingLevel(clientName)
+			if clientName == "asicd" {
+				mgr.DiscoverPorts()
 			}
 			mgr.logger.Info("Do Global Init for Client:" + clientName)
 			for key, value := range mgr.objectMgr.ObjHdlMap {
@@ -397,18 +386,8 @@ func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
 					mgr.ConfigureGlobalConfig(paramsDir, key, client)
 				}
 			}
-			mgr.ConfigureComponentLoggingLevel(clientName)
 		}
 	}
-}
-
-//
-// This method is to get system objects and store in DB
-//
-func (mgr *ConfigMgr) DiscoverSystemObjects() error {
-	mgr.logger.Info("Discover system objects")
-	mgr.DiscoverPorts()
-	return nil
 }
 
 func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
