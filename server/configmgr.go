@@ -72,7 +72,6 @@ type SwVersion struct {
 
 type SwitchCfgJson struct {
 	SwitchMac   string `json:"SwitchMac"`
-	RouterId    string `json:"RouterId"`
 	Hostname    string `json:"HostName"`
 	Version     string `json:"Version"`
 	MgmtIp      string `json:"MgmtIp"`
@@ -283,7 +282,6 @@ func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
 		return nil
 	}
 	sysInfo.SwitchMac = cfg.SwitchMac
-	sysInfo.RouterId = cfg.RouterId
 	sysInfo.MgmtIp = cfg.MgmtIp
 	sysInfo.Version = cfg.Version
 	sysInfo.Description = cfg.Description
