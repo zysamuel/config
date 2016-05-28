@@ -807,6 +807,11 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			mergedObj,diff,err := obj.MergeDbAndConfigObjForPatchUpdate(dbObj,patchOpInfoSlice)
+			if err != nil {
+				fmt.Println("err when merging ", err)
+				return
+			}
 			err, success = resourceOwner.UpdateObject(dbObj, dbObj, make([]bool, ((reflect.TypeOf(obj)).NumField())), patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
