@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"reflect"
 	//"utils/dbutils"
 	//"net/url"
 	//"path"
@@ -741,7 +742,6 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	var err error
-	var diff []bool = make([]bool,0)
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
@@ -787,13 +787,18 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				    return
 			    }
 				fmt.Println("path = ", pathStr)
-				patchObj,err := objects.GetValue(ops,objHdl)
+/*				patchObj,err := objects.GetValue(ops,objHdl)
 			    if err != nil {
 				    fmt.Println("error unmarshaling path:",err)
 				    return
 			    }
-				fmt.Println("value = ", patchObj)
-				patchOpInfo := models.PatchOpInfo{opStr, pathStr, patchObj}
+				fmt.Println("value = ", patchObj)*/
+	             value, ok := ops["value"]
+	             if !ok {
+		            fmt.Println("No value")
+		            return 
+	             }
+				patchOpInfo := models.PatchOpInfo{opStr, pathStr, string(*value)}
 				patchOpInfoSlice = append(patchOpInfoSlice,patchOpInfo)
 			}
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
@@ -802,7 +807,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, dbObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.UpdateObject(dbObj, dbObj, make([]bool, ((reflect.TypeOf(obj)).NumField())), patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -814,7 +819,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		} 
-			diff, _ = obj.CompareObjectsAndDiff(updateKeys, dbObj)
+			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 			anyUpdated := false
 			for _, updated := range diff {
 				if updated == true {
@@ -884,7 +889,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var uuid string
 	var err error
-	var diff []bool = make([]bool,0)
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
@@ -909,6 +913,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("body: ", string(body))
 		if strings.Contains(string(body), "\"patch\":") {
 			fmt.Println("this is a patch update")
+			diff := make([]bool, ((reflect.TypeOf(obj)).NumField()))
 			patches := strings.SplitAfter(string(body), "\"patch\":")[1]
 			fmt.Println("patches = ", patches)
 			patches = strings.TrimSuffix(patches, "}")
@@ -931,13 +936,12 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				    return
 			    }
 				fmt.Println("path = ", pathStr)
-				patchObj,err := objects.GetValue(ops,objHdl)
-			    if err != nil {
-				    fmt.Println("error unmarshaling path:",err)
-				    return
-			    }
-				fmt.Println("value = ", patchObj)
-				patchOpInfo := models.PatchOpInfo{opStr, pathStr, patchObj}
+	             value, ok := ops["value"]
+	             if !ok {
+		            fmt.Println("No value")
+		            return 
+	             }
+				patchOpInfo := models.PatchOpInfo{opStr, pathStr, string(*value)}
 				patchOpInfoSlice = append(patchOpInfoSlice,patchOpInfo)
 			}
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
@@ -946,7 +950,13 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, dbObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			mergedObj,diff,err := obj.MergeDbAndConfigObjForPatchUpdate(dbObj,patchOpInfoSlice)
+			if err != nil {
+				fmt.Println("err when merging ", err)
+				return
+			}
+			fmt.Println("mergedObj = ", mergedObj)
+			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -958,7 +968,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		} 
-		diff, _ = obj.CompareObjectsAndDiff(updateKeys, dbObj)
+		diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
 		anyUpdated := false
 		for _, updated := range diff {
 			if updated == true {

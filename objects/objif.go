@@ -114,20 +114,20 @@ func CreateObjectMap() {
 		models.ConfigObjectMap[objName] = obj
 	}
 }
-func GetValue(op PatchOp, obj models.ConfigObj) (valueStr interface{}, err error ) {
+func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error ) {
 	value, ok := op["value"]
 	if !ok {
 		fmt.Println("No value")
-		return valueStr, errors.New("Unknown")
+		return nil, errors.New("Unknown")
 	}
 	//valueStr,err = obj.UnmarshalObject(*value)
 	fmt.Println("value: ", string(*value))
-	err = json.Unmarshal(*value,&valueStr)
+	err = json.Unmarshal([]byte (*value),&valueObj)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:",err)
-		return valueStr, err
+		fmt.Sprintln("error unmarshaling value:",err)
+		return nil, err
 	}
-    return valueStr, err
+    return valueObj, err
 }
 func GetPatch(patches []byte) (patch Patch, err error ) {
 	err = json.Unmarshal(patches, &patch)
