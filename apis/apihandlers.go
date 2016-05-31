@@ -812,7 +812,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("err when merging ", err)
 				return
 			}
-			err, success = resourceOwner.UpdateObject(dbObj, dbObj, make([]bool, ((reflect.TypeOf(obj)).NumField())), patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
