@@ -764,35 +764,24 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		if gerr == nil {
 		patchOpInfoSlice := make([]models.PatchOpInfo,0)
 		if strings.Contains(string(body), "\"patch\":") {
-			fmt.Println("this is a patch update")
 			patches := strings.SplitAfter(string(body), "\"patch\":")[1]
-			fmt.Println("patches = ", patches)
 			patches = strings.TrimSuffix(patches, "}")
 			patchStr, err := objects.GetPatch([]byte (patches))
 			if err != nil {
 				fmt.Println("error unmarshaling patches:",err)
 				return
 			}
-			fmt.Println("patches =" , patchStr, "len(patchStr) = ", len(patchStr))
 			for _,ops := range patchStr {
 				opStr,err := objects.GetOp(ops)
 			    if err != nil {
 				    fmt.Println("error unmarshaling op:",err)
 				    return
 			    }
-				fmt.Println("patch op = ", opStr)
 				pathStr,err := objects.GetPath(ops)
 			    if err != nil {
 				    fmt.Println("error unmarshaling path:",err)
 				    return
 			    }
-				fmt.Println("path = ", pathStr)
-/*				patchObj,err := objects.GetValue(ops,objHdl)
-			    if err != nil {
-				    fmt.Println("error unmarshaling path:",err)
-				    return
-			    }
-				fmt.Println("value = ", patchObj)*/
 	             value, ok := ops["value"]
 	             if !ok {
 		            fmt.Println("No value")
@@ -901,8 +890,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
-		fmt.Println("body: ", body)
-		fmt.Println("obj = ",obj)
 		objKey = obj.GetKey()
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
@@ -915,32 +902,26 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(objKey)
 		resp.UUId = uuid
 		patchOpInfoSlice := make([]models.PatchOpInfo,0)
-		fmt.Println("body: ", string(body))
 		if strings.Contains(string(body), "\"patch\":") {
-			fmt.Println("this is a patch update")
 			diff := make([]bool, ((reflect.TypeOf(obj)).NumField()))
 			patches := strings.SplitAfter(string(body), "\"patch\":")[1]
-			fmt.Println("patches = ", patches)
 			patches = strings.TrimSuffix(patches, "}")
 			patchStr, err := objects.GetPatch([]byte (patches))
 			if err != nil {
 				fmt.Println("error unmarshaling patches:",err)
 				return
 			}
-			fmt.Println("patches =" , patchStr, "len(patchStr) = ", len(patchStr))
 			for _,ops := range patchStr {
 				opStr,err := objects.GetOp(ops)
 			    if err != nil {
 				    fmt.Println("error unmarshaling op:",err)
 				    return
 			    }
-				fmt.Println("patch op = ", opStr)
 				pathStr,err := objects.GetPath(ops)
 			    if err != nil {
 				    fmt.Println("error unmarshaling path:",err)
 				    return
 			    }
-				fmt.Println("path = ", pathStr)
 	             value, ok := ops["value"]
 	             if !ok {
 		            fmt.Println("No value")
@@ -960,7 +941,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("err when merging ", err)
 				return
 			}
-			fmt.Println("mergedObj = ", mergedObj)
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
