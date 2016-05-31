@@ -52,19 +52,21 @@ var gObjectMgr *ObjectMgr
 //
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
-	Owner      string   `json:"Owner"`
-	Access     string   `json:"Access"`
-	Listeners  []string `json:"Listeners"`
-	AutoCreate bool     `json:"autoCreate"`
+	Owner         string   `json:"Owner"`
+	Access        string   `json:"Access"`
+	Listeners     []string `json:"Listeners"`
+	AutoCreate    bool     `json:"autoCreate"`
+	LinkedObjects []string `json:"linkedObjects"`
 }
 
 //
 // This structure represents the in memory layout of all the config object handlers
 type ConfigObjInfo struct {
-	Owner      clients.ClientIf
-	Access     string
-	AutoCreate bool
-	Listeners  []clients.ClientIf
+	Owner         clients.ClientIf
+	Access        string
+	AutoCreate    bool
+	LinkedObjects []string
+	Listeners     []clients.ClientIf
 }
 
 const (
@@ -195,7 +197,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Info(fmt.Sprintf("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
 				v.Access, " Auto Create ", v.AutoCreate))
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
@@ -204,6 +206,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
+			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
 			mgr.ObjHdlMap[k] = *entry
 		}
 	}
