@@ -437,7 +437,7 @@ func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
 
 	err = json.Unmarshal(bytes, &mgr.swVersion.Repos)
 	if err != nil {
-		mgr.logger.Err("Error in Unmarshalling buildInfo Json")
+		mgr.logger.Err("Error in Unmarshalling buildInfo Json ")
 		return err
 	}
 	return nil
