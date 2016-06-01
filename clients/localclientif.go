@@ -34,7 +34,12 @@ type LocalClient struct {
 func (clnt *LocalClient) Initialize(name string, address string) {
 	return
 }
+
 func (clnt *LocalClient) ConnectToServer() bool {
+	return true
+}
+
+func (clnt *LocalClient) DisconnectFromServer() bool {
 	return true
 }
 
