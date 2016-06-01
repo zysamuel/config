@@ -148,6 +148,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	go mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.AutoCreateConfigObjects(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
+	go mgr.clientMgr.ListenToClientStateChanges()
 	go mgr.SigHandler()
 	gConfigMgr = mgr
 
