@@ -34,7 +34,12 @@ type LocalClient struct {
 func (clnt *LocalClient) Initialize(name string, address string) {
 	return
 }
+
 func (clnt *LocalClient) ConnectToServer() bool {
+	return true
+}
+
+func (clnt *LocalClient) DisconnectFromServer() bool {
 	return true
 }
 
@@ -63,7 +68,7 @@ func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUt
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op string, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
+func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op []models.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
 	return nil, true
 }
 
