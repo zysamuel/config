@@ -33,6 +33,7 @@ import (
 	"models"
 	"net/http"
 	"utils/logging"
+	"strings"
 )
 
 type ObjectMgr struct {
@@ -41,24 +42,31 @@ type ObjectMgr struct {
 	clientMgr *clients.ClientMgr
 }
 
+type PatchOp map[string]*json.RawMessage
+
+// Patch is an ordered collection of patch-ops.
+type Patch []PatchOp
+
 var gObjectMgr *ObjectMgr
 
 //
 // This structure represents the json layout for config objects
 type ConfigObjJson struct {
-	Owner      string   `json:"Owner"`
-	Access     string   `json:"Access"`
-	Listeners  []string `json:"Listeners"`
-	AutoCreate bool     `json:"autoCreate"`
+	Owner         string   `json:"Owner"`
+	Access        string   `json:"Access"`
+	Listeners     []string `json:"Listeners"`
+	AutoCreate    bool     `json:"autoCreate"`
+	LinkedObjects []string `json:"linkedObjects"`
 }
 
 //
 // This structure represents the in memory layout of all the config object handlers
 type ConfigObjInfo struct {
-	Owner      clients.ClientIf
-	Access     string
-	AutoCreate bool
-	Listeners  []clients.ClientIf
+	Owner         clients.ClientIf
+	Access        string
+	AutoCreate    bool
+	LinkedObjects []string
+	Listeners     []clients.ClientIf
 }
 
 const (
@@ -108,7 +116,56 @@ func CreateObjectMap() {
 		models.ConfigObjectMap[objName] = obj
 	}
 }
-
+func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error ) {
+	value, ok := op["value"]
+	if !ok {
+		fmt.Println("No value")
+		return nil, errors.New("Unknown")
+	}
+	//valueStr,err = obj.UnmarshalObject(*value)
+	fmt.Println("value: ", string(*value))
+	err = json.Unmarshal([]byte (*value),&valueObj)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling value:",err)
+		return nil, err
+	}
+    return valueObj, err
+}
+func GetPatch(patches []byte) (patch Patch, err error ) {
+	err = json.Unmarshal(patches, &patch)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling patches:",err)
+		return patch, err
+	}
+    return patch, err
+}
+func GetPath(op PatchOp) (pathStr string, err error ) {
+	path, ok := op["path"]
+	if !ok {
+		fmt.Println("No path")
+		return pathStr, errors.New("Unknown")
+	}
+	err = json.Unmarshal(*path, &pathStr)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling path:",err)
+		return pathStr, err
+	}
+	pathStr = strings.Split(pathStr, "/")[1]
+    return pathStr, err
+}
+func GetOp(patchOp PatchOp) (opStr string, err error ) {
+	op, ok := patchOp["op"]
+	if !ok {
+		fmt.Println("No op")
+		return opStr, errors.New("Unknown")
+	}
+	err = json.Unmarshal(*op, &opStr)
+	if err != nil {
+		fmt.Sprintln("error unmarshaling patches:",err)
+		return opStr, err
+	}
+    return opStr, err
+}
 func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
 	mgr.logger = logger
@@ -149,6 +206,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
+			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
 			mgr.ObjHdlMap[k] = *entry
 		}
 	}
