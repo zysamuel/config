@@ -32,8 +32,8 @@ import (
 	"io/ioutil"
 	"models"
 	"net/http"
-	"utils/logging"
 	"strings"
+	"utils/logging"
 )
 
 type ObjectMgr struct {
@@ -116,7 +116,7 @@ func CreateObjectMap() {
 		models.ConfigObjectMap[objName] = obj
 	}
 }
-func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error ) {
+func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error) {
 	value, ok := op["value"]
 	if !ok {
 		fmt.Println("No value")
@@ -124,22 +124,22 @@ func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error
 	}
 	//valueStr,err = obj.UnmarshalObject(*value)
 	fmt.Println("value: ", string(*value))
-	err = json.Unmarshal([]byte (*value),&valueObj)
+	err = json.Unmarshal([]byte(*value), &valueObj)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling value:",err)
+		fmt.Sprintln("error unmarshaling value:", err)
 		return nil, err
 	}
-    return valueObj, err
+	return valueObj, err
 }
-func GetPatch(patches []byte) (patch Patch, err error ) {
+func GetPatch(patches []byte) (patch Patch, err error) {
 	err = json.Unmarshal(patches, &patch)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:",err)
+		fmt.Sprintln("error unmarshaling patches:", err)
 		return patch, err
 	}
-    return patch, err
+	return patch, err
 }
-func GetPath(op PatchOp) (pathStr string, err error ) {
+func GetPath(op PatchOp) (pathStr string, err error) {
 	path, ok := op["path"]
 	if !ok {
 		fmt.Println("No path")
@@ -147,13 +147,13 @@ func GetPath(op PatchOp) (pathStr string, err error ) {
 	}
 	err = json.Unmarshal(*path, &pathStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling path:",err)
+		fmt.Sprintln("error unmarshaling path:", err)
 		return pathStr, err
 	}
 	pathStr = strings.Split(pathStr, "/")[1]
-    return pathStr, err
+	return pathStr, err
 }
-func GetOp(patchOp PatchOp) (opStr string, err error ) {
+func GetOp(patchOp PatchOp) (opStr string, err error) {
 	op, ok := patchOp["op"]
 	if !ok {
 		fmt.Println("No op")
@@ -161,10 +161,10 @@ func GetOp(patchOp PatchOp) (opStr string, err error ) {
 	}
 	err = json.Unmarshal(*op, &opStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:",err)
+		fmt.Sprintln("error unmarshaling patches:", err)
 		return opStr, err
 	}
-    return opStr, err
+	return opStr, err
 }
 func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
