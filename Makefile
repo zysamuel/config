@@ -20,8 +20,8 @@ install:
 	 @$(RSYNC) docsui $(PARAMSDIR)
 	 @echo $(DESTDIR)
 	 install params/* $(PARAMSDIR)/
-	 install $(SR_CODE_BASE)/snaproute/src/models/genObjectConfig.json $(PARAMSDIR)
-	 install $(SR_CODE_BASE)/snaproute/src/models/systemProfile.json $(SYSPROFILE)
+	 install $(SR_CODE_BASE)/snaproute/src/models/objects/genObjectConfig.json $(PARAMSDIR)
+	 install $(SR_CODE_BASE)/snaproute/src/models/objects/systemProfile.json $(SYSPROFILE)
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)

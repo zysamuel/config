@@ -30,7 +30,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"models"
+	"models/objects"
 	"net/http"
 	"strings"
 	"utils/logging"
@@ -73,7 +73,7 @@ const (
 	MAX_JSON_LENGTH = 4096
 )
 
-func GetConfigObj(r *http.Request, obj models.ConfigObj) (body []byte, retobj models.ConfigObj, err error) {
+func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
@@ -111,12 +111,12 @@ func GetUpdateKeys(body []byte) (map[string]bool, error) {
 }
 
 func CreateObjectMap() {
-	//models.ConfigObjectMap
-	for objName, obj := range models.GenConfigObjectMap {
-		models.ConfigObjectMap[objName] = obj
+	//objects.ConfigObjectMap
+	for objName, obj := range objects.GenConfigObjectMap {
+		objects.ConfigObjectMap[objName] = obj
 	}
 }
-func GetValue(op PatchOp, obj models.ConfigObj) (valueObj interface{}, err error) {
+func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err error) {
 	value, ok := op["value"]
 	if !ok {
 		fmt.Println("No value")

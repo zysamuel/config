@@ -27,7 +27,7 @@ import (
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
-	"models"
+	modelObjs "models/objects"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -104,7 +104,7 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 //
 func (mgr *ApiMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
-	for key, _ := range models.ConfigObjectMap {
+	for key, _ := range modelObjs.ConfigObjectMap {
 		objInfo := mgr.objectMgr.ObjHdlMap[key]
 		if objInfo.Access == "w" || objInfo.Access == "rw" {
 			rt = ApiRoute{key + "Create",
