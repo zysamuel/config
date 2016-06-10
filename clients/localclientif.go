@@ -24,7 +24,7 @@
 package clients
 
 import (
-	"models"
+	"models/objects"
 	"utils/dbutils"
 )
 
@@ -51,34 +51,34 @@ func (clnt *LocalClient) GetServerName() string {
 	return "local"
 }
 
-func (clnt *LocalClient) CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
+func (clnt *LocalClient) CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
 	var err error
 	return err, true
 }
 
-func (clnt *LocalClient) DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
+func (clnt *LocalClient) DeleteObject(obj objects.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
 	return nil, true
 }
 
-func (clnt *LocalClient) GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error,
+func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error,
 	objCount int64,
 	nextMarker int64,
 	more bool,
-	objs []models.ConfigObj) {
+	objs []objects.ConfigObj) {
 	return nil, objCount, nextMarker, more, objs
 }
 
-func (clnt *LocalClient) UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op []models.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
+func (clnt *LocalClient) UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
 	return nil, true
 }
 
-func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj) {
-	var retObj models.ConfigObj
+func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj) {
+	var retObj objects.ConfigObj
 	switch obj.(type) {
-	case models.SystemStatusState:
+	case objects.SystemStatusState:
 		retObj = gClientMgr.systemStatusCB()
 		return nil, retObj
-	case models.SystemSwVersionState:
+	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
 		return nil, retObj
 	default:
@@ -87,6 +87,6 @@ func (clnt *LocalClient) GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) 
 	return nil, nil
 }
 
-func (clnt *LocalClient) ExecuteAction(obj models.ConfigObj) error {
+func (clnt *LocalClient) ExecuteAction(obj objects.ConfigObj) error {
 	return nil
 }
