@@ -6,10 +6,10 @@ import requests
 import wx.grid
 
 HOME = os.getenv("HOME")
-MODEL_NAME = 'models'
-JSON_MODEL_REGISTRAION_PATH = HOME + "/git/snaproute/src/models/"
+MODEL_NAME = 'models/objects'
+JSON_MODEL_REGISTRAION_PATH = HOME + "/git/snaproute/src/models/objects/"
 GO_MODEL_BASE_PATH_LIST = [
-                           HOME + "/git/snaproute/src/models/"]
+                           HOME + "/git/snaproute/src/models/objects/"]
 
 LOCAL_HOST_URL = "http://localhost:8080/"
 
