@@ -41,6 +41,9 @@
 	{"Name":"dhcpd",
 	 "Port":10013},
 
+	{"Name":"fMgrd",
+	 "Port":10014},
+
    {"Name":"local",
 	  "Port":0}
 ]
