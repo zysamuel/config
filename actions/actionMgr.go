@@ -95,7 +95,9 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 		for k, v := range actionMap {
 			mgr.logger.Debug(fmt.Sprintln("For Action [", k, "] Primary owner is [", v.Owner, "] "))
 			entry := new(ActionObjInfo)
-			entry.Owner = mgr.clientMgr.Clients[v.Owner]
+			if mgr.clientMgr != nil {
+				entry.Owner = mgr.clientMgr.Clients[v.Owner]
+			}
 			mgr.ObjHdlMap[k] = *entry
 		}
 	}
