@@ -31,7 +31,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"models"
+	modelObjs "models/objects"
 	"os"
 	"os/signal"
 	"strings"
@@ -72,7 +72,6 @@ type SwVersion struct {
 
 type SwitchCfgJson struct {
 	SwitchMac   string `json:"SwitchMac"`
-	RouterId    string `json:"RouterId"`
 	Hostname    string `json:"HostName"`
 	Version     string `json:"Version"`
 	MgmtIp      string `json:"MgmtIp"`
@@ -81,6 +80,8 @@ type SwitchCfgJson struct {
 }
 
 var gConfigMgr *ConfigMgr
+
+var futureObjKey map[string][]int32 // Object Name and key
 
 type ConfdGlobals struct {
 	Name  string `json: "Name"`
@@ -134,6 +135,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.ApiMgr.InitializeRestRoutes()
 	mgr.ApiMgr.InstantiateRestRtr()
 
+	//@TODO: this is bad as its global object... lets see what we can do with this
+	futureObjKey = make(map[string][]int32, 50)
 	mgr.bringUpTime = time.Now()
 	// Initialize channel to receive connected client name.
 	// When confd connects to a client, it creates global objects owned by that client and
@@ -143,9 +146,9 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	logger.Info("Initialization Done!")
 
 	go mgr.ReadSystemSwVersion(paramsDir)
-	go mgr.InitalizeGlobalConfig(paramsDir)
+	go mgr.AutoCreateConfigObjects(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
-	go mgr.DiscoverSystemObjects()
+	go mgr.clientMgr.ListenToClientStateChanges()
 	go mgr.SigHandler()
 	gConfigMgr = mgr
 
@@ -170,8 +173,8 @@ func (mgr *ConfigMgr) SigHandler() {
 	}
 }
 
-func GetSystemStatus() models.SystemStatusState {
-	systemStatus := models.SystemStatusState{}
+func GetSystemStatus() modelObjs.SystemStatusState {
+	systemStatus := modelObjs.SystemStatusState{}
 	systemStatus.Name, _ = os.Hostname()
 	systemStatus.Ready = gConfigMgr.clientMgr.IsReady()
 	if systemStatus.Ready == false {
@@ -197,20 +200,20 @@ func GetSystemStatus() models.SystemStatusState {
 		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumActionCalls, gConfigMgr.ApiMgr.ApiCallStats.NumActionCallsSuccess)
 
 	// Read DaemonStates from db
-	var daemonState models.DaemonState
+	var daemonState modelObjs.DaemonState
 	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
-	systemStatus.FlexDaemons = make([]models.DaemonState, len(daemonStates))
+	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
 	for idx, daemonState := range daemonStates {
-		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
+		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)
 	}
 	return systemStatus
 }
 
-func GetSystemSwVersion() models.SystemSwVersionState {
-	systemSwVersion := models.SystemSwVersionState{}
+func GetSystemSwVersion() modelObjs.SystemSwVersionState {
+	systemSwVersion := modelObjs.SystemSwVersionState{}
 	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
 	numRepos := len(gConfigMgr.swVersion.Repos)
-	systemSwVersion.Repos = make([]models.RepoInfo, numRepos)
+	systemSwVersion.Repos = make([]modelObjs.RepoInfo, numRepos)
 	for i := 0; i < numRepos; i++ {
 		systemSwVersion.Repos[i].Name = gConfigMgr.swVersion.Repos[i].Name
 		systemSwVersion.Repos[i].Sha1 = gConfigMgr.swVersion.Repos[i].Sha1
@@ -222,42 +225,39 @@ func GetSystemSwVersion() models.SystemSwVersionState {
 
 func (mgr *ConfigMgr) DiscoverPorts() error {
 	mgr.logger.Debug("Discovering ports")
-	asicdConnectionCheckTimer := time.NewTicker(time.Millisecond * 1000)
-	i := 0
-	for t := range asicdConnectionCheckTimer.C {
-		_ = t
-		if mgr.clientMgr.IsConnectedClient("asicd") {
-			asicdConnectionCheckTimer.Stop()
-			break
-		} else {
-			if i%100 == 0 {
-				mgr.logger.Info("Not connected to asicd yet to get all ports")
-			}
-		}
-		i++
-	}
 	// Get ports present on this system and store in DB for user to update port parameters
 	resource := "Port"
-	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		var objs []models.ConfigObj
+	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+		var objs []modelObjs.ConfigObj
 		var err error
 		_, obj, _ := objects.GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdCommonDefs.MAX_SYS_PORTS)
-		err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil, currentIndex, objCount)
+		err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
+			currentIndex, objCount)
 		if err == nil {
+			var LinkedObjects []string
+			for key, value := range mgr.objectMgr.ObjHdlMap {
+				if key != resource {
+					continue
+				}
+				LinkedObjects = value.LinkedObjects
+			}
 			for i := 0; i < len(objs); i++ {
-				portConfig := (*objs[i].(*models.Port))
+				portConfig := (*objs[i].(*modelObjs.Port))
 				_, err := portConfig.GetObjectFromDb(portConfig.GetKey(), mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
 					err = portConfig.StoreObjectInDb(mgr.dbHdl)
 					if err != nil {
-						mgr.logger.Err(fmt.Sprintln("Failed to store Port in DB ", i, portConfig, err))
+						mgr.logger.Err(fmt.Sprintln("Failed to store Port in DB ",
+							i, portConfig, err))
 					} else {
-						_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(portConfig.GetKey())
-						if err != nil {
-							mgr.logger.Err(fmt.Sprintln("Failed to store uuid map for Port in DB ", portConfig, err))
+						mgr.storeUUID(portConfig.GetKey())
+						for _, linkedObj := range LinkedObjects {
+							keys := futureObjKey[linkedObj]
+							keys = append(keys, portConfig.IfIndex)
+							futureObjKey[linkedObj] = keys
 						}
 					}
 				}
@@ -269,7 +269,7 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 }
 
 func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
-	sysInfo := &models.SystemParam{}
+	sysInfo := &modelObjs.SystemParam{}
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
@@ -283,7 +283,6 @@ func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
 		return nil
 	}
 	sysInfo.SwitchMac = cfg.SwitchMac
-	sysInfo.RouterId = cfg.RouterId
 	sysInfo.MgmtIp = cfg.MgmtIp
 	sysInfo.Version = cfg.Version
 	sysInfo.Description = cfg.Description
@@ -296,11 +295,19 @@ func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
 	return rbyte
 }
 
+func (mgr *ConfigMgr) storeUUID(key string) {
+	_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(key)
+	if err != nil {
+		mgr.logger.Err(fmt.Sprintln(
+			"Failed to store uuid map for key ", key, err))
+	}
+}
+
 func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client clients.ClientIf) {
-	var obj models.ConfigObj
+	var obj modelObjs.ConfigObj
 	var err error
 	mgr.logger.Info(fmt.Sprintln("Object: ", key, "is global object"))
-	if objHdl, ok := models.ConfigObjectMap[key]; ok {
+	if objHdl, ok := modelObjs.ConfigObjectMap[key]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ = objHdl.UnmarshalObject(body)
 		_, err = objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
@@ -316,40 +323,43 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 				sysObj, _ := objHdl.UnmarshalObject(sysBody)
 				err, success = client.CreateObject(sysObj, mgr.dbHdl.DBUtil)
 				if err == nil && success == true {
-					_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(obj.GetKey())
-					if err != nil {
-						mgr.logger.Err(fmt.Sprintln(
-							"Failed to store uuid map for Port in DB ",
-							obj, err))
-					}
+					mgr.storeUUID(sysObj.GetKey())
 				}
 			} else {
-				err, success = client.CreateObject(obj, mgr.dbHdl.DBUtil)
-				if err == nil && success == true {
-					_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(obj.GetKey())
-					if err != nil {
-						mgr.logger.Err(fmt.Sprintln(
-							"Failed to store uuid map for Port in DB ",
-							obj, err))
+				keys, exists := futureObjKey[key]
+				if exists {
+					// Special case for linked objects...
+					for _, ifIndex := range keys {
+						switch key {
+						case "LLDPIntf": // @TODO: this is bad... as its hardcoded :(
+							lldpObj := &modelObjs.LLDPIntf{}
+							lldpObj.IfIndex = ifIndex
+							bytes, err := json.Marshal(lldpObj)
+							lldpIntfObj, _ := objHdl.UnmarshalObject(bytes)
+							err, success = client.CreateObject(lldpIntfObj, mgr.dbHdl.DBUtil)
+							if err == nil && success == true {
+								mgr.storeUUID(lldpIntfObj.GetKey())
+							}
+						}
+					}
+				} else {
+					err, success = client.CreateObject(obj, mgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						mgr.storeUUID(obj.GetKey())
 					}
 				}
 			}
 		} else {
 			_, err = mgr.dbHdl.GetUUIDFromObjKey(obj.GetKey())
 			if err != nil {
-				_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(obj.GetKey())
-				if err != nil {
-					mgr.logger.Err(fmt.Sprintln(
-						"Failed to store uuid map for Port in DB ",
-						obj, err))
-				}
+				mgr.storeUUID(obj.GetKey())
 			}
 		}
 	}
 }
 
 func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
-	var data models.ComponentLogging
+	var data modelObjs.ComponentLogging
 	var modName string
 	var err error
 
@@ -361,10 +371,10 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 	}
 
 	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
-	if objHdl, ok := models.ConfigObjectMap["ComponentLogging"]; ok {
+	if objHdl, ok := modelObjs.ConfigObjectMap["ComponentLogging"]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ := objHdl.UnmarshalObject(body)
-		data = obj.(models.ComponentLogging)
+		data = obj.(modelObjs.ComponentLogging)
 		data.Module = modName
 		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
 	}
@@ -372,43 +382,33 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 		// ComponentLogging is not created in DB. Create with dsefault logging level and store in DB
 		err = mgr.dbHdl.StoreObjectInDb(data)
 		if err == nil {
-			_, err = mgr.dbHdl.StoreUUIDToObjKeyMap(data.GetKey())
-			if err != nil {
-				mgr.logger.Err(fmt.Sprintln(
-					"Failed to store uuid map for ComponentLogging in DB ",
-					data, err))
-			}
+			mgr.storeUUID(data.GetKey())
 		}
 	}
 }
 
-func (mgr *ConfigMgr) InitalizeGlobalConfig(paramsDir string) {
+func (mgr *ConfigMgr) AutoCreateConfigObjects(paramsDir string) {
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
-			if clientName == "Client_Init_Done" {
+			switch clientName {
+			case "Client_Init_Done":
 				close(mgr.cltNameCh)
 				return
-			}
-			mgr.logger.Info("Do Global Init for Client:" + clientName)
-			for key, value := range mgr.objectMgr.ObjHdlMap {
-				client := value.Owner
-				if value.AutoCreate && client.GetServerName() == clientName {
-					mgr.ConfigureGlobalConfig(paramsDir, key, client)
+			case "asicd":
+				mgr.DiscoverPorts()
+			default:
+				mgr.logger.Info("Do Global Init for Client:" + clientName)
+				for key, value := range mgr.objectMgr.ObjHdlMap {
+					client := value.Owner
+					if value.AutoCreate && client.GetServerName() == clientName {
+						mgr.ConfigureGlobalConfig(paramsDir, key, client)
+					}
 				}
 			}
 			mgr.ConfigureComponentLoggingLevel(clientName)
 		}
 	}
-}
-
-//
-// This method is to get system objects and store in DB
-//
-func (mgr *ConfigMgr) DiscoverSystemObjects() error {
-	mgr.logger.Info("Discover system objects")
-	mgr.DiscoverPorts()
-	return nil
 }
 
 func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {

@@ -26,16 +26,18 @@ package clients
 import (
 	"encoding/json"
 	"fmt"
+	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
-	"models"
+	"models/objects"
 	"strconv"
 	"time"
 	"utils/dbutils"
+	"utils/keepalive"
 	"utils/logging"
 )
 
-type SystemStatusCB func() models.SystemStatusState
-type SystemSwVersionCB func() models.SystemSwVersionState
+type SystemStatusCB func() objects.SystemStatusState
+type SystemSwVersionCB func() objects.SystemSwVersionState
 
 type ClientMgr struct {
 	logger            *logging.Writer
@@ -56,13 +58,14 @@ type ClientJson struct {
 type ClientIf interface {
 	Initialize(name string, address string)
 	ConnectToServer() bool
+	DisconnectFromServer() bool
 	IsConnectedToServer() bool
-	CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
-	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
-	GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []models.ConfigObj)
-	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op string, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
-	GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj)
-	ExecuteAction(obj models.ConfigObj) error
+	CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
+	DeleteObject(obj objects.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
+	GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []objects.ConfigObj)
+	UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
+	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
+	ExecuteAction(obj objects.ConfigObj) error
 	GetServerName() string
 }
 
@@ -108,6 +111,25 @@ func (mgr *ClientMgr) InitializeClientHandles(paramsFile string) bool {
 	return true
 }
 
+func (mgr *ClientMgr) ListenToClientStateChanges() {
+	clientStatusListener := keepalive.InitDaemonStatusListener()
+	if clientStatusListener != nil {
+		go clientStatusListener.StartDaemonStatusListner()
+		for {
+			select {
+			case clientStatus := <-clientStatusListener.DaemonStatusCh:
+				mgr.logger.Info(fmt.Sprintln("Received client status: ", clientStatus.Name, clientStatus.Status))
+				switch clientStatus.Status {
+				case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
+					go mgr.DisconnectFromClient(clientStatus.Name)
+				case sysdCommonDefs.UP:
+					go mgr.ConnectToClient(clientStatus.Name)
+				}
+			}
+		}
+	}
+}
+
 //
 //  This method connects to all the config daemon's clients
 //
@@ -120,11 +142,8 @@ func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
 		client.ConnectToServer()
 		if client.IsConnectedToServer() == false {
 			unconnectedClients = append(unconnectedClients, clntName)
-			//unconnectedClients[idx] = clntName
 			idx++
 		} else {
-			// connected to one client... now lets do global init for that client
-			//mgr.InitializeGlobalConfig(clntName)
 			clntNameCh <- clntName
 		}
 	}
@@ -161,13 +180,18 @@ func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
 	return true
 }
 
-func (mgr *ClientMgr) IsConnectedClient(name string) bool {
-	for clntName, client := range mgr.Clients {
-		if clntName == name && client.IsConnectedToServer() == true {
-			return true
-		}
-	}
+//
+// This method is to disconnect from all clients
+//
+func (mgr *ClientMgr) DisconnectFromAllClients() bool {
 	return false
+}
+
+//
+// This method is to check if config manager is ready to accept config requests
+//
+func (mgr *ClientMgr) IsReady() bool {
+	return mgr.systemReady
 }
 
 func (mgr *ClientMgr) GetUnconnectedClients() []string {
@@ -180,16 +204,36 @@ func (mgr *ClientMgr) GetUnconnectedClients() []string {
 	return unconnectedClients
 }
 
-//
-// This method is to check if config manager is ready to accept config requests
-//
-func (mgr *ClientMgr) IsReady() bool {
-	return mgr.systemReady
+func (mgr *ClientMgr) DisconnectFromClient(name string) error {
+	client, exist := mgr.Clients[name]
+	if exist {
+		if client.IsConnectedToServer() {
+			client.DisconnectFromServer()
+		}
+	}
+	return nil
 }
 
-//
-// This method is to disconnect from all clients
-//
-func (mgr *ClientMgr) disconnectFromAllClients() bool {
-	return false
+func (mgr *ClientMgr) ConnectToClient(name string) error {
+	client, exist := mgr.Clients[name]
+	waitCount := 0
+	if exist {
+		if !client.IsConnectedToServer() {
+			reconncetTimer := time.NewTicker(time.Millisecond * 1000)
+			for t := range reconncetTimer.C {
+				_ = t
+				waitCount++
+				if waitCount%10 == 0 {
+					mgr.logger.Info(fmt.Sprintln("Connecting to client ", name))
+				}
+				if !client.IsConnectedToServer() {
+					client.ConnectToServer()
+				} else {
+					reconncetTimer.Stop()
+					break
+				}
+			}
+		}
+	}
+	return nil
 }
