@@ -24,6 +24,8 @@
 package clients
 
 import (
+	"fmt"
+//	"models/actions"
 	"models/objects"
 	"utils/dbutils"
 )
@@ -88,5 +90,6 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 }
 
 func (clnt *LocalClient) ExecuteAction(obj objects.ConfigObj) error {
+	fmt.Println("local client Execute action obj: ", obj)
 	return nil
 }

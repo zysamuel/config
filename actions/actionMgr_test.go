@@ -1,12 +1,13 @@
 package actions
 
 import (
+	"config/objects"
 	"flag"
 	"fmt"
+	modelActions "models/actions"
+	"net/http"
 	"testing"
 	"utils/logging"
-	"config/clients"
-	modelObjs "models/objects"
 )
 
 //usage: go test or
@@ -16,12 +17,6 @@ var paramsDir = flag.String("params", "../../models/actions", "Location of actio
 var Logger *logging.Writer
 var infoListFile []string
 var actionMgr *ActionMgr
-
-
-func getSystemStatus() modelObjs.SystemStatusState {
-	systemStatus := modelObjs.SystemStatusState{}
-	return systemStatus
-}
 
 func Init() {
 	fmt.Println("ActionMgr: Start logger")
@@ -39,10 +34,11 @@ func Init() {
 
 func TestInit(t *testing.T) {
 	Init()
-	systemSwVersion := modelObjs.SystemSwVersionState{}
-	clientMgr := clients.InitializeClientMgr(".././params/clients.json", Logger, getSystemStatus(),  systemSwVersion)
+	//	systemSwVersion := modelObjs.SystemSwVersionState{}
+	//	clientMgr := clients.InitializeClientMgr(".././params/clients.json", Logger, getSystemStatus(),  systemSwVersion)
 	fmt.Println("call initializeactionMgr")
-	v := InitializeActionMgr(infoListFile, Logger, clientMgr)
+	dbHdl := objects.InstantiateDbIf(Logger)
+	v := InitializeActionMgr(infoListFile, Logger, dbHdl, nil, nil)
 	fmt.Println("returned v:", v)
 	t.Log("For ", infoListFile, " nil, nil",
 		"got", v)
@@ -52,4 +48,16 @@ func TestInit(t *testing.T) {
 func TestGetAllActions(t *testing.T) {
 	actions := actionMgr.GetAllActions()
 	fmt.Println("actions:", actions)
+}
+
+func TestGetActionObj(t *testing.T) {
+	var r *http.Request
+	if actionobjHdl, ok := modelActions.ActionMap["ApplyConfig"]; ok {
+		fmt.Println("actionObjhdl:", actionobjHdl)
+		if body, actionobj, err := GetActionObj(r, actionobjHdl); err == nil {
+			fmt.Println("body:", body, " actionobj:", actionobj)
+			err := ExecutePerformAction(actionobj)
+			fmt.Println("err:", err)
+		}
+	}
 }
