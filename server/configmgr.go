@@ -28,6 +28,7 @@ import (
 	"config/apis"
 	"config/clients"
 	"config/objects"
+	"config/actions"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -48,6 +49,7 @@ type ConfigMgr struct {
 	ApiMgr      *apis.ApiMgr
 	clientMgr   *clients.ClientMgr
 	objectMgr   *objects.ObjectMgr
+	actionMgr   *actions.ActionMgr
 	cltNameCh   chan string
 }
 
@@ -131,8 +133,12 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
-	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr)
+	actionConfigFiles := [...]string{paramsDir + "/genActionConfig.json"}
+	mgr.actionMgr = actions.InitializeActionMgr(actionConfigFiles[:], logger, mgr.dbHdl,mgr.objectMgr, mgr.clientMgr)
+
+	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
 	mgr.ApiMgr.InitializeRestRoutes()
+	mgr.ApiMgr.InitializeActionRestRoutes()
 	mgr.ApiMgr.InstantiateRestRtr()
 
 	//@TODO: this is bad as its global object... lets see what we can do with this
