@@ -126,8 +126,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion)
 
 	objects.CreateObjectMap()
-	objectConfigFiles := [...]string{paramsDir + "/objectconfig.json",
-		paramsDir + "/genObjectConfig.json"}
+	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
