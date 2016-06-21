@@ -38,9 +38,6 @@
 	{"Name":"dhcpd",
 	 "Port":10013},
 	
-	{"Name":"ldpd",
-	 "Port":10014},
-
 	{"Name":"fMgrd",
 	 "Port":10014},
 	
