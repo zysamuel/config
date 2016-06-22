@@ -35,14 +35,14 @@
 	{"Name":"lldpd",
 	 "Port":10011},
 	
-	{"Name":"vxland",
-	 "Port":10012},
-	
 	{"Name":"dhcpd",
 	 "Port":10013},
-
+	
 	{"Name":"fMgrd",
 	 "Port":10014},
+	
+        {"Name":"vxland",
+	 "Port":10015},
 
    {"Name":"local",
 	  "Port":0}
