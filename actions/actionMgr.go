@@ -34,6 +34,7 @@ import (
 	modelActions "models/actions"
 	modelObjs "models/objects"
 	"net/http"
+	"os"
 	"utils/logging"
 )
 
@@ -51,8 +52,9 @@ import (
 //
 
 type ActionMgr struct {
-	logger *logging.Writer
-	dbHdl  *objects.DbHandler
+	logger    *logging.Writer
+	paramsDir string
+	dbHdl     *objects.DbHandler
 	//	ExecuteAction(obj actions.ActionObj) error
 	ObjHdlMap map[string]ActionObjInfo
 	clientMgr *clients.ClientMgr
@@ -160,8 +162,9 @@ func RespondErrorForApiCall(w http.ResponseWriter, errCode int, errString string
 	return nil
 }
 
-func InitializeActionMgr(infoFiles []string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, clientMgr *clients.ClientMgr) *ActionMgr {
+func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, clientMgr *clients.ClientMgr) *ActionMgr {
 	mgr := new(ActionMgr)
+	mgr.paramsDir = paramsDir
 	mgr.logger = logger
 	mgr.clientMgr = clientMgr
 	mgr.objectMgr = objectMgr
@@ -335,10 +338,50 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 
 	switch obj.(type) {
 	case modelActions.ApplyConfig:
+		gActionMgr.logger.Info("ApplyConfig")
 		data := obj.(modelActions.ApplyConfig)
 		for _, applyResource := range ApplyConfigOrder {
 			ApplyConfigObject(data, applyResource)
 		}
+	case modelActions.SaveConfig:
+		gActionMgr.logger.Info("SaveConfig")
+		var fo *os.File
+		data := obj.(modelActions.SaveConfig)
+		fileName := data.FileName
+		gActionMgr.logger.Info(fmt.Sprintln("FileName:", fileName))
+		if fileName == "" {
+			gActionMgr.logger.Info("FileName not set, setting it to default startup-config")
+			fileName = "startup-config"
+		}
+		// open config file
+		cfgFileName := gActionMgr.paramsDir + "/" + fileName + ".json"
+		gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
+		_,err := os.Stat(cfgFileName)
+		if os.IsNotExist(err) {
+			gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
+			fo, err = os.Create(cfgFileName)
+			if err != nil {
+				gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
+				return err
+			}
+		} else if err == nil {
+			// open cfg file
+			gActionMgr.logger.Info("cfgFile present, open it for update")
+			fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
+			if err != nil {
+				gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
+				return err
+			}
+		} else {
+			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, " when handling the cfgFile:", cfgFileName))
+			return err
+		}
+		// close fo on exit and check for its returned error
+		defer func() {
+			if err := fo.Close(); err != nil {
+				panic(err)
+			}
+		}()
 	}
 	return err
 }

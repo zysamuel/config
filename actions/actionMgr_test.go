@@ -38,7 +38,7 @@ func TestInit(t *testing.T) {
 	//	clientMgr := clients.InitializeClientMgr(".././params/clients.json", Logger, getSystemStatus(),  systemSwVersion)
 	fmt.Println("call initializeactionMgr")
 	dbHdl := objects.InstantiateDbIf(Logger)
-	v := InitializeActionMgr(infoListFile, Logger, dbHdl, nil, nil)
+	v := InitializeActionMgr(paramsDir, infoListFile, Logger, dbHdl, nil, nil)
 	fmt.Println("returned v:", v)
 	t.Log("For ", infoListFile, " nil, nil",
 		"got", v)
