@@ -21,21 +21,32 @@
 // |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
 //
 
-package clients
+package actions
 
-var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
-	"asicd":      &ASICDClient{},
-	"arpd":       &ARPDClient{},
-	"bgpd":       &BGPDClient{},
-	"lacpd":      &LACPDClient{},
-	"dhcprelayd": &DHCPRELAYDClient{},
-	"local":      &LocalClient{},
-	"ospfd":      &OSPFDClient{},
-	"stpd":       &STPDClient{},
-	"bfdd":       &BFDDClient{},
-	"vrrpd":      &VRRPDClient{},
-	"sysd":       &SYSDClient{},
-	"vxland":     &VXLANDClient{},
-	"lldpd":      &LLDPDClient{},
-	"dhcpd":      &DHCPDClient{},
+import (
+	"utils/logging"
+)
+
+//
+// Actions are methods exposed by various daemons. These may have an object as parameter.
+// The only methods supported on these actions would be POST methods
+//
+
+//
+// ActionManager provides the following methods for rest of the config manager subsystem
+//  -- Initialize
+//  -- DeInitialize
+//  -- RegisterActions
+//  -- PerformAction
+//
+
+type ActionMgr struct {
+}
+
+var gActionMgr *ActionMgr
+
+func InitializeActionMgr(infoFiles []string, logger *logging.Writer) *ActionMgr {
+	mgr := new(ActionMgr)
+	gActionMgr = mgr
+	return mgr
 }
