@@ -41,9 +41,12 @@
 	{"Name":"fMgrd",
 	 "Port":10014},
 	
-        {"Name":"vxland",
+    {"Name":"vxland",
 	 "Port":10015},
 
-   {"Name":"local",
-	  "Port":0}
+    {"Name":"opticd",
+	 "Port":10016},
+
+    {"Name":"local",
+	 "Port":0}
 ]
