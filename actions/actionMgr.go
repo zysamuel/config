@@ -333,6 +333,24 @@ func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 		}
 	}
 }
+
+func ResetConfigObject(data modelActions.ApplyConfig) (err error) {
+    gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
+	
+    /* 1) Get all config objects */
+     for key, objHandle := range modelObjs.ConfigObjectMap {
+	gActionMgr.logger.Debug(fmt.Sprintln("ResetConfig: Got object ", key , " : ", objHandle))
+    /* 2) Check if the object is Autoconfig if not
+	  delete config */
+         _, _, err := objects.GetConfigObj(nil, objHandle) 
+	if err != nil {
+	gActionMgr.logger.Debug(fmt.Sprintln("Config object doesn't exist ", err))
+	}
+	}
+    
+return nil	
+}
+
 func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 	gActionMgr.logger.Debug(fmt.Sprintln("local client Execute action obj: ", obj))
 
@@ -382,6 +400,11 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 				panic(err)
 			}
 		}()
+
+	case modelActions.ResetConfig:
+		gActionMgr.logger.Info("ResetConfig")
+		data := obj.(modelActions.ApplyConfig)
+		ResetConfigObject(data)
 	}
 	return err
 }
