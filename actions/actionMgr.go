@@ -68,7 +68,7 @@ var ApplyConfigOrder = []string{
 	"Vlan",
 	"IPv4Intf",
 	"IPv4Route",
-	"IPv6Route",
+//	"IPv6Route",
 	"PolicyCondition",
 	"PolicyStmt",
 	"PolicyDefinition",
@@ -333,7 +333,62 @@ func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 		}
 	}
 }
+func SaveConfigObject(data modelActions.ApplyConfig, resource string) error {
+	gActionMgr.logger.Info(fmt.Sprintln("SaveConfigObject for resource:",resource))
+	objHdl, ok := modelObjs.ConfigObjectMap[resource]
+	if !ok {
+		gActionMgr.logger.Err("objHdl nil")
+		return errors.New("objHdl Nil")
+	}
+	_, obj, err := objects.GetConfigObj(nil, objHdl)
+	if err != nil {
+		gActionMgr.logger.Err(fmt.Sprintln("GetConfigObj return err: ",err))
+		return errors.New("getConfigObj return err")
+	}
+	var configObjects []modelObjs.ConfigObj
+	err, objCount, _, _,configObjects := obj.GetBulkObjFromDb(0, 100, gActionMgr.dbHdl.DBUtil)
+	if err != nil {
+		gActionMgr.logger.Err(fmt.Sprintln("GetBulkObjFromDB returned error:",err))
+		return errors.New("GetBulkObjFromDb returned error")
+	}
+	if objCount == 0 {
+		gActionMgr.logger.Info(fmt.Sprintln("No objects of type:",resource, " configured"))
+		return nil
+	}
+	if data.ConfigData[resource] == nil {
+		data.ConfigData[resource] = make([]interface{},0)
+	}
+    for _, configObject := range configObjects {
+        data.ConfigData[resource] = append(data.ConfigData[resource],configObject)
+	}
+	gActionMgr.logger.Info(fmt.Sprintln("data at the end of SaveConfig:",data))
+	return nil
 
+}
+func OpenFile(cfgFileName string) (fo *os.File, err error) {
+		gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
+		_,err = os.Stat(cfgFileName)
+		if os.IsNotExist(err) {
+			gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
+			fo, err = os.Create(cfgFileName)
+			if err != nil {
+				gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
+				return fo,err
+			}
+		} else if err == nil {
+			// open cfg file
+			gActionMgr.logger.Info("cfgFile present, open it for update")
+			fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
+			if err != nil {
+				gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
+				return fo,err
+			}
+		} else {
+			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, " when handling the cfgFile:", cfgFileName))
+			return fo,err
+		}
+		return fo,err
+}
 func ResetConfigObject(data modelActions.ApplyConfig) (err error) {
     gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
 	
@@ -364,6 +419,7 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 	case modelActions.SaveConfig:
 		gActionMgr.logger.Info("SaveConfig")
 		var fo *os.File
+		var err error
 		data := obj.(modelActions.SaveConfig)
 		fileName := data.FileName
 		gActionMgr.logger.Info(fmt.Sprintln("FileName:", fileName))
@@ -373,26 +429,10 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 		}
 		// open config file
 		cfgFileName := gActionMgr.paramsDir + "/" + fileName + ".json"
-		gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
-		_,err := os.Stat(cfgFileName)
-		if os.IsNotExist(err) {
-			gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
-			fo, err = os.Create(cfgFileName)
-			if err != nil {
-				gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
-				return err
-			}
-		} else if err == nil {
-			// open cfg file
-			gActionMgr.logger.Info("cfgFile present, open it for update")
-			fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
-			if err != nil {
-				gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
-				return err
-			}
-		} else {
-			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, " when handling the cfgFile:", cfgFileName))
-			return err
+		fo,err = OpenFile(cfgFileName)
+		if err != nil {
+		    gActionMgr.logger.Err(fmt.Sprintln("error with OpenFile, err:",err))
+			return err	
 		}
 		// close fo on exit and check for its returned error
 		defer func() {
@@ -400,6 +440,23 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 				panic(err)
 			}
 		}()
+		var wdata modelActions.ApplyConfig
+		wdata.ConfigData = make(map[string] []interface{})
+		for _, applyResource := range ApplyConfigOrder {
+			SaveConfigObject(wdata, applyResource)
+	        gActionMgr.logger.Info(fmt.Sprintln("data after calling SaveConfig for resource:",applyResource, " is:", wdata))
+		}
+	    js, err := json.Marshal(wdata)
+	    if err != nil {
+			gActionMgr.logger.Err(fmt.Sprintln("json marshal returned error:",err))
+			return err
+		}
+		gActionMgr.logger.Info(fmt.Sprintln("js:",string(js)))
+		_,err = fo.Write(js) 
+		if err != nil {
+			gActionMgr.logger.Err(fmt.Sprintln("Error writing:",err))
+			return err
+		}
 
 	case modelActions.ResetConfig:
 		gActionMgr.logger.Info("ResetConfig")
