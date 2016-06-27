@@ -50,9 +50,20 @@ func TestGetAllActions(t *testing.T) {
 	fmt.Println("actions:", actions)
 }
 
-func TestGetActionObj(t *testing.T) {
+func TestGetApplyActionObj(t *testing.T) {
 	var r *http.Request
 	if actionobjHdl, ok := modelActions.ActionMap["ApplyConfig"]; ok {
+		fmt.Println("actionObjhdl:", actionobjHdl)
+		if body, actionobj, err := GetActionObj(r, actionobjHdl); err == nil {
+			fmt.Println("body:", body, " actionobj:", actionobj)
+			err := ExecutePerformAction(actionobj)
+			fmt.Println("err:", err)
+		}
+	}
+}
+func TestGetSaveActionObj(t *testing.T) {
+	var r *http.Request
+	if actionobjHdl, ok := modelActions.ActionMap["SaveConfig"]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
 		if body, actionobj, err := GetActionObj(r, actionobjHdl); err == nil {
 			fmt.Println("body:", body, " actionobj:", actionobj)
