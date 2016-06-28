@@ -63,16 +63,49 @@ type ActionMgr struct {
 
 var gActionMgr *ActionMgr
 var ApplyConfigOrder = []string{
-	"Port",
-	"LogicalIntf",
-	"Vlan",
-	"IPv4Intf",
-	"IPv4Route",
-//	"IPv6Route",
-	"PolicyCondition",
-	"PolicyStmt",
-	"PolicyDefinition",
-}
+        "SystemLogging",
+        "ComponentLogging",
+        "Port",
+        "LaPortChannel",
+        "LLDPIntf",
+        "Vlan",
+        "StpBridgeInstance",
+        "StpPort",
+        "ArpConfig",
+        "LogicalIntf",
+        "IPv4Intf",
+        "SubIPv4Intf",
+        "IPv4Route",
+        "IpTableAcl",
+        "BfdGlobal",
+        "BfdInterface",
+        "BfdSession",
+        "PolicyCondition",
+        "PolicyStmt",
+        "PolicyDefinition",
+        "BGPGlobal",
+        "BGPNeighbor",
+        "BGPPeerGroup",
+        "BGPPolicyAction",
+        "BGPPolicyCondition",
+        "BGPPolicyDefinition",
+        "BGPPolicyDefinitionStmtPrecedence",
+        "BGPPolicyStmt",
+        "OspfAreaAggregateEntry",
+        "OspfAreaEntry",
+        "OspfGlobal",
+        "OspfHostEntry",
+        "OspfIfEntry",
+        "OspfIfMetricEntry",
+        "OspfNbrEntry",
+        "OspfStubAreaEntry",
+        "OspfVirtIfEntry",
+        "VrrpIntf",
+        "DhcpRelayGlobal",
+        "DhcpRelayIntf",
+        "VxlanInstance",
+        "VxlanVtepInstances",
+ }
 
 const (
 	MAX_JSON_LENGTH = 4096
@@ -220,7 +253,7 @@ func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, ret
 		return body, retobj, err
 	}
 	if r != nil {
-		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, r.ContentLength))
 		fmt.Println("err:", err, " body:", body)
 		if err != nil {
 			return body, retobj, err
