@@ -35,6 +35,7 @@ import (
 	modelObjs "models/objects"
 	"net/http"
 	"os"
+	"strings"
 	"utils/logging"
 )
 
@@ -369,7 +370,11 @@ func CreateConfig(resource string, body json.RawMessage) {
 					return
 				}
 			}
-			if errCode != SRSuccess {
+			/* TODO -
+			Once we have support for Autocreate  add general check for
+			global objects.
+			*/
+			if errCode != SRSuccess && resource != "Port" && resource != "BFDGlobal" {
 				//		w.WriteHeader(http.StatusInternalServerError)
 				resp.UUId = uuid
 				resp.Error = SRErrString(errCode)
@@ -385,6 +390,55 @@ func CreateConfig(resource string, body json.RawMessage) {
 				return
 			}
 			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
+			if resource == "Port" || resource == "BFDGlobal" {
+				objKey, er := gActionMgr.dbHdl.GetObjKeyFromUUID(resource)
+				if er != nil {
+					gActionMgr.logger.Err(fmt.Sprintln("Object not found in db ", resource))
+				}
+				dbObj, gerr := obj.GetObjectFromDb(objKey, gActionMgr.dbHdl.DBUtil)
+				if gerr == nil {
+					//Construct patchinfo slice
+					patchOpInfoSlice := make([]modelObjs.PatchOpInfo, 0)
+					patches := strings.TrimSuffix(string(body), "}")
+					patchStr, err := objects.GetPatch([]byte(patches))
+					if err != nil {
+						gActionMgr.logger.Err(fmt.Sprintln("Error unmarshaling patches ", err))
+						return
+					}
+					for _, ops := range patchStr {
+						opStr, err := objects.GetOp(ops)
+						if err != nil {
+							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling op:", err))
+							return
+						}
+						pathStr, err := objects.GetPath(ops)
+						if err != nil {
+							fmt.Println("error unmarshaling path:", err)
+							return
+						}
+
+						value, ok := ops["value"]
+						if !ok {
+							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling path :", err))
+							return
+						}
+						patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
+						patchOpInfoSlice = append(patchOpInfoSlice, patchOpInfo)
+
+					}
+					mergedObj, diff, err := obj.MergeDbAndConfigObjForPatchUpdate(dbObj, patchOpInfoSlice)
+					if err != nil {
+						gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig: Failed to merge object ", err))
+						return
+					}
+					err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gActionMgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						gActionMgr.logger.Debug(fmt.Sprintln("ApplyConfig: Successfully updated the object ", objKey))
+					}
+				}
+
+			}
+
 			err, success = resourceOwner.CreateObject(obj, gActionMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -481,20 +535,67 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 	}
 	return fo, err
 }
-func ResetConfigObject(data modelActions.ApplyConfig) (err error) {
+
+
+func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
 
+	configCount := len(ApplyConfigOrder)
+	configCount = configCount - 1
 	/* 1) Get all config objects */
-	for key, objHandle := range modelObjs.ConfigObjectMap {
-		gActionMgr.logger.Debug(fmt.Sprintln("ResetConfig: Got object ", key, " : ", objHandle))
-		/* 2) Check if the object is Autoconfig if not
-		delete config */
-		_, _, err := objects.GetConfigObj(nil, objHandle)
-		if err != nil {
-			gActionMgr.logger.Debug(fmt.Sprintln("Config object doesn't exist ", err))
-		}
-	}
 
+	gActionMgr.logger.Debug(fmt.Sprintln("Get all object owners : "))
+	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
+	for index := configCount; index > -1; index-- {
+		key := ApplyConfigOrder[index]
+		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[key]
+		if !ok {
+			gActionMgr.logger.Debug(fmt.Sprintln("Key ", key, " doesnt exist in ObjHdlMap"))
+			continue
+		}
+		gActionMgr.logger.Debug(fmt.Sprintln("***************************************"))
+		gActionMgr.logger.Debug(fmt.Sprintln("name ", key, "Access ", objMap.Access,
+			"autocreate ", objMap.AutoCreate,
+			"Owner ", objMap.Owner))
+		if objMap.Owner.IsConnectedToServer() == false {
+			gActionMgr.logger.Err(fmt.Sprintln("ResetConfig: Not connected to daemon ", key))
+			continue
+		}
+
+		if objMap.Access == "w" && !objMap.AutoCreate {
+			gActionMgr.logger.Debug(fmt.Sprintln("Get db objects for  ", key))
+			//resource := objMap.Owner
+
+			//get  object handle
+			if objHdl, ok := modelObjs.ConfigObjectMap[key]; ok {
+				_, obj, _ := objects.GetConfigObj(nil, objHdl)
+				currentIndex := int64(0)
+				objCount := int64(1024)
+				err, _, _, _, objs := obj.GetBulkObjFromDb(currentIndex, objCount, gActionMgr.dbHdl.DBUtil)
+				if err != nil {
+					gActionMgr.logger.Debug(fmt.Sprintln("Failed to do getBulk object ", objMap.Owner))
+				}
+				gActionMgr.logger.Debug(fmt.Sprintln("No of objects collected ", len(objs)))
+				for index := range objs {
+					objKey := objs[index].GetKey()
+					gActionMgr.logger.Debug(fmt.Sprintln("Obj ", objs[index], " key ", objKey))
+					err, success := objMap.Owner.DeleteObject(objs[index], objKey, gActionMgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						gActionMgr.logger.Debug(fmt.Sprintln("Delete UUID to objectKeyMap"))
+						uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
+						if er == nil {
+							err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
+							if err != nil {
+								gActionMgr.logger.Err(fmt.Sprintln("Failed to delete uuid map ", uuid))
+							}
+						}
+					}
+				}
+
+			}
+		}
+
+	}
 	return nil
 }
 
@@ -550,8 +651,8 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 		}
 
 	case modelActions.ResetConfig:
-		gActionMgr.logger.Info("ResetConfig")
-		data := obj.(modelActions.ApplyConfig)
+		gActionMgr.logger.Info("Action resolved as ResetConfig")
+		data := obj.(modelActions.ResetConfig)
 		ResetConfigObject(data)
 	}
 	return err
