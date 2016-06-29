@@ -35,6 +35,7 @@ import (
 	modelObjs "models/objects"
 	"net/http"
 	"os"
+	"strings"
 	"utils/logging"
 )
 
@@ -63,49 +64,49 @@ type ActionMgr struct {
 
 var gActionMgr *ActionMgr
 var ApplyConfigOrder = []string{
-        "SystemLogging",
-        "ComponentLogging",
-        "Port",
-        "LaPortChannel",
-        "LLDPIntf",
-        "Vlan",
-        "StpBridgeInstance",
-        "StpPort",
-        "ArpConfig",
-        "LogicalIntf",
-        "IPv4Intf",
-        "SubIPv4Intf",
-        "IPv4Route",
-        "IpTableAcl",
-        "BfdGlobal",
-        "BfdInterface",
-        "BfdSession",
-        "PolicyCondition",
-        "PolicyStmt",
-        "PolicyDefinition",
-        "BGPGlobal",
-        "BGPNeighbor",
-        "BGPPeerGroup",
-        "BGPPolicyAction",
-        "BGPPolicyCondition",
-        "BGPPolicyDefinition",
-        "BGPPolicyDefinitionStmtPrecedence",
-        "BGPPolicyStmt",
-        "OspfAreaAggregateEntry",
-        "OspfAreaEntry",
-        "OspfGlobal",
-        "OspfHostEntry",
-        "OspfIfEntry",
-        "OspfIfMetricEntry",
-        "OspfNbrEntry",
-        "OspfStubAreaEntry",
-        "OspfVirtIfEntry",
-        "VrrpIntf",
-        "DhcpRelayGlobal",
-        "DhcpRelayIntf",
-        "VxlanInstance",
-        "VxlanVtepInstances",
- }
+	"SystemLogging",
+	"ComponentLogging",
+	"Port",
+	"LaPortChannel",
+	"LLDPIntf",
+	"Vlan",
+	"StpBridgeInstance",
+	"StpPort",
+	"ArpConfig",
+	"LogicalIntf",
+	"IPv4Intf",
+	"SubIPv4Intf",
+	"IPv4Route",
+	"IpTableAcl",
+	"BfdGlobal",
+	"BfdInterface",
+	"BfdSession",
+	"PolicyCondition",
+	"PolicyStmt",
+	"PolicyDefinition",
+	"BGPGlobal",
+	"BGPNeighbor",
+	"BGPPeerGroup",
+	"BGPPolicyAction",
+	"BGPPolicyCondition",
+	"BGPPolicyDefinition",
+	"BGPPolicyDefinitionStmtPrecedence",
+	"BGPPolicyStmt",
+	"OspfAreaAggregateEntry",
+	"OspfAreaEntry",
+	"OspfGlobal",
+	"OspfHostEntry",
+	"OspfIfEntry",
+	"OspfIfMetricEntry",
+	"OspfNbrEntry",
+	"OspfStubAreaEntry",
+	"OspfVirtIfEntry",
+	"VrrpIntf",
+	"DhcpRelayGlobal",
+	"DhcpRelayIntf",
+	"VxlanInstance",
+	"VxlanVtepInstances",
+}
 
 const (
 	MAX_JSON_LENGTH = 4096
@@ -309,7 +310,11 @@ func CreateConfig(resource string, body []byte) {
 					gActionMgr.logger.Err("Config object is present")
 				}
 			}
-			if errCode != SRSuccess {
+			/* TODO -
+			Once we have support for Autocreate  add general check for
+			global objects.
+			*/
+			if errCode != SRSuccess && resource != "Port" && resource != "BFDGlobal" {
 				//		w.WriteHeader(http.StatusInternalServerError)
 				resp.UUId = uuid
 				resp.Error = SRErrString(errCode)
@@ -325,6 +330,55 @@ func CreateConfig(resource string, body []byte) {
 				return
 			}
 			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
+			if resource == "Port" || resource == "BFDGlobal" {
+				objKey, er := gActionMgr.dbHdl.GetObjKeyFromUUID(resource)
+				if er != nil {
+					gActionMgr.logger.Err(fmt.Sprintln("Object not found in db ", resource))
+				}
+				dbObj, gerr := obj.GetObjectFromDb(objKey, gActionMgr.dbHdl.DBUtil)
+				if gerr == nil {
+					//Construct patchinfo slice
+					patchOpInfoSlice := make([]modelObjs.PatchOpInfo, 0)
+					patches := strings.TrimSuffix(string(body), "}")
+					patchStr, err := objects.GetPatch([]byte(patches))
+					if err != nil {
+						gActionMgr.logger.Err(fmt.Sprintln("Error unmarshaling patches ", err))
+						return
+					}
+					for _, ops := range patchStr {
+						opStr, err := objects.GetOp(ops)
+						if err != nil {
+							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling op:", err))
+							return
+						}
+						pathStr, err := objects.GetPath(ops)
+						if err != nil {
+							fmt.Println("error unmarshaling path:", err)
+							return
+						}
+
+						value, ok := ops["value"]
+						if !ok {
+							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling path :", err))
+							return
+						}
+						patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
+						patchOpInfoSlice = append(patchOpInfoSlice, patchOpInfo)
+
+					}
+					mergedObj, diff, err := obj.MergeDbAndConfigObjForPatchUpdate(dbObj, patchOpInfoSlice)
+					if err != nil {
+						gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig: Failed to merge object ", err))
+						return
+					}
+					err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gActionMgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						gActionMgr.logger.Debug(fmt.Sprintln("ApplyConfig: Successfully updated the object ", objKey))
+					}
+				}
+
+			}
+
 			err, success = resourceOwner.CreateObject(obj, gActionMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -367,7 +421,7 @@ func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 	}
 }
 func SaveConfigObject(data modelActions.ApplyConfig, resource string) error {
-	gActionMgr.logger.Info(fmt.Sprintln("SaveConfigObject for resource:",resource))
+	gActionMgr.logger.Info(fmt.Sprintln("SaveConfigObject for resource:", resource))
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		gActionMgr.logger.Err("objHdl nil")
@@ -375,68 +429,113 @@ func SaveConfigObject(data modelActions.ApplyConfig, resource string) error {
 	}
 	_, obj, err := objects.GetConfigObj(nil, objHdl)
 	if err != nil {
-		gActionMgr.logger.Err(fmt.Sprintln("GetConfigObj return err: ",err))
+		gActionMgr.logger.Err(fmt.Sprintln("GetConfigObj return err: ", err))
 		return errors.New("getConfigObj return err")
 	}
 	var configObjects []modelObjs.ConfigObj
-	err, objCount, _, _,configObjects := obj.GetBulkObjFromDb(0, 100, gActionMgr.dbHdl.DBUtil)
+	err, objCount, _, _, configObjects := obj.GetBulkObjFromDb(0, 100, gActionMgr.dbHdl.DBUtil)
 	if err != nil {
-		gActionMgr.logger.Err(fmt.Sprintln("GetBulkObjFromDB returned error:",err))
+		gActionMgr.logger.Err(fmt.Sprintln("GetBulkObjFromDB returned error:", err))
 		return errors.New("GetBulkObjFromDb returned error")
 	}
 	if objCount == 0 {
-		gActionMgr.logger.Info(fmt.Sprintln("No objects of type:",resource, " configured"))
+		gActionMgr.logger.Info(fmt.Sprintln("No objects of type:", resource, " configured"))
 		return nil
 	}
 	if data.ConfigData[resource] == nil {
-		data.ConfigData[resource] = make([]interface{},0)
+		data.ConfigData[resource] = make([]interface{}, 0)
 	}
-    for _, configObject := range configObjects {
-        data.ConfigData[resource] = append(data.ConfigData[resource],configObject)
+	for _, configObject := range configObjects {
+		data.ConfigData[resource] = append(data.ConfigData[resource], configObject)
 	}
-	gActionMgr.logger.Info(fmt.Sprintln("data at the end of SaveConfig:",data))
+	gActionMgr.logger.Info(fmt.Sprintln("data at the end of SaveConfig:", data))
 	return nil
 
 }
 func OpenFile(cfgFileName string) (fo *os.File, err error) {
-		gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
-		_,err = os.Stat(cfgFileName)
-		if os.IsNotExist(err) {
-			gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
-			fo, err = os.Create(cfgFileName)
-			if err != nil {
-				gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
-				return fo,err
-			}
-		} else if err == nil {
-			// open cfg file
-			gActionMgr.logger.Info("cfgFile present, open it for update")
-			fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
-			if err != nil {
-				gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
-				return fo,err
-			}
-		} else {
-			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, " when handling the cfgFile:", cfgFileName))
-			return fo,err
+	gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
+	_, err = os.Stat(cfgFileName)
+	if os.IsNotExist(err) {
+		gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
+		fo, err = os.Create(cfgFileName)
+		if err != nil {
+			gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
+			return fo, err
 		}
-		return fo,err
+	} else if err == nil {
+		// open cfg file
+		gActionMgr.logger.Info("cfgFile present, open it for update")
+		fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
+		if err != nil {
+			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
+			return fo, err
+		}
+	} else {
+		gActionMgr.logger.Err(fmt.Sprintln("Error:", err, " when handling the cfgFile:", cfgFileName))
+		return fo, err
+	}
+	return fo, err
 }
-func ResetConfigObject(data modelActions.ApplyConfig) (err error) {
-    gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
-	
-    /* 1) Get all config objects */
-     for key, objHandle := range modelObjs.ConfigObjectMap {
-	gActionMgr.logger.Debug(fmt.Sprintln("ResetConfig: Got object ", key , " : ", objHandle))
-    /* 2) Check if the object is Autoconfig if not
-	  delete config */
-         _, _, err := objects.GetConfigObj(nil, objHandle) 
-	if err != nil {
-	gActionMgr.logger.Debug(fmt.Sprintln("Config object doesn't exist ", err))
+func ResetConfigObject(data modelActions.ResetConfig) (err error) {
+	gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
+
+	configCount := len(ApplyConfigOrder)
+	configCount = configCount - 1
+	/* 1) Get all config objects */
+
+	gActionMgr.logger.Debug(fmt.Sprintln("Get all object owners : "))
+	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
+	for index := configCount; index > -1; index-- {
+		key := ApplyConfigOrder[index]
+		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[key]
+		if !ok {
+			gActionMgr.logger.Debug(fmt.Sprintln("Key ", key, " doesnt exist in ObjHdlMap"))
+			continue
+		}
+		gActionMgr.logger.Debug(fmt.Sprintln("***************************************"))
+		gActionMgr.logger.Debug(fmt.Sprintln("name ", key, "Access ", objMap.Access,
+			"autocreate ", objMap.AutoCreate,
+			"Owner ", objMap.Owner))
+		if objMap.Owner.IsConnectedToServer() == false {
+			gActionMgr.logger.Err(fmt.Sprintln("ResetConfig: Not connected to daemon ", key))
+			continue
+		}
+
+		if objMap.Access == "w" && !objMap.AutoCreate {
+			gActionMgr.logger.Debug(fmt.Sprintln("Get db objects for  ", key))
+			//resource := objMap.Owner
+
+			//get  object handle
+			if objHdl, ok := modelObjs.ConfigObjectMap[key]; ok {
+				_, obj, _ := objects.GetConfigObj(nil, objHdl)
+				currentIndex := int64(0)
+				objCount := int64(1024)
+				err, _, _, _, objs := obj.GetBulkObjFromDb(currentIndex, objCount, gActionMgr.dbHdl.DBUtil)
+				if err != nil {
+					gActionMgr.logger.Debug(fmt.Sprintln("Failed to do getBulk object ", objMap.Owner))
+				}
+				gActionMgr.logger.Debug(fmt.Sprintln("No of objects collected ", len(objs)))
+				for index := range objs {
+					objKey := objs[index].GetKey()
+					gActionMgr.logger.Debug(fmt.Sprintln("Obj ", objs[index], " key ", objKey))
+					err, success := objMap.Owner.DeleteObject(objs[index], objKey, gActionMgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						gActionMgr.logger.Debug(fmt.Sprintln("Delete UUID to objectKeyMap"))
+						uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
+						if er == nil {
+							err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
+							if err != nil {
+								gActionMgr.logger.Err(fmt.Sprintln("Failed to delete uuid map ", uuid))
+							}
+						}
+					}
+				}
+
+			}
+		}
+
 	}
-	}
-    
-return nil	
+	return nil
 }
 
 func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
@@ -462,10 +561,10 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 		}
 		// open config file
 		cfgFileName := gActionMgr.paramsDir + "/" + fileName + ".json"
-		fo,err = OpenFile(cfgFileName)
+		fo, err = OpenFile(cfgFileName)
 		if err != nil {
-		    gActionMgr.logger.Err(fmt.Sprintln("error with OpenFile, err:",err))
-			return err	
+			gActionMgr.logger.Err(fmt.Sprintln("error with OpenFile, err:", err))
+			return err
 		}
 		// close fo on exit and check for its returned error
 		defer func() {
@@ -474,26 +573,26 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 			}
 		}()
 		var wdata modelActions.ApplyConfig
-		wdata.ConfigData = make(map[string] []interface{})
+		wdata.ConfigData = make(map[string][]interface{})
 		for _, applyResource := range ApplyConfigOrder {
 			SaveConfigObject(wdata, applyResource)
-	        gActionMgr.logger.Info(fmt.Sprintln("data after calling SaveConfig for resource:",applyResource, " is:", wdata))
+			gActionMgr.logger.Info(fmt.Sprintln("data after calling SaveConfig for resource:", applyResource, " is:", wdata))
 		}
-	    js, err := json.Marshal(wdata)
-	    if err != nil {
-			gActionMgr.logger.Err(fmt.Sprintln("json marshal returned error:",err))
+		js, err := json.Marshal(wdata)
+		if err != nil {
+			gActionMgr.logger.Err(fmt.Sprintln("json marshal returned error:", err))
 			return err
 		}
-		gActionMgr.logger.Info(fmt.Sprintln("js:",string(js)))
-		_,err = fo.Write(js) 
+		gActionMgr.logger.Info(fmt.Sprintln("js:", string(js)))
+		_, err = fo.Write(js)
 		if err != nil {
-			gActionMgr.logger.Err(fmt.Sprintln("Error writing:",err))
+			gActionMgr.logger.Err(fmt.Sprintln("Error writing:", err))
 			return err
 		}
 
 	case modelActions.ResetConfig:
-		gActionMgr.logger.Info("ResetConfig")
-		data := obj.(modelActions.ApplyConfig)
+		gActionMgr.logger.Info("Action resolved as ResetConfig")
+		data := obj.(modelActions.ResetConfig)
 		ResetConfigObject(data)
 	}
 	return err
