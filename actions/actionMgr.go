@@ -35,7 +35,6 @@ import (
 	modelObjs "models/objects"
 	"net/http"
 	"os"
-	"strings"
 	"utils/logging"
 )
 
@@ -370,11 +369,8 @@ func CreateConfig(resource string, body json.RawMessage) {
 					return
 				}
 			}
-			/* TODO -
-			Once we have support for Autocreate  add general check for
-			global objects.
-			*/
-			if errCode != SRSuccess && resource != "Port" && resource != "BFDGlobal" {
+
+			if errCode != SRSuccess {
 				//		w.WriteHeader(http.StatusInternalServerError)
 				resp.UUId = uuid
 				resp.Error = SRErrString(errCode)
@@ -383,6 +379,7 @@ func CreateConfig(resource string, body json.RawMessage) {
 				fmt.Println("errcode not success, return")
 				return
 			}
+
 			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				//			errString := "Confd not connected to " + resourceOwner.GetServerName()
@@ -390,54 +387,6 @@ func CreateConfig(resource string, body json.RawMessage) {
 				return
 			}
 			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
-			if resource == "Port" || resource == "BFDGlobal" {
-				objKey, er := gActionMgr.dbHdl.GetObjKeyFromUUID(resource)
-				if er != nil {
-					gActionMgr.logger.Err(fmt.Sprintln("Object not found in db ", resource))
-				}
-				dbObj, gerr := obj.GetObjectFromDb(objKey, gActionMgr.dbHdl.DBUtil)
-				if gerr == nil {
-					//Construct patchinfo slice
-					patchOpInfoSlice := make([]modelObjs.PatchOpInfo, 0)
-					patches := strings.TrimSuffix(string(body), "}")
-					patchStr, err := objects.GetPatch([]byte(patches))
-					if err != nil {
-						gActionMgr.logger.Err(fmt.Sprintln("Error unmarshaling patches ", err))
-						return
-					}
-					for _, ops := range patchStr {
-						opStr, err := objects.GetOp(ops)
-						if err != nil {
-							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling op:", err))
-							return
-						}
-						pathStr, err := objects.GetPath(ops)
-						if err != nil {
-							fmt.Println("error unmarshaling path:", err)
-							return
-						}
-
-						value, ok := ops["value"]
-						if !ok {
-							gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig:error unmarshaling path :", err))
-							return
-						}
-						patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
-						patchOpInfoSlice = append(patchOpInfoSlice, patchOpInfo)
-
-					}
-					mergedObj, diff, err := obj.MergeDbAndConfigObjForPatchUpdate(dbObj, patchOpInfoSlice)
-					if err != nil {
-						gActionMgr.logger.Err(fmt.Sprintln("ApplyConfig: Failed to merge object ", err))
-						return
-					}
-					err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gActionMgr.dbHdl.DBUtil)
-					if err == nil && success == true {
-						gActionMgr.logger.Debug(fmt.Sprintln("ApplyConfig: Successfully updated the object ", objKey))
-					}
-				}
-
-			}
 
 			err, success = resourceOwner.CreateObject(obj, gActionMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
@@ -535,7 +484,6 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 	}
 	return fo, err
 }
-
 
 func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	gActionMgr.logger.Debug(fmt.Sprintln("Start config reset"))
