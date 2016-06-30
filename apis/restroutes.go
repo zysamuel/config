@@ -24,6 +24,7 @@
 package apis
 
 import (
+	"config/actions"
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -47,6 +48,7 @@ type ApiRoutes []ApiRoute
 type ApiMgr struct {
 	logger        *logging.Writer
 	objectMgr     *objects.ObjectMgr
+	actionMgr     *actions.ActionMgr
 	dbHdl         *objects.DbHandler
 	apiVer        string
 	apiBase       string
@@ -79,12 +81,13 @@ type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
 }
 
-func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr) *ApiMgr {
+func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
 	mgr.logger = logger
 	mgr.dbHdl = dbHdl
 	mgr.objectMgr = objectMgr
+	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
 	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
@@ -97,6 +100,21 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
 	gApiMgr = mgr
 	return mgr
+}
+
+func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
+	var rt ApiRoute
+	actionList := mgr.actionMgr.GetAllActions()
+	for _, action := range actionList {
+		rt = ApiRoute{action + "Action",
+			"POST",
+			mgr.apiBaseAction + action,
+			HandleRestRouteAction,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	}
+	return true
 }
 
 //
@@ -176,12 +194,6 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
 		} else if objInfo.Access == "x" {
-			rt = ApiRoute{key + "Action",
-				"POST",
-				mgr.apiBaseAction + key,
-				HandleRestRouteAction,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
 		}
 	}
 	return true
