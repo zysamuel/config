@@ -119,7 +119,12 @@ func writeAttributeJson(attrInfo AttributeListItem, dstFile *os.File) {
 	} else {
 		isRequired = false
 	}
-	dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	if attrInfo.IsArray == true {
+		dstFile.WriteString(fourTabs + "\"type\":" + "\"" + "array" + "\"" + "," + "\n")
+		dstFile.WriteString(fourTabs + "\"items\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	} else {
+		dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	}
 	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + description + "\"" + "," + "\n")
 	if isRequired {
 		dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
