@@ -22,6 +22,8 @@ install:
 	 install params/* $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objects/genObjectConfig.json $(PARAMSDIR)
 	 install $(SR_CODE_BASE)/snaproute/src/models/objects/systemProfile.json $(SYSPROFILE)
+	 install $(SR_CODE_BASE)/snaproute/src/models/actions/genActionConfig.json $(SYSPROFILE)
+
 
 fmt: $(SRCS)
 	 go fmt $(SRCS)
