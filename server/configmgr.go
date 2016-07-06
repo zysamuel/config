@@ -25,10 +25,10 @@ package server
 
 import (
 	"asicd/asicdCommonDefs"
+	"config/actions"
 	"config/apis"
 	"config/clients"
 	"config/objects"
-	"config/actions"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -133,7 +133,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
 	actionConfigFiles := [...]string{paramsDir + "/genActionConfig.json"}
-	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl,mgr.objectMgr, mgr.clientMgr)
+	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
 
 	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
 	mgr.ApiMgr.InitializeRestRoutes()
