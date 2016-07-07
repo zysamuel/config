@@ -30,11 +30,13 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	modelActions "models/actions"
+	modelEvents "models/events"
 	modelObjs "models/objects"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"utils/eventUtils"
 	//"utils/dbutils"
 	//"net/url"
 	//"path"
@@ -60,6 +62,10 @@ type GetBulkResponse struct {
 	CurrentMarker int64 `json:"CurrentMarker"`
 	NextMarker    int64 `json:"NextMarker"`
 	Objects       []ReturnObject
+}
+
+type GetEventResponse struct {
+	Objects []modelEvents.EventObject
 }
 
 type ActionResponse struct {
@@ -465,7 +471,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var err error
 	var obj modelObjs.ConfigObj
-//	var actionobj modelActions.ActionObj
+	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
 	fmt.Println("ExecuteActionObject")
@@ -497,10 +503,10 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
 		}
 	} else if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
-		fmt.Println("actionObjhdl:",actionobjHdl)
+		fmt.Println("actionObjhdl:", actionobjHdl)
 		if body, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
-			fmt.Println("resourceOwner:", resourceOwner, " servername:", resourceOwner.GetServerName()," body:",body, " actionObj:",actionobj)
+			fmt.Println("resourceOwner:", resourceOwner, " servername:", resourceOwner.GetServerName(), " body:", body, " actionObj:", actionobj)
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
@@ -556,9 +562,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
-	fmt.Println("resource:",resource)
+	fmt.Println("resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		fmt.Println("objHdl:",objHdl)
+		fmt.Println("objHdl:", objHdl)
 		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
 			if len(updateKeys) == 0 {
@@ -586,7 +592,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			fmt.Println("resource:", resource, " resourceOwner:",resourceOwner," obj:",obj)
+			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -1066,3 +1072,27 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 //	//http.ServeFile(w, r, fp)
 //	return
 //}
+
+func ExecuteEventObject(w http.ResponseWriter, r *http.Request) {
+	var retObj GetEventResponse
+	evtQueryObj, err := eventUtils.GetEventQueryParams(r)
+	if err != nil {
+		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	evtObj, err := eventUtils.GetEvents(evtQueryObj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
+	if err != nil {
+		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	retObj.Objects = evtObj
+	w.WriteHeader(http.StatusOK)
+	js, err := json.Marshal(retObj)
+	if err != nil {
+		gApiMgr.logger.Err("Error marshalling the object")
+	}
+	w.Write(js)
+	return
+}
