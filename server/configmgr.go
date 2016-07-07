@@ -138,6 +138,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
 	mgr.ApiMgr.InitializeRestRoutes()
 	mgr.ApiMgr.InitializeActionRestRoutes()
+	mgr.ApiMgr.InitializeEventRestRoutes()
 	mgr.ApiMgr.InstantiateRestRtr()
 
 	//@TODO: this is bad as its global object... lets see what we can do with this

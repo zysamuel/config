@@ -4468,8 +4468,24 @@ Operation.prototype.getBody = function (headers, args, opts) {
         if (encoded !== '') {
           encoded += ',';
         }
-		  var valueStr = encodeURIComponent(value).replace("%",'')
-        encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + "\"" + valueStr + "\"";
+        if (Array.isArray(value)) {
+           encoded += "\"" + encodeURIComponent(key) +"\":"
+           var valueStr = "[" ;
+           var arrayLength = value.length;
+           for (var i = 0; i < arrayLength; i++) {
+               if (i < arrayLength -1) {
+               valueStr += "\"" + String(value[i]) + "\",";
+               } else {
+                valueStr += "\"" + String(value[i]) + "\"";
+               }
+            }
+            valueStr +=  "]" ;
+            encoded += valueStr
+        }
+        else {
+            var valueStr = value
+            encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + "\"" + valueStr + "\"";
+        }
       }
     }
     body = "{" + encoded + "}";
