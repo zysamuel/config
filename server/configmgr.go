@@ -25,13 +25,14 @@ package server
 
 import (
 	"asicd/asicdCommonDefs"
+	"config/actions"
 	"config/apis"
 	"config/clients"
 	"config/objects"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"models"
+	modelObjs "models/objects"
 	"os"
 	"os/signal"
 	"strings"
@@ -48,6 +49,7 @@ type ConfigMgr struct {
 	ApiMgr      *apis.ApiMgr
 	clientMgr   *clients.ClientMgr
 	objectMgr   *objects.ObjectMgr
+	actionMgr   *actions.ActionMgr
 	cltNameCh   chan string
 }
 
@@ -126,13 +128,17 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion)
 
 	objects.CreateObjectMap()
-	objectConfigFiles := [...]string{paramsDir + "/objectconfig.json",
-		paramsDir + "/genObjectConfig.json"}
+	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
-	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr)
+	actionConfigFiles := [...]string{paramsDir + "/genActionConfig.json"}
+	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
+
+	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
 	mgr.ApiMgr.InitializeRestRoutes()
+	mgr.ApiMgr.InitializeActionRestRoutes()
+	mgr.ApiMgr.InitializeEventRestRoutes()
 	mgr.ApiMgr.InstantiateRestRtr()
 
 	//@TODO: this is bad as its global object... lets see what we can do with this
@@ -173,8 +179,8 @@ func (mgr *ConfigMgr) SigHandler() {
 	}
 }
 
-func GetSystemStatus() models.SystemStatusState {
-	systemStatus := models.SystemStatusState{}
+func GetSystemStatus() modelObjs.SystemStatusState {
+	systemStatus := modelObjs.SystemStatusState{}
 	systemStatus.Name, _ = os.Hostname()
 	systemStatus.Ready = gConfigMgr.clientMgr.IsReady()
 	if systemStatus.Ready == false {
@@ -200,20 +206,20 @@ func GetSystemStatus() models.SystemStatusState {
 		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumActionCalls, gConfigMgr.ApiMgr.ApiCallStats.NumActionCallsSuccess)
 
 	// Read DaemonStates from db
-	var daemonState models.DaemonState
+	var daemonState modelObjs.DaemonState
 	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
-	systemStatus.FlexDaemons = make([]models.DaemonState, len(daemonStates))
+	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
 	for idx, daemonState := range daemonStates {
-		systemStatus.FlexDaemons[idx] = daemonState.(models.DaemonState)
+		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)
 	}
 	return systemStatus
 }
 
-func GetSystemSwVersion() models.SystemSwVersionState {
-	systemSwVersion := models.SystemSwVersionState{}
+func GetSystemSwVersion() modelObjs.SystemSwVersionState {
+	systemSwVersion := modelObjs.SystemSwVersionState{}
 	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
 	numRepos := len(gConfigMgr.swVersion.Repos)
-	systemSwVersion.Repos = make([]models.RepoInfo, numRepos)
+	systemSwVersion.Repos = make([]modelObjs.RepoInfo, numRepos)
 	for i := 0; i < numRepos; i++ {
 		systemSwVersion.Repos[i].Name = gConfigMgr.swVersion.Repos[i].Name
 		systemSwVersion.Repos[i].Sha1 = gConfigMgr.swVersion.Repos[i].Sha1
@@ -227,8 +233,8 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 	mgr.logger.Debug("Discovering ports")
 	// Get ports present on this system and store in DB for user to update port parameters
 	resource := "Port"
-	if objHdl, ok := models.ConfigObjectMap[resource]; ok {
-		var objs []models.ConfigObj
+	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+		var objs []modelObjs.ConfigObj
 		var err error
 		_, obj, _ := objects.GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
@@ -244,7 +250,7 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 				LinkedObjects = value.LinkedObjects
 			}
 			for i := 0; i < len(objs); i++ {
-				portConfig := (*objs[i].(*models.Port))
+				portConfig := (*objs[i].(*modelObjs.Port))
 				_, err := portConfig.GetObjectFromDb(portConfig.GetKey(), mgr.dbHdl)
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
@@ -269,7 +275,7 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 }
 
 func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
-	sysInfo := &models.SystemParam{}
+	sysInfo := &modelObjs.SystemParam{}
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
@@ -304,10 +310,10 @@ func (mgr *ConfigMgr) storeUUID(key string) {
 }
 
 func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client clients.ClientIf) {
-	var obj models.ConfigObj
+	var obj modelObjs.ConfigObj
 	var err error
 	mgr.logger.Info(fmt.Sprintln("Object: ", key, "is global object"))
-	if objHdl, ok := models.ConfigObjectMap[key]; ok {
+	if objHdl, ok := modelObjs.ConfigObjectMap[key]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ = objHdl.UnmarshalObject(body)
 		_, err = objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
@@ -332,7 +338,7 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 					for _, ifIndex := range keys {
 						switch key {
 						case "LLDPIntf": // @TODO: this is bad... as its hardcoded :(
-							lldpObj := &models.LLDPIntf{}
+							lldpObj := &modelObjs.LLDPIntf{}
 							lldpObj.IfIndex = ifIndex
 							bytes, err := json.Marshal(lldpObj)
 							lldpIntfObj, _ := objHdl.UnmarshalObject(bytes)
@@ -359,7 +365,7 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 }
 
 func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
-	var data models.ComponentLogging
+	var data modelObjs.ComponentLogging
 	var modName string
 	var err error
 
@@ -371,10 +377,10 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 	}
 
 	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
-	if objHdl, ok := models.ConfigObjectMap["ComponentLogging"]; ok {
+	if objHdl, ok := modelObjs.ConfigObjectMap["ComponentLogging"]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ := objHdl.UnmarshalObject(body)
-		data = obj.(models.ComponentLogging)
+		data = obj.(modelObjs.ComponentLogging)
 		data.Module = modName
 		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
 	}

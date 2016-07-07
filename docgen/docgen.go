@@ -13,13 +13,13 @@
 //	 See the License for the specific language governing permissions and
 //	 limitations under the License.
 //
-// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __  
-// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  | 
-// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  | 
-// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   | 
-// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  | 
-// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__| 
-//                                                                                                           
+// _______  __       __________   ___      _______.____    __    ____  __  .___________.  ______  __    __
+// |   ____||  |     |   ____\  \ /  /     /       |\   \  /  \  /   / |  | |           | /      ||  |  |  |
+// |  |__   |  |     |  |__   \  V  /     |   (----` \   \/    \/   /  |  | `---|  |----`|  ,----'|  |__|  |
+// |   __|  |  |     |   __|   >   <       \   \      \            /   |  |     |  |     |  |     |   __   |
+// |  |     |  `----.|  |____ /  .  \  .----)   |      \    /\    /    |  |     |  |     |  `----.|  |  |  |
+// |__|     |_______||_______/__/ \__\ |_______/        \__/  \__/     |__|     |__|      \______||__|  |__|
+//
 
 package main
 
@@ -119,7 +119,12 @@ func writeAttributeJson(attrInfo AttributeListItem, dstFile *os.File) {
 	} else {
 		isRequired = false
 	}
-	dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	if attrInfo.IsArray == true {
+		dstFile.WriteString(fourTabs + "\"type\":" + "\"" + "array" + "\"" + "," + "\n")
+		dstFile.WriteString(fourTabs + "\"items\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	} else {
+		dstFile.WriteString(fourTabs + "\"type\":" + "\"" + attrTypeVal + "\"" + "," + "\n")
+	}
 	dstFile.WriteString(fourTabs + "\"description\":" + "\"" + description + "\"" + "," + "\n")
 	if isRequired {
 		dstFile.WriteString(fourTabs + "\"required\":" + "true," + "\n")
@@ -303,7 +308,7 @@ func main() {
 		return
 	}
 	idx := 0
-	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/genObjectConfig.json")
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/objects/genObjectConfig.json")
 	membersInfoBase := base + "/reltools/codegentools/._genInfo/"
 	for _, infoFile := range jsonFilesList {
 		fmt.Println("Info File", infoFile)

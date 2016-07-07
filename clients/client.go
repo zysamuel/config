@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
-	"models"
+	"models/objects"
 	"strconv"
 	"time"
 	"utils/dbutils"
@@ -36,8 +36,8 @@ import (
 	"utils/logging"
 )
 
-type SystemStatusCB func() models.SystemStatusState
-type SystemSwVersionCB func() models.SystemSwVersionState
+type SystemStatusCB func() objects.SystemStatusState
+type SystemSwVersionCB func() objects.SystemSwVersionState
 
 type ClientMgr struct {
 	logger            *logging.Writer
@@ -60,12 +60,12 @@ type ClientIf interface {
 	ConnectToServer() bool
 	DisconnectFromServer() bool
 	IsConnectedToServer() bool
-	CreateObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
-	DeleteObject(obj models.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
-	GetBulkObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []models.ConfigObj)
-	UpdateObject(dbObj models.ConfigObj, obj models.ConfigObj, attrSet []bool, op []models.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
-	GetObject(obj models.ConfigObj, dbHdl *dbutils.DBUtil) (error, models.ConfigObj)
-	ExecuteAction(obj models.ConfigObj) error
+	CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
+	DeleteObject(obj objects.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
+	GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []objects.ConfigObj)
+	UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
+	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
+	ExecuteAction(obj objects.ConfigObj) error
 	GetServerName() string
 }
 
