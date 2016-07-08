@@ -55,6 +55,7 @@ type ApiMgr struct {
 	apiBaseConfig string
 	apiBaseState  string
 	apiBaseAction string
+	apiBaseEvent  string
 	basePath      string
 	fullPath      string
 	pRestRtr      *mux.Router
@@ -93,6 +94,7 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
 	mgr.apiBaseState = mgr.apiBase + "state" + "/"
 	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
+	mgr.apiBaseEvent = mgr.apiBase + "events"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
@@ -114,6 +116,18 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 
 	}
+	return true
+}
+
+func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
+	var rt ApiRoute
+	rt = ApiRoute{"Events",
+		"GET",
+		mgr.apiBaseEvent,
+		HandleRestRouteEvent,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+
 	return true
 }
 
@@ -252,6 +266,11 @@ func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
 
 func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 	ExecuteActionObject(w, r)
+	return
+}
+
+func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
+	ExecuteEventObject(w, r)
 	return
 }
 
