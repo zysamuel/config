@@ -33,6 +33,7 @@ import (
 	"models/objects"
 	"net/http"
 	"strings"
+	"utils/commonDefs"
 	"utils/logging"
 )
 
@@ -69,17 +70,13 @@ type ConfigObjInfo struct {
 	Listeners     []clients.ClientIf
 }
 
-const (
-	MAX_JSON_LENGTH = 4096
-)
-
 func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
 	}
 	if r != nil {
-		body, err = ioutil.ReadAll(io.LimitReader(r.Body, MAX_JSON_LENGTH))
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, commonDefs.MAX_JSON_LENGTH))
 		if err != nil {
 			return body, retobj, err
 		}
