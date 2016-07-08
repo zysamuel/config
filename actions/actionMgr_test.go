@@ -62,7 +62,6 @@ func Init() {
 	infoListFile = make([]string, 0)
 	infoListFile = actionConfigFiles[:]
 }
-
 func TestInit(t *testing.T) {
 	Init()
 	dbHdl = objects.InstantiateDbIf(Logger)
@@ -79,6 +78,15 @@ func TestInit(t *testing.T) {
 	t.Log("For ", infoListFile, " nil, nil",
 		"got", v)
 	actionMgr = v
+}
+func TestInitializeActionObjectHandles(*testing.T) {
+	fmt.Println("****TestInitializeActionHandles****")
+	var init bool
+	init = actionMgr.InitializeActionObjectHandles(infoListFile)
+	fmt.Println("init status with infoListFile:", infoListFile, " is:", init)
+	init = actionMgr.InitializeActionObjectHandles(make([]string, 0))
+	fmt.Println("init status with empty infoListFile:", init)
+	fmt.Println("*************************")
 }
 
 func TestGetAllActions(t *testing.T) {

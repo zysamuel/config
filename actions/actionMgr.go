@@ -177,16 +177,16 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in reading Action configuration file", objFile))
+			mgr.logger.Debug(fmt.Sprintln("Error in reading Action configuration file", objFile))
 			return false
 		}
 		err = json.Unmarshal(bytes, &actionMap)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in unmarshaling data from ", objFile))
+			mgr.logger.Debug(fmt.Sprintln("Error in unmarshaling data from ", objFile))
 		}
 
 		for k, v := range actionMap {
-			mgr.logger.Info(fmt.Sprintln("For Action [", k, "] Primary owner is [", v.Owner, "] "))
+			mgr.logger.Debug(fmt.Sprintln("For Action [", k, "] Primary owner is [", v.Owner, "] "))
 			entry := new(ActionObjInfo)
 			if mgr.clientMgr != nil {
 				entry.Owner = mgr.clientMgr.Clients[v.Owner]
@@ -207,14 +207,14 @@ func (mgr *ActionMgr) GetAllActions() []string {
 
 func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, retobj modelActions.ActionObj, err error) {
 	//var ret_obj map[string]modelActions.DummyStruct
-	fmt.Println("GetActionObj r:", r, " obj:", obj)
+	gActionMgr.logger.Debug(fmt.Sprintln("GetActionObj r:", r, " obj:", obj))
 	if obj == nil {
 		err = errors.New("Action Object is nil")
 		return body, retobj, err
 	}
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, r.ContentLength))
-		fmt.Println("err:", err, " body:", body)
+		gActionMgr.logger.Debug(fmt.Sprintln("err:", err, " body:", body))
 		if err != nil {
 			return body, retobj, err
 		}
@@ -237,7 +237,7 @@ func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
 	var obj modelObjs.ConfigObj
 	var objKey string
 
-	gActionMgr.logger.Info(fmt.Sprintln("update config resource:", resource))
+	gActionMgr.logger.Debug(fmt.Sprintln("update config resource:", resource))
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if obj, err = objHdl.UnmarshalObject(body); err == nil {
 			objKey = obj.GetKey()
@@ -296,7 +296,7 @@ func CreateConfig(resource string, body json.RawMessage) {
 	var objKey string
 	errCode = SRSuccess
 
-	gActionMgr.logger.Info(fmt.Sprintln("Create config resource:", resource))
+	gActionMgr.logger.Debug(fmt.Sprintln("Create config resource:", resource))
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if obj, err = objHdl.UnmarshalObject(body); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
@@ -360,7 +360,7 @@ func CreateConfig(resource string, body json.RawMessage) {
 }
 func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 	for key, value := range data.ConfigData {
-		gActionMgr.logger.Info(fmt.Sprintln("key:", key, "value:", value, " resoure:", resource))
+		gActionMgr.logger.Debug(fmt.Sprintln("key:", key, "value:", value, " resoure:", resource))
 		if resource != key {
 			continue
 		}
@@ -374,7 +374,7 @@ func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 }
 
 func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
-	gActionMgr.logger.Info(fmt.Sprintln("SaveConfigObject for resource:", resource))
+	gActionMgr.logger.Debug(fmt.Sprintln("SaveConfigObject for resource:", resource))
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		gActionMgr.logger.Err("objHdl nil")
@@ -392,7 +392,7 @@ func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
 		return errors.New("GetBulkObjFromDb returned error")
 	}
 	if objCount == 0 {
-		gActionMgr.logger.Info(fmt.Sprintln("No objects of type:", resource, " configured"))
+		gActionMgr.logger.Debug(fmt.Sprintln("No objects of type:", resource, " configured"))
 		return nil
 	}
 	if data.ConfigData[resource] == nil {
@@ -405,10 +405,10 @@ func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
 
 }
 func OpenFile(cfgFileName string) (fo *os.File, err error) {
-	gActionMgr.logger.Info(fmt.Sprintln("Full config file : ", cfgFileName))
+	gActionMgr.logger.Debug(fmt.Sprintln("Full config file : ", cfgFileName))
 	_, err = os.Stat(cfgFileName)
 	if os.IsNotExist(err) {
-		gActionMgr.logger.Info(fmt.Sprintln(cfgFileName, " not present, create it"))
+		gActionMgr.logger.Debug(fmt.Sprintln(cfgFileName, " not present, create it"))
 		fo, err = os.Create(cfgFileName)
 		if err != nil {
 			gActionMgr.logger.Err(fmt.Sprintln("Error :", err, " when creating file:", cfgFileName))
@@ -416,7 +416,7 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 		}
 	} else if err == nil {
 		// open cfg file
-		gActionMgr.logger.Info("cfgFile present, open it for update")
+		gActionMgr.logger.Debug("cfgFile present, open it for update")
 		fo, err = os.OpenFile(cfgFileName, os.O_RDWR, 0666)
 		if err != nil {
 			gActionMgr.logger.Err(fmt.Sprintln("Error:", err, "when opening cfgFile:", cfgFileName))
@@ -499,21 +499,21 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 	}
 	switch obj.(type) {
 	case modelActions.ApplyConfig:
-		gActionMgr.logger.Info("ApplyConfig")
+		gActionMgr.logger.Debug("ApplyConfig")
 		fmt.Println("ApplyConfig")
 		data := obj.(modelActions.ApplyConfig)
 		for _, applyResource := range ApplyConfigOrder {
 			ApplyConfigObject(data, applyResource)
 		}
 	case modelActions.SaveConfig:
-		gActionMgr.logger.Info("SaveConfig")
+		gActionMgr.logger.Debug("SaveConfig")
 		var fo *os.File
 		var err error
 		data := obj.(modelActions.SaveConfig)
 		fileName := data.FileName
-		gActionMgr.logger.Info(fmt.Sprintln("FileName:", fileName))
+		gActionMgr.logger.Debug(fmt.Sprintln("FileName:", fileName))
 		if fileName == "" {
-			gActionMgr.logger.Info("FileName not set, setting it to default startup-config")
+			gActionMgr.logger.Debug("FileName not set, setting it to default startup-config")
 			fileName = "startup-config"
 		}
 		// open config file
@@ -539,7 +539,7 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 			gActionMgr.logger.Err(fmt.Sprintln("json marshal returned error:", err))
 			return err
 		}
-		gActionMgr.logger.Info(fmt.Sprintln("js:", string(js)))
+		gActionMgr.logger.Debug(fmt.Sprintln("js:", string(js)))
 		_, err = fo.Write(js)
 		if err != nil {
 			gActionMgr.logger.Err(fmt.Sprintln("Error writing:", err))
@@ -547,7 +547,7 @@ func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
 		}
 
 	case modelActions.ResetConfig:
-		gActionMgr.logger.Info("Action resolved as ResetConfig")
+		gActionMgr.logger.Debug("Action resolved as ResetConfig")
 		data := obj.(modelActions.ResetConfig)
 		ResetConfigObject(data)
 	}
