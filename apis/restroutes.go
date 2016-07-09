@@ -24,6 +24,7 @@
 package apis
 
 import (
+	"config/actions"
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -47,12 +48,14 @@ type ApiRoutes []ApiRoute
 type ApiMgr struct {
 	logger        *logging.Writer
 	objectMgr     *objects.ObjectMgr
+	actionMgr     *actions.ActionMgr
 	dbHdl         *objects.DbHandler
 	apiVer        string
 	apiBase       string
 	apiBaseConfig string
 	apiBaseState  string
 	apiBaseAction string
+	apiBaseEvent  string
 	basePath      string
 	fullPath      string
 	pRestRtr      *mux.Router
@@ -79,17 +82,19 @@ type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
 }
 
-func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr) *ApiMgr {
+func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
 	mgr.logger = logger
 	mgr.dbHdl = dbHdl
 	mgr.objectMgr = objectMgr
+	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
 	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
 	mgr.apiBaseState = mgr.apiBase + "state" + "/"
 	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
+	mgr.apiBaseEvent = mgr.apiBase + "events"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
@@ -97,6 +102,33 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
 	gApiMgr = mgr
 	return mgr
+}
+
+func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
+	var rt ApiRoute
+	actionList := mgr.actionMgr.GetAllActions()
+	for _, action := range actionList {
+		rt = ApiRoute{action + "Action",
+			"POST",
+			mgr.apiBaseAction + action,
+			HandleRestRouteAction,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	}
+	return true
+}
+
+func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
+	var rt ApiRoute
+	rt = ApiRoute{"Events",
+		"GET",
+		mgr.apiBaseEvent,
+		HandleRestRouteEvent,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	return true
 }
 
 //
@@ -176,12 +208,6 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
 		} else if objInfo.Access == "x" {
-			rt = ApiRoute{key + "Action",
-				"POST",
-				mgr.apiBaseAction + key,
-				HandleRestRouteAction,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
 		}
 	}
 	return true
@@ -240,6 +266,11 @@ func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
 
 func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 	ExecuteActionObject(w, r)
+	return
+}
+
+func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
+	ExecuteEventObject(w, r)
 	return
 }
 
