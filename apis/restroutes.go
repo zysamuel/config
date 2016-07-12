@@ -28,6 +28,7 @@ import (
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
+	"models/events"
 	modelObjs "models/objects"
 	"net/http"
 	"path/filepath"
@@ -91,10 +92,10 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
-	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
-	mgr.apiBaseState = mgr.apiBase + "state" + "/"
-	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
-	mgr.apiBaseEvent = mgr.apiBase + "events"
+	mgr.apiBaseConfig = mgr.apiBase + "config/"
+	mgr.apiBaseState = mgr.apiBase + "state/"
+	mgr.apiBaseAction = mgr.apiBase + "action/"
+	mgr.apiBaseEvent = mgr.apiBase + "events/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
@@ -121,13 +122,15 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 
 func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
 	var rt ApiRoute
-	rt = ApiRoute{"Events",
-		"GET",
-		mgr.apiBaseEvent,
-		HandleRestRouteEvent,
+	for key, _ := range events.EventObjectMap {
+		rt = ApiRoute{key + "Events",
+			"GET",
+			mgr.apiBaseEvent + key,
+			HandleRestRouteEvent,
+		}
+		fmt.Println("Adding route rt - ", rt)
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
-	mgr.restRoutes = append(mgr.restRoutes, rt)
-
 	return true
 }
 
@@ -270,7 +273,7 @@ func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
-	ExecuteEventObject(w, r)
+	EventObjectGet(w, r)
 	return
 }
 
