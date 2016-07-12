@@ -65,7 +65,7 @@ type GetBulkResponse struct {
 }
 
 type GetEventResponse struct {
-	Objects []modelEvents.EventObject
+	Objects []modelEvents.EventObj
 }
 
 type ActionResponse struct {
@@ -1073,21 +1073,30 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 //	return
 //}
 
-func ExecuteEventObject(w http.ResponseWriter, r *http.Request) {
+func EventObjectGet(w http.ResponseWriter, r *http.Request) {
+	var obj modelEvents.EventObj
 	var retObj GetEventResponse
-	evtQueryObj, err := eventUtils.GetEventQueryParams(r)
+	var err error
+
+	gApiMgr.ApiCallStats.NumGetCalls++
+	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseEvent), "/")[0]
+	objHdl, ok := modelEvents.EventObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+	}
+	_, obj, err = objects.GetEventObj(r, objHdl)
+	if err != nil {
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	evtObjList, err := eventUtils.GetEvents(obj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
 	if err != nil {
 		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	evtObj, err := eventUtils.GetEvents(evtQueryObj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
-	if err != nil {
-		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
-		RespondErrorForApiCall(w, SRNotFound, err.Error())
-		return
-	}
-	retObj.Objects = evtObj
+	retObj.Objects = evtObjList
 	w.WriteHeader(http.StatusOK)
 	js, err := json.Marshal(retObj)
 	if err != nil {
