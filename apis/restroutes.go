@@ -128,7 +128,6 @@ func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
 			mgr.apiBaseEvent + key,
 			HandleRestRouteEvent,
 		}
-		fmt.Println("Adding route rt - ", rt)
 		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
 	return true
