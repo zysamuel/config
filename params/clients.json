@@ -44,6 +44,9 @@
         {"Name":"vxland",
 	 "Port":10015},
 
+        {"Name":"platformd",
+	 "Port":10016},
+
    {"Name":"local",
 	  "Port":0}
 ]
