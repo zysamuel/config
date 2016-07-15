@@ -291,18 +291,13 @@ func (mgr *ConfigMgr) DiscoverOpticModuleInfo() error {
 				currentIndex, objCount)
 			if err == nil {
 				for _, obj := range objs {
-					//for i := 0; i < len(objs); i++ {
-					//dwdmCfg := (*objs[i].(*modelObjs.DWDMModule))
-					//_, err := dwdmCfg.GetObjectFromDb(dwdmCfg.GetKey(), mgr.dbHdl)
 					_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
 					if err != nil {
-						//err = dwdmCfg.StoreObjectInDb(mgr.dbHdl)
 						err = obj.StoreObjectInDb(mgr.dbHdl)
 						if err != nil {
-							//mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ",
-							//	i, dwdmCfg, err))
+							mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ",
+								i, obj, err))
 						} else {
-							//mgr.storeUUID(dwdmCfg.GetKey())
 							mgr.storeUUID(obj.GetKey())
 						}
 					}
