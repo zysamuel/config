@@ -276,27 +276,31 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 
 func (mgr *ConfigMgr) DiscoverOpticModuleInfo() error {
 	mgr.logger.Debug("Discovering optic module information")
-	resource := "DWDMModule"
-	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		var objs []modelObjs.ConfigObj
-		var err error
-		_, obj, _ := objects.GetConfigObj(nil, objHdl)
-		currentIndex := int64(0)
-		objCount := int64(64)
-		err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
-			currentIndex, objCount)
-		fmt.Println("DISCOVERING OPTICD COMPS : ", objs)
-		if err == nil {
-			for i := 0; i < len(objs); i++ {
-				dwdmCfg := (*objs[i].(*modelObjs.DWDMModule))
-				_, err := dwdmCfg.GetObjectFromDb(dwdmCfg.GetKey(), mgr.dbHdl)
-				if err != nil {
-					err = dwdmCfg.StoreObjectInDb(mgr.dbHdl)
+	for _, resource := range []string{"DWDMModule", "DWDMModuleNwIntf"} {
+		if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+			var objs []modelObjs.ConfigObj
+			var err error
+			_, obj, _ := objects.GetConfigObj(nil, objHdl)
+			currentIndex := int64(0)
+			objCount := int64(64)
+			err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
+				currentIndex, objCount)
+			if err == nil {
+				for _, obj := range objs {
+					//for i := 0; i < len(objs); i++ {
+					//dwdmCfg := (*objs[i].(*modelObjs.DWDMModule))
+					//_, err := dwdmCfg.GetObjectFromDb(dwdmCfg.GetKey(), mgr.dbHdl)
+					_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
 					if err != nil {
-						mgr.logger.Err(fmt.Sprintln("Failed to store DWDMModule config in DB ",
-							i, dwdmCfg, err))
-					} else {
-						mgr.storeUUID(dwdmCfg.GetKey())
+						//err = dwdmCfg.StoreObjectInDb(mgr.dbHdl)
+						err = obj.StoreObjectInDb(mgr.dbHdl)
+						if err != nil {
+							//mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ",
+							//	i, dwdmCfg, err))
+						} else {
+							//mgr.storeUUID(dwdmCfg.GetKey())
+							mgr.storeUUID(obj.GetKey())
+						}
 					}
 				}
 			}
