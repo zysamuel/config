@@ -94,6 +94,7 @@ const (
 	SRAlreadyConfigured = 13
 	SRUpdateKeyError    = 14
 	SRUpdateNoChange    = 15
+	SRConfdBusy         = 16
 )
 
 // SR error strings
@@ -114,6 +115,7 @@ var ErrString = map[int]string{
 	SRAlreadyConfigured: "Already configured. Delete and Update operations are allowed.",
 	SRUpdateKeyError:    "Cannot update key in an object.",
 	SRUpdateNoChange:    "Nothing to be updated.",
+	SRConfdBusy:         "Confd busy, cannot serve the API call",
 }
 
 //Given a code reurn error string

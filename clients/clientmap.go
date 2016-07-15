@@ -40,4 +40,5 @@ var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"dhcpd":      &DHCPDClient{},
 	"fMgrd":      &FMGRDClient{},
 	"ndpd":       &NDPDClient{},
+	"platformd":  &PLATFORMDClient{},
 }
