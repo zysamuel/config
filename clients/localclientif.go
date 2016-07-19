@@ -25,7 +25,7 @@ package clients
 
 import (
 	"fmt"
-//	"models/actions"
+	//	"models/actions"
 	"models/objects"
 	"utils/dbutils"
 )
@@ -51,6 +51,14 @@ func (clnt *LocalClient) IsConnectedToServer() bool {
 
 func (clnt *LocalClient) GetServerName() string {
 	return "local"
+}
+
+func (clnt *LocalClient) LockApiHandler() {
+	return
+}
+
+func (clnt *LocalClient) UnlockApiHandler() {
+	return
 }
 
 func (clnt *LocalClient) CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {

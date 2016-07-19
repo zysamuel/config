@@ -94,7 +94,6 @@ const (
 	SRAlreadyConfigured = 13
 	SRUpdateKeyError    = 14
 	SRUpdateNoChange    = 15
-	SRConfdBusy         = 16
 )
 
 // SR error strings
@@ -115,7 +114,6 @@ var ErrString = map[int]string{
 	SRAlreadyConfigured: "Already configured. Delete and Update operations are allowed.",
 	SRUpdateKeyError:    "Cannot update key in an object.",
 	SRUpdateNoChange:    "Nothing to be updated.",
-	SRConfdBusy:         "Confd busy, cannot serve the API call",
 }
 
 //Given a code reurn error string
@@ -277,6 +275,8 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
+	defer resourceOwner.UnlockApiHandler()
+	resourceOwner.LockApiHandler()
 	if err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gApiMgr.dbHdl.DBUtil); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -320,6 +320,8 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
+	defer resourceOwner.UnlockApiHandler()
+	resourceOwner.LockApiHandler()
 	if err, retObj.ConfigObj = resourceOwner.GetObject(obj, gApiMgr.dbHdl.DBUtil); err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -424,6 +426,8 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
+	defer resourceOwner.UnlockApiHandler()
+	resourceOwner.LockApiHandler()
 	resp.CurrentMarker = currentIndex
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 		stateObjects = resourceOwner.GetBulkObject(obj, gApiMgr.dbHdl.DBUtil, currentIndex, objCount)
@@ -594,7 +598,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
+			defer resourceOwner.UnlockApiHandler()
+			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -666,6 +671,8 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			defer resourceOwner.UnlockApiHandler()
+			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(vars["objId"], objKey)
@@ -737,6 +744,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			defer resourceOwner.UnlockApiHandler()
+			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
@@ -842,6 +851,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					fmt.Println("err when merging ", err)
 					return
 				}
+				defer resourceOwner.UnlockApiHandler()
+				resourceOwner.LockApiHandler()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
@@ -878,6 +889,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
+				defer resourceOwner.UnlockApiHandler()
+				resourceOwner.LockApiHandler()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				fmt.Println("Returned after update object call - err: ", err, " success = ", success)
 				if err == nil && success == true {
@@ -983,6 +996,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("err when merging ", err)
 				return
 			}
+			defer resourceOwner.UnlockApiHandler()
+			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
@@ -1020,6 +1035,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			defer resourceOwner.UnlockApiHandler()
+			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++

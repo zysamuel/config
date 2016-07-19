@@ -46,22 +46,21 @@ type ApiRoute struct {
 type ApiRoutes []ApiRoute
 
 type ApiMgr struct {
-	logger          *logging.Writer
-	objectMgr       *objects.ObjectMgr
-	actionMgr       *actions.ActionMgr
-	dbHdl           *objects.DbHandler
-	apiVer          string
-	apiBase         string
-	apiBaseConfig   string
-	apiBaseState    string
-	apiBaseAction   string
-	apiBaseEvent    string
-	basePath        string
-	fullPath        string
-	pRestRtr        *mux.Router
-	restRoutes      []ApiRoute
-	ApiCallStats    ApiCallStats
-	readyToServeApi bool
+	logger        *logging.Writer
+	objectMgr     *objects.ObjectMgr
+	actionMgr     *actions.ActionMgr
+	dbHdl         *objects.DbHandler
+	apiVer        string
+	apiBase       string
+	apiBaseConfig string
+	apiBaseState  string
+	apiBaseAction string
+	apiBaseEvent  string
+	basePath      string
+	fullPath      string
+	pRestRtr      *mux.Router
+	restRoutes    []ApiRoute
+	ApiCallStats  ApiCallStats
 }
 
 var gApiMgr *ApiMgr
@@ -101,7 +100,6 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
-	mgr.readyToServeApi = true
 	gApiMgr = mgr
 	return mgr
 }
@@ -215,144 +213,68 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 	return true
 }
 
-func CanServeRestRouteCall() bool {
-	if gApiMgr.readyToServeApi == true {
-		gApiMgr.readyToServeApi = false
-		return true
-	}
-	return false
-}
-
-func DoneServingRestRouteCall() bool {
-	if gApiMgr.readyToServeApi == false {
-		gApiMgr.readyToServeApi = true
-	}
-	return true
-}
-
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ConfigObjectCreate(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ConfigObjectCreate(w, r)
 	return
 }
 
 func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ConfigObjectDeleteForId(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ConfigObjectDeleteForId(w, r)
 	return
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ConfigObjectDelete(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ConfigObjectDelete(w, r)
 	return
 }
 
 func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ConfigObjectUpdateForId(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ConfigObjectUpdateForId(w, r)
 	return
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ConfigObjectUpdate(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ConfigObjectUpdate(w, r)
 	return
 }
 
 func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		GetOneConfigObjectForId(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	GetOneConfigObjectForId(w, r)
+	return
 }
 
 func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		GetOneConfigObject(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	GetOneConfigObject(w, r)
+	return
 }
 
 func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		GetOneStateObjectForId(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	GetOneStateObjectForId(w, r)
+	return
 }
 
 func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		GetOneStateObject(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	GetOneStateObject(w, r)
+	return
 }
 
 func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		BulkGetConfigObjects(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	BulkGetConfigObjects(w, r)
 	return
 }
 
 func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		BulkGetStateObjects(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	BulkGetStateObjects(w, r)
 	return
 }
 
 func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ExecuteActionObject(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ExecuteActionObject(w, r)
 	return
 }
 
 func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
-	if CanServeRestRouteCall() {
-		ExecuteEventObject(w, r)
-		DoneServingRestRouteCall()
-	} else {
-		RespondErrorForApiCall(w, SRConfdBusy, "")
-	}
+	ExecuteEventObject(w, r)
 	return
 }
 
