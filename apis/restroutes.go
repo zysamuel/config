@@ -24,6 +24,7 @@
 package apis
 
 import (
+	"config/actions"
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -45,19 +46,22 @@ type ApiRoute struct {
 type ApiRoutes []ApiRoute
 
 type ApiMgr struct {
-	logger        *logging.Writer
-	objectMgr     *objects.ObjectMgr
-	dbHdl         *objects.DbHandler
-	apiVer        string
-	apiBase       string
-	apiBaseConfig string
-	apiBaseState  string
-	apiBaseAction string
-	basePath      string
-	fullPath      string
-	pRestRtr      *mux.Router
-	restRoutes    []ApiRoute
-	ApiCallStats  ApiCallStats
+	logger          *logging.Writer
+	objectMgr       *objects.ObjectMgr
+	actionMgr       *actions.ActionMgr
+	dbHdl           *objects.DbHandler
+	apiVer          string
+	apiBase         string
+	apiBaseConfig   string
+	apiBaseState    string
+	apiBaseAction   string
+	apiBaseEvent    string
+	basePath        string
+	fullPath        string
+	pRestRtr        *mux.Router
+	restRoutes      []ApiRoute
+	ApiCallStats    ApiCallStats
+	readyToServeApi bool
 }
 
 var gApiMgr *ApiMgr
@@ -79,24 +83,54 @@ type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
 }
 
-func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr) *ApiMgr {
+func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
 	mgr.logger = logger
 	mgr.dbHdl = dbHdl
 	mgr.objectMgr = objectMgr
+	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
 	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
 	mgr.apiBaseState = mgr.apiBase + "state" + "/"
 	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
+	mgr.apiBaseEvent = mgr.apiBase + "events"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
+	mgr.readyToServeApi = true
 	gApiMgr = mgr
 	return mgr
+}
+
+func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
+	var rt ApiRoute
+	actionList := mgr.actionMgr.GetAllActions()
+	for _, action := range actionList {
+		rt = ApiRoute{action + "Action",
+			"POST",
+			mgr.apiBaseAction + action,
+			HandleRestRouteAction,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	}
+	return true
+}
+
+func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
+	var rt ApiRoute
+	rt = ApiRoute{"Events",
+		"GET",
+		mgr.apiBaseEvent,
+		HandleRestRouteEvent,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+
+	return true
 }
 
 //
@@ -176,70 +210,149 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
 		} else if objInfo.Access == "x" {
-			rt = ApiRoute{key + "Action",
-				"POST",
-				mgr.apiBaseAction + key,
-				HandleRestRouteAction,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
 		}
 	}
 	return true
 }
 
+func CanServeRestRouteCall() bool {
+	if gApiMgr.readyToServeApi == true {
+		gApiMgr.readyToServeApi = false
+		return true
+	}
+	return false
+}
+
+func DoneServingRestRouteCall() bool {
+	if gApiMgr.readyToServeApi == false {
+		gApiMgr.readyToServeApi = true
+	}
+	return true
+}
+
 func HandleRestRouteCreate(w http.ResponseWriter, r *http.Request) {
-	ConfigObjectCreate(w, r)
+	if CanServeRestRouteCall() {
+		ConfigObjectCreate(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteDeleteForId(w http.ResponseWriter, r *http.Request) {
-	ConfigObjectDeleteForId(w, r)
+	if CanServeRestRouteCall() {
+		ConfigObjectDeleteForId(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteDelete(w http.ResponseWriter, r *http.Request) {
-	ConfigObjectDelete(w, r)
+	if CanServeRestRouteCall() {
+		ConfigObjectDelete(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteUpdateForId(w http.ResponseWriter, r *http.Request) {
-	ConfigObjectUpdateForId(w, r)
+	if CanServeRestRouteCall() {
+		ConfigObjectUpdateForId(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
-	ConfigObjectUpdate(w, r)
+	if CanServeRestRouteCall() {
+		ConfigObjectUpdate(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
-	GetOneConfigObjectForId(w, r)
+	if CanServeRestRouteCall() {
+		GetOneConfigObjectForId(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 }
 
 func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
-	GetOneConfigObject(w, r)
+	if CanServeRestRouteCall() {
+		GetOneConfigObject(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 }
 
 func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
-	GetOneStateObjectForId(w, r)
+	if CanServeRestRouteCall() {
+		GetOneStateObjectForId(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 }
 
 func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
-	GetOneStateObject(w, r)
+	if CanServeRestRouteCall() {
+		GetOneStateObject(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 }
 
 func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {
-	BulkGetConfigObjects(w, r)
+	if CanServeRestRouteCall() {
+		BulkGetConfigObjects(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteBulkGetState(w http.ResponseWriter, r *http.Request) {
-	BulkGetStateObjects(w, r)
+	if CanServeRestRouteCall() {
+		BulkGetStateObjects(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 
 func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
-	ExecuteActionObject(w, r)
+	if CanServeRestRouteCall() {
+		ExecuteActionObject(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
+	return
+}
+
+func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
+	if CanServeRestRouteCall() {
+		ExecuteEventObject(w, r)
+		DoneServingRestRouteCall()
+	} else {
+		RespondErrorForApiCall(w, SRConfdBusy, "")
+	}
 	return
 }
 

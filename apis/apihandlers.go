@@ -24,15 +24,19 @@
 package apis
 
 import (
+	"config/actions"
 	"config/objects"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	modelActions "models/actions"
+	modelEvents "models/events"
 	modelObjs "models/objects"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"utils/eventUtils"
 	//"utils/dbutils"
 	//"net/url"
 	//"path"
@@ -58,6 +62,10 @@ type GetBulkResponse struct {
 	CurrentMarker int64 `json:"CurrentMarker"`
 	NextMarker    int64 `json:"NextMarker"`
 	Objects       []ReturnObject
+}
+
+type GetEventResponse struct {
+	Objects []modelEvents.EventObject
 }
 
 type ActionResponse struct {
@@ -86,6 +94,7 @@ const (
 	SRAlreadyConfigured = 13
 	SRUpdateKeyError    = 14
 	SRUpdateNoChange    = 15
+	SRConfdBusy         = 16
 )
 
 // SR error strings
@@ -106,6 +115,7 @@ var ErrString = map[int]string{
 	SRAlreadyConfigured: "Already configured. Delete and Update operations are allowed.",
 	SRUpdateKeyError:    "Cannot update key in an object.",
 	SRUpdateNoChange:    "Nothing to be updated.",
+	SRConfdBusy:         "Confd busy, cannot serve the API call",
 }
 
 //Given a code reurn error string
@@ -463,12 +473,15 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var err error
 	var obj modelObjs.ConfigObj
+	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
+	fmt.Println("ExecuteActionObject")
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
+	fmt.Println("resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if _, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
@@ -486,6 +499,31 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 				resp.Error = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("Failed to execute action: ", obj, " due to error: ", err))
+			}
+		} else {
+			errCode = SRObjHdlError
+			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
+		}
+	} else if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
+		fmt.Println("actionObjhdl:", actionobjHdl)
+		if body, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
+			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
+			fmt.Println("resourceOwner:", resourceOwner, " servername:", resourceOwner.GetServerName(), " body:", body, " actionObj:", actionobj)
+			if resourceOwner.IsConnectedToServer() == false {
+				errString := "Confd not connected to " + resourceOwner.GetServerName()
+				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				return
+			}
+			//temporary
+			err = actions.ExecutePerformAction(actionobj)
+			if err == nil {
+				gApiMgr.ApiCallStats.NumActionCallsSuccess++
+				w.WriteHeader(http.StatusOK)
+				errCode = SRSuccess
+			} else {
+				resp.Error = err.Error()
+				errCode = SRServerError
+				gApiMgr.logger.Debug(fmt.Sprintln("Failed to execute action: ", actionobj, " due to error: ", err))
 			}
 		} else {
 			errCode = SRObjHdlError
@@ -526,7 +564,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
+	fmt.Println("resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+		fmt.Println("objHdl:", objHdl)
 		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
 			if len(updateKeys) == 0 {
@@ -554,6 +594,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -1033,3 +1074,27 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 //	//http.ServeFile(w, r, fp)
 //	return
 //}
+
+func ExecuteEventObject(w http.ResponseWriter, r *http.Request) {
+	var retObj GetEventResponse
+	evtQueryObj, err := eventUtils.GetEventQueryParams(r)
+	if err != nil {
+		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	evtObj, err := eventUtils.GetEvents(evtQueryObj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
+	if err != nil {
+		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	retObj.Objects = evtObj
+	w.WriteHeader(http.StatusOK)
+	js, err := json.Marshal(retObj)
+	if err != nil {
+		gApiMgr.logger.Err("Error marshalling the object")
+	}
+	w.Write(js)
+	return
+}
