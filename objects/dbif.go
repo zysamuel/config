@@ -58,6 +58,8 @@ func (d *DbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
 		d.logger.Err(fmt.Sprintln("Failed to get UUID ", err))
 		return "", err
 	}
+	defer d.DBUtil.DbLock.Unlock()
+	d.DBUtil.DbLock.Lock()
 	_, err = d.Do("SET", UUId.String(), objKey)
 	if err != nil {
 		d.logger.Err(fmt.Sprintln("Failed to insert uuid to objkey entry in db ", err))
@@ -73,6 +75,8 @@ func (d *DbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
 }
 
 func (d *DbHandler) DeleteUUIDToObjKeyMap(uuid, objKey string) error {
+	defer d.DBUtil.DbLock.Unlock()
+	d.DBUtil.DbLock.Lock()
 	_, err := d.Do("DEL", uuid)
 	if err != nil {
 		d.logger.Err(fmt.Sprintln("Failed to delete uuid to objkey entry in db ", err))
@@ -88,6 +92,8 @@ func (d *DbHandler) DeleteUUIDToObjKeyMap(uuid, objKey string) error {
 }
 
 func (d *DbHandler) GetUUIDFromObjKey(objKey string) (string, error) {
+	defer d.DBUtil.DbLock.Unlock()
+	d.DBUtil.DbLock.Lock()
 	objKeyWithUUIDPrefix := "UUID" + objKey
 	uuid, err := redis.String(d.Do("GET", objKeyWithUUIDPrefix))
 	if err != nil {
@@ -97,6 +103,8 @@ func (d *DbHandler) GetUUIDFromObjKey(objKey string) (string, error) {
 }
 
 func (d *DbHandler) GetObjKeyFromUUID(uuid string) (string, error) {
+	defer d.DBUtil.DbLock.Unlock()
+	d.DBUtil.DbLock.Lock()
 	objKey, err := redis.String(d.Do("GET", uuid))
 	if err != nil {
 		return "", err
