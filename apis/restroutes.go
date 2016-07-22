@@ -240,18 +240,22 @@ func HandleRestRouteUpdate(w http.ResponseWriter, r *http.Request) {
 
 func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 	GetOneConfigObjectForId(w, r)
+	return
 }
 
 func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 	GetOneConfigObject(w, r)
+	return
 }
 
 func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
 	GetOneStateObjectForId(w, r)
+	return
 }
 
 func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 	GetOneStateObject(w, r)
+	return
 }
 
 func HandleRestRouteBulkGetConfig(w http.ResponseWriter, r *http.Request) {

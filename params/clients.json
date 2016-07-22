@@ -46,7 +46,10 @@
 
         {"Name":"platformd",
 	 "Port":10016},
+	 
+        {"Name":"ndpd",
+	 "Port":10017},
 
-   {"Name":"local",
+         {"Name":"local",
 	  "Port":0}
 ]
