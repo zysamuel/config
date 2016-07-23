@@ -37,10 +37,10 @@ import (
 )
 
 type ApiRoute struct {
-	Name        string
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
+	Name        string           // Unique Identifier to identify this route
+	Method      string           // REST Method POST/GET/PATCH....
+	Pattern     string           // Endpoint URI
+	HandlerFunc http.HandlerFunc // Function reposnsible for executing the request
 }
 
 type ApiRoutes []ApiRoute
