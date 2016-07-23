@@ -67,6 +67,8 @@ type ClientIf interface {
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
 	ExecuteAction(obj objects.ConfigObj) error
 	GetServerName() string
+	LockApiHandler()
+	UnlockApiHandler()
 }
 
 func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB) *ClientMgr {

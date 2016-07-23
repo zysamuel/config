@@ -38,10 +38,15 @@ import (
 	"utils/logging"
 )
 
+type AutoDiscoverStruct struct {
+	ObjList []string
+}
+
 type ObjectMgr struct {
-	logger    *logging.Writer
-	ObjHdlMap map[string]ConfigObjInfo
-	clientMgr *clients.ClientMgr
+	logger             *logging.Writer
+	ObjHdlMap          map[string]ConfigObjInfo
+	clientMgr          *clients.ClientMgr
+	AutoDiscoverObjMap map[string]AutoDiscoverStruct
 }
 
 type PatchOp map[string]*json.RawMessage
@@ -58,6 +63,7 @@ type ConfigObjJson struct {
 	Access        string   `json:"Access"`
 	Listeners     []string `json:"Listeners"`
 	AutoCreate    bool     `json:"autoCreate"`
+	AutoDiscover  bool     `json:"autoDiscover"`
 	LinkedObjects []string `json:"linkedObjects"`
 }
 
@@ -204,6 +210,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 	var objMap map[string]ConfigObjJson
 
 	mgr.ObjHdlMap = make(map[string]ConfigObjInfo)
+	mgr.AutoDiscoverObjMap = make(map[string]AutoDiscoverStruct)
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
@@ -227,10 +234,20 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 			}
 			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
 			mgr.ObjHdlMap[k] = *entry
+
+			if v.AutoDiscover == true {
+				ent, _ := mgr.AutoDiscoverObjMap[v.Owner]
+				ent.ObjList = append(ent.ObjList, k)
+				mgr.AutoDiscoverObjMap[v.Owner] = ent
+			}
 		}
 	}
 	return true
 }
 func (mgr *ObjectMgr) GetConfigObjHdlMap() map[string]ConfigObjInfo {
 	return mgr.ObjHdlMap
+}
+
+func (mgr *ObjectMgr) GetAutoDiscoverObjMap() map[string]AutoDiscoverStruct {
+	return mgr.AutoDiscoverObjMap
 }

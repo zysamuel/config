@@ -83,6 +83,10 @@ type SwitchCfgJson struct {
 
 var gConfigMgr *ConfigMgr
 
+const (
+	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 200
+)
+
 var futureObjKey map[string][]int32 // Object Name and key
 
 type ConfdGlobals struct {
@@ -438,14 +442,48 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects(paramsDir string) {
 				mgr.DiscoverOpticModuleInfo()
 			default:
 				mgr.logger.Info("Do Global Init for Client:" + clientName)
-				for key, value := range mgr.objectMgr.ObjHdlMap {
-					client := value.Owner
-					if value.AutoCreate && client.GetServerName() == clientName {
-						mgr.ConfigureGlobalConfig(paramsDir, key, client)
+				/*				for key, value := range mgr.objectMgr.ObjHdlMap {
+									client := value.Owner
+									if value.AutoCreate && client.GetServerName() == clientName {
+										mgr.ConfigureGlobalConfig(paramsDir, key, client)
+									}
+								}
+				*/
+			}
+			mgr.AutoDiscoverObjects(clientName)
+			mgr.ConfigureComponentLoggingLevel(clientName)
+		}
+	}
+}
+
+func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
+	if ent, ok := mgr.objectMgr.AutoDiscoverObjMap[clientName]; ok {
+		for _, resource := range ent.ObjList {
+			if resource == "Port" {
+				continue
+			}
+			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+				var objs []modelObjs.ConfigObj
+				var err error
+				_, obj, _ := objects.GetConfigObj(nil, objHdl)
+				currentIndex := int64(0)
+				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
+				err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
+					currentIndex, objCount)
+				if err == nil {
+					for _, obj := range objs {
+						_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
+						if err != nil {
+							err = obj.StoreObjectInDb(mgr.dbHdl)
+							if err != nil {
+								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
+							} else {
+								mgr.storeUUID(obj.GetKey())
+							}
+						}
 					}
 				}
 			}
-			mgr.ConfigureComponentLoggingLevel(clientName)
 		}
 	}
 }

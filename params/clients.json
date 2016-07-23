@@ -44,8 +44,14 @@
     {"Name":"vxland",
 	 "Port":10015},
 
-    {"Name":"opticd",
+    {"Name":"platformd",
 	 "Port":10016},
+	 
+    {"Name":"ndpd",
+	 "Port":10017},
+
+    {"Name":"opticd",
+	 "Port":10018},
 
     {"Name":"local",
 	 "Port":0}
