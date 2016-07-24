@@ -5,6 +5,9 @@ SnapRoute Config Manager
 Config Manager is responsible for providing RESTful interface to 
 all the protocol daemons and other infrastructure components.
 
+http://www.snaproute.com 
+
+
 Complete product documentation is available at 
 [Product Overview] (http://opensnaproute.github.io/docs/)
 
