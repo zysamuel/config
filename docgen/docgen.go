@@ -181,7 +181,7 @@ func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []Attr
 	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
 	writePathCompletion(docJsFile)
 
-	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/\": { \n")
+	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
 	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS)
 	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS)
 	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
