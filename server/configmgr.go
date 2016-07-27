@@ -35,7 +35,6 @@ import (
 	modelObjs "models/objects"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 	"utils/logging"
@@ -43,6 +42,7 @@ import (
 
 type ConfigMgr struct {
 	logger      *logging.Writer
+	paramsDir   string
 	dbHdl       *objects.DbHandler
 	bringUpTime time.Time
 	swVersion   SwVersion
@@ -51,34 +51,6 @@ type ConfigMgr struct {
 	objectMgr   *objects.ObjectMgr
 	actionMgr   *actions.ActionMgr
 	cltNameCh   chan string
-}
-
-type Repo struct {
-	Name   string `json:Name`
-	Sha1   string `json:Sha1`
-	Branch string `json:Branch`
-	Time   string `json:Time`
-}
-
-type Version struct {
-	Major string `json:major`
-	Minor string `json:minor`
-	Patch string `json:patch`
-	Build string `json:build`
-}
-
-type SwVersion struct {
-	SwVersion string
-	Repos     []Repo
-}
-
-type SwitchCfgJson struct {
-	SwitchMac   string `json:"SwitchMac"`
-	Hostname    string `json:"HostName"`
-	Version     string `json:"Version"`
-	MgmtIp      string `json:"MgmtIp"`
-	Description string `json:"Description"`
-	Vrf         string `json:"Vrf"`
 }
 
 var gConfigMgr *ConfigMgr
@@ -127,9 +99,10 @@ func GetConfigHandlerPort(paramsDir string) (bool, string) {
 func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr := new(ConfigMgr)
 	mgr.logger = logger
+	mgr.paramsDir = paramsDir
 
 	paramsFile := paramsDir + "/clients.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion)
+	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
@@ -155,8 +128,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.cltNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
-	go mgr.ReadSystemSwVersion(paramsDir)
-	go mgr.AutoCreateConfigObjects(paramsDir)
+	go mgr.ReadSystemSwVersion()
+	go mgr.AutoCreateConfigObjects()
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
 	go mgr.clientMgr.ListenToClientStateChanges()
 	go mgr.SigHandler()
@@ -181,56 +154,6 @@ func (mgr *ConfigMgr) SigHandler() {
 			}
 		}
 	}
-}
-
-func GetSystemStatus() modelObjs.SystemStatusState {
-	systemStatus := modelObjs.SystemStatusState{}
-	systemStatus.Name, _ = os.Hostname()
-	systemStatus.Ready = gConfigMgr.clientMgr.IsReady()
-	if systemStatus.Ready == false {
-		reason := "Not connected to"
-		unconnectedClients := gConfigMgr.clientMgr.GetUnconnectedClients()
-		for idx := 0; idx < len(unconnectedClients); idx++ {
-			reason = reason + " " + unconnectedClients[idx]
-		}
-		systemStatus.Reason = reason
-	} else {
-		systemStatus.Reason = "None"
-	}
-	systemStatus.UpTime = time.Since(gConfigMgr.bringUpTime).String()
-	systemStatus.NumCreateCalls =
-		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumCreateCalls, gConfigMgr.ApiMgr.ApiCallStats.NumCreateCallsSuccess)
-	systemStatus.NumDeleteCalls =
-		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumDeleteCalls, gConfigMgr.ApiMgr.ApiCallStats.NumDeleteCallsSuccess)
-	systemStatus.NumUpdateCalls =
-		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumUpdateCalls, gConfigMgr.ApiMgr.ApiCallStats.NumUpdateCallsSuccess)
-	systemStatus.NumGetCalls =
-		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumGetCalls, gConfigMgr.ApiMgr.ApiCallStats.NumGetCallsSuccess)
-	systemStatus.NumActionCalls =
-		fmt.Sprintf("Total %d Success %d", gConfigMgr.ApiMgr.ApiCallStats.NumActionCalls, gConfigMgr.ApiMgr.ApiCallStats.NumActionCallsSuccess)
-
-	// Read DaemonStates from db
-	var daemonState modelObjs.DaemonState
-	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
-	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
-	for idx, daemonState := range daemonStates {
-		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)
-	}
-	return systemStatus
-}
-
-func GetSystemSwVersion() modelObjs.SystemSwVersionState {
-	systemSwVersion := modelObjs.SystemSwVersionState{}
-	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
-	numRepos := len(gConfigMgr.swVersion.Repos)
-	systemSwVersion.Repos = make([]modelObjs.RepoInfo, numRepos)
-	for i := 0; i < numRepos; i++ {
-		systemSwVersion.Repos[i].Name = gConfigMgr.swVersion.Repos[i].Name
-		systemSwVersion.Repos[i].Sha1 = gConfigMgr.swVersion.Repos[i].Sha1
-		systemSwVersion.Repos[i].Branch = gConfigMgr.swVersion.Repos[i].Branch
-		systemSwVersion.Repos[i].Time = gConfigMgr.swVersion.Repos[i].Time
-	}
-	return systemSwVersion
 }
 
 func (mgr *ConfigMgr) DiscoverPorts() error {
@@ -278,33 +201,6 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 	return nil
 }
 
-func (mgr *ConfigMgr) ConstructSystemParam(paramsDir string) []byte {
-	sysInfo := &modelObjs.SystemParam{}
-	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
-	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
-		return nil
-	}
-	// Get this info from systemProfile
-	var cfg SwitchCfgJson
-	err = json.Unmarshal(cfgFileData, &cfg)
-	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error Unmarshalling cfg json data, err:", err))
-		return nil
-	}
-	sysInfo.SwitchMac = cfg.SwitchMac
-	sysInfo.MgmtIp = cfg.MgmtIp
-	sysInfo.Version = cfg.Version
-	sysInfo.Description = cfg.Description
-	sysInfo.Hostname = cfg.Hostname
-	sysInfo.Vrf = cfg.Vrf
-	rbyte, err := json.Marshal(sysInfo)
-	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error marshalling system info, err:", err))
-	}
-	return rbyte
-}
-
 func (mgr *ConfigMgr) storeUUID(key string) {
 	_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(key)
 	if err != nil {
@@ -329,7 +225,7 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 			// SystemParam is unique case where we will use SystemProfile.json to parse the
 			// information
 			if key == "SystemParam" {
-				sysBody := mgr.ConstructSystemParam(paramsDir)
+				sysBody := mgr.ConstructSystemParam()
 				sysObj, _ := objHdl.UnmarshalObject(sysBody)
 				err, success = client.CreateObject(sysObj, mgr.dbHdl.DBUtil)
 				if err == nil && success == true {
@@ -368,36 +264,8 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 	}
 }
 
-func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
-	var data modelObjs.ComponentLogging
-	var modName string
-	var err error
-
-	// Client name for confd is configured as "local" in json file.
-	if compName == "local" {
-		modName = "confd"
-	} else {
-		modName = compName
-	}
-
-	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
-	if objHdl, ok := modelObjs.ConfigObjectMap["ComponentLogging"]; ok {
-		var body []byte // @dummy body for default objects
-		obj, _ := objHdl.UnmarshalObject(body)
-		data = obj.(modelObjs.ComponentLogging)
-		data.Module = modName
-		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
-	}
-	if err != nil {
-		// ComponentLogging is not created in DB. Create with dsefault logging level and store in DB
-		err = mgr.dbHdl.StoreObjectInDb(data)
-		if err == nil {
-			mgr.storeUUID(data.GetKey())
-		}
-	}
-}
-
-func (mgr *ConfigMgr) AutoCreateConfigObjects(paramsDir string) {
+func (mgr *ConfigMgr) AutoCreateConfigObjects() {
+	paramsDir := mgr.paramsDir
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
@@ -452,36 +320,4 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 			}
 		}
 	}
-}
-
-func (mgr *ConfigMgr) ReadSystemSwVersion(paramsDir string) error {
-	var version Version
-	infoDir := strings.TrimSuffix(paramsDir, "params/")
-	pkgInfoFile := infoDir + "pkgInfo.json"
-	bytes, err := ioutil.ReadFile(pkgInfoFile)
-	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", pkgInfoFile))
-		return err
-	}
-
-	err = json.Unmarshal(bytes, &version)
-	if err != nil {
-		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
-		return err
-	}
-	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
-
-	buildInfoFile := infoDir + "buildInfo.json"
-	bytes, err = ioutil.ReadFile(buildInfoFile)
-	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", buildInfoFile))
-		return err
-	}
-
-	err = json.Unmarshal(bytes, &mgr.swVersion.Repos)
-	if err != nil {
-		mgr.logger.Err("Error in Unmarshalling buildInfo Json")
-		return err
-	}
-	return nil
 }

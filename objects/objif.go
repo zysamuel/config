@@ -119,6 +119,7 @@ func CreateObjectMap() {
 		objects.ConfigObjectMap[objName] = obj
 	}
 }
+
 func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err error) {
 	value, ok := op["value"]
 	if !ok {

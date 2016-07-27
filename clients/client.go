@@ -39,14 +39,16 @@ import (
 
 type SystemStatusCB func() objects.SystemStatusState
 type SystemSwVersionCB func() objects.SystemSwVersionState
+type ExecuteConfigurationActionCB func(actions.ActionObj) error
 
 type ClientMgr struct {
-	logger            *logging.Writer
-	Clients           map[string]ClientIf
-	reconncetTimer    *time.Ticker
-	systemReady       bool
-	systemStatusCB    SystemStatusCB
-	systemSwVersionCB SystemSwVersionCB
+	logger                       *logging.Writer
+	Clients                      map[string]ClientIf
+	reconncetTimer               *time.Ticker
+	systemReady                  bool
+	systemStatusCB               SystemStatusCB
+	systemSwVersionCB            SystemSwVersionCB
+	executeConfigurationActionCB ExecuteConfigurationActionCB
 }
 
 var gClientMgr *ClientMgr
@@ -72,11 +74,12 @@ type ClientIf interface {
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB) *ClientMgr {
+func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB
 	mgr.systemSwVersionCB = systemSwVersionCB
+	mgr.executeConfigurationActionCB = executeConfigurationActionCB
 	if rc := mgr.InitializeClientHandles(paramsFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil

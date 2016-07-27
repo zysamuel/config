@@ -139,6 +139,12 @@ type ActionObjInfo struct {
 	Owner clients.ClientIf
 }
 
+func CreateActionMap() {
+	for actionName, action := range modelActions.GenActionObjectMap {
+		modelActions.ActionObjectMap[actionName] = action
+	}
+}
+
 func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, clientMgr *clients.ClientMgr) *ActionMgr {
 	mgr := new(ActionMgr)
 	mgr.paramsDir = paramsDir
@@ -162,6 +168,7 @@ func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.W
 		return nil
 	}
 	mgr.dbHdl = dbHdl
+	CreateActionMap()
 	if rc := mgr.InitializeActionObjectHandles(infoFiles); !rc {
 		logger.Err("Error in initializing action object handles")
 		return nil
@@ -199,7 +206,7 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 
 func (mgr *ActionMgr) GetAllActions() []string {
 	retList := make([]string, 0)
-	for key, _ := range modelActions.ActionMap {
+	for key, _ := range modelActions.ActionObjectMap {
 		retList = append(retList, key)
 	}
 	return retList
@@ -358,6 +365,7 @@ func CreateConfig(resource string, body json.RawMessage) {
 	}
 
 }
+
 func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 	for key, value := range data.ConfigData {
 		gActionMgr.logger.Debug(fmt.Sprintln("key:", key, "value:", value, " resoure:", resource))
@@ -491,7 +499,7 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	return nil
 }
 
-func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
+func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 	gActionMgr.logger.Debug(fmt.Sprintln("local client Execute action obj: ", obj))
 	if gActionMgr == nil {
 		gActionMgr.logger.Err("Action mgr not initialized")
