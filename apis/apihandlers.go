@@ -476,7 +476,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var resp ActionResponse
 	var errCode int
 	var err error
-	var obj modelObjs.ConfigObj
+	//      var obj modelObjs.ConfigObj
 	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
@@ -486,7 +486,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
 	fmt.Println("resource:", resource)
-	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+	/*if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if _, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
@@ -508,7 +508,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 			errCode = SRObjHdlError
 			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
 		}
-	} else if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
+	} else*/if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
 		if body, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
@@ -531,7 +531,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			errCode = SRObjHdlError
-			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
+			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", actionobjHdl, resource, err))
 		}
 	} else {
 		errCode = SRObjMapError

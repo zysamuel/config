@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
+	"models/actions"
 	"models/objects"
 	"strconv"
 	"time"
@@ -65,7 +66,7 @@ type ClientIf interface {
 	GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []objects.ConfigObj)
 	UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
-	ExecuteAction(obj objects.ConfigObj) error
+	ExecuteAction(obj actions.ActionObj) error
 	GetServerName() string
 	LockApiHandler()
 	UnlockApiHandler()
