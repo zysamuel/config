@@ -486,7 +486,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var resp ActionResponse
 	var errCode int
 	var err error
-	var obj modelObjs.ConfigObj
+	//      var obj modelObjs.ConfigObj
 	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
@@ -498,29 +498,9 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
-	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if _, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
-			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
-			if resourceOwner.IsConnectedToServer() == false {
-				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
-				return
-			}
-			err = resourceOwner.ExecuteAction(obj)
-			if err == nil {
-				gApiMgr.ApiCallStats.NumActionCallsSuccess++
-				w.WriteHeader(http.StatusOK)
-				errCode = SRSuccess
-			} else {
-				resp.Error = err.Error()
-				errCode = SRServerError
-				gApiMgr.logger.Debug(fmt.Sprintln("Failed to execute action: ", obj, " due to error: ", err))
-			}
-		} else {
-			errCode = SRObjHdlError
-			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
-		}
-	} else if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
+	fmt.Println("resource:", resource)
+	if actionobjHdl, ok := modelActions.ActionObjectMap[resource]; ok {
+		fmt.Println("actionObjhdl:", actionobjHdl)
 		if _, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
@@ -528,8 +508,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			//temporary
-			err = actions.ExecutePerformAction(actionobj)
+			err = resourceOwner.ExecuteAction(actionobj)
 			if err == nil {
 				gApiMgr.ApiCallStats.NumActionCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -541,7 +520,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			errCode = SRObjHdlError
-			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
+			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", actionobjHdl, resource, err))
 		}
 	} else {
 		errCode = SRObjMapError
