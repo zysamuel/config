@@ -133,8 +133,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.cltNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
-	mgr.ReadSystemSwVersion(paramsDir)
-	go mgr.AutoCreateConfigObjects(paramsDir)
+	mgr.ReadSystemSwVersion()
+	go mgr.AutoCreateConfigObjects()
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
 	go mgr.clientMgr.ListenToClientStateChanges()
 	go mgr.SigHandler()
