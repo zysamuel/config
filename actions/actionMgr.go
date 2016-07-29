@@ -207,11 +207,11 @@ func (mgr *ActionMgr) GetAllActions() []string {
 
 func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, retobj modelActions.ActionObj, err error) {
 	//var ret_obj map[string]modelActions.DummyStruct
-	gActionMgr.logger.Debug(fmt.Sprintln("GetActionObj r:", r, " obj:", obj))
 	if obj == nil {
 		err = errors.New("Action Object is nil")
 		return body, retobj, err
 	}
+	//	gActionMgr.logger.Debug(fmt.Sprintln("GetActionObj r:", r, " obj:", obj))
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, r.ContentLength))
 		gActionMgr.logger.Debug(fmt.Sprintln("err:", err, " body:", body))
