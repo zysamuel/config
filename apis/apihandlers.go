@@ -153,7 +153,6 @@ func ReplaceMultipleSeperatorInUrl(urlStr string) string {
 			retStr = retStr + "/" + strs[i]
 		}
 	}
-	fmt.Println("Normalized url string is ", retStr)
 	return retStr
 }
 
@@ -495,7 +494,6 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, "")
 		return
 	}
-	fmt.Println("ExecuteActionObject")
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -503,9 +501,8 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("resource:", resource)
 	if actionobjHdl, ok := modelActions.ActionObjectMap[resource]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
-		if body, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
+		if _, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
-			fmt.Println("resourceOwner:", resourceOwner, " servername:", resourceOwner.GetServerName(), " body:", body, " actionObj:", actionobj)
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
@@ -564,7 +561,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
-	fmt.Println("resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
@@ -905,7 +901,6 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				defer resourceOwner.UnlockApiHandler()
 				resourceOwner.LockApiHandler()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-				fmt.Println("Returned after update object call - err: ", err, " success = ", success)
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
