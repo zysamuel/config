@@ -139,18 +139,18 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 //
 //  This method connects to all the config daemon's clients
 //
-func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
+func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 	unconnectedClients := make([]string, 0)
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
 	idx := 0
-	for clntName, client := range mgr.Clients {
+	for clientName, client := range mgr.Clients {
 		client.ConnectToServer()
 		if client.IsConnectedToServer() == false {
-			unconnectedClients = append(unconnectedClients, clntName)
+			unconnectedClients = append(unconnectedClients, clientName)
 			idx++
 		} else {
-			clntNameCh <- clntName
+			clientNameCh <- clientName
 		}
 	}
 	waitCount := 0
@@ -166,7 +166,7 @@ func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
 				}
 				if len(unconnectedClients) > i {
 					if mgr.Clients[unconnectedClients[i]].IsConnectedToServer() {
-						clntNameCh <- unconnectedClients[i]
+						clientNameCh <- unconnectedClients[i]
 						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
 					} else {
 						mgr.Clients[unconnectedClients[i]].ConnectToServer()
@@ -182,7 +182,7 @@ func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
 	}
 	mgr.logger.Info("Connected to all clients")
 	mgr.systemReady = true
-	clntNameCh <- "Client_Init_Done"
+	clientNameCh <- "Client_Init_Done"
 	return true
 }
 
