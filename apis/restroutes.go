@@ -117,7 +117,7 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 			HandleRestRouteAction,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-
+		fmt.Println("Added action restrt: ", action)
 	}
 	return true
 }
