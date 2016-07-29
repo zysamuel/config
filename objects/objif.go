@@ -37,6 +37,10 @@ import (
 	"utils/logging"
 )
 
+type AutoCreateStruct struct {
+	ObjList []string
+}
+
 type AutoDiscoverStruct struct {
 	ObjList []string
 }
@@ -45,6 +49,7 @@ type ObjectMgr struct {
 	logger             *logging.Writer
 	ObjHdlMap          map[string]ConfigObjInfo
 	clientMgr          *clients.ClientMgr
+	AutoCreateObjMap   map[string]AutoCreateStruct
 	AutoDiscoverObjMap map[string]AutoDiscoverStruct
 }
 
@@ -189,6 +194,7 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 	var objMap map[string]ConfigObjJson
 
 	mgr.ObjHdlMap = make(map[string]ConfigObjInfo)
+	mgr.AutoCreateObjMap = make(map[string]AutoCreateStruct)
 	mgr.AutoDiscoverObjMap = make(map[string]AutoDiscoverStruct)
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
@@ -213,6 +219,12 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 			}
 			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
 			mgr.ObjHdlMap[k] = *entry
+
+			if v.AutoCreate == true {
+				ent, _ := mgr.AutoCreateObjMap[v.Owner]
+				ent.ObjList = append(ent.ObjList, k)
+				mgr.AutoCreateObjMap[v.Owner] = ent
+			}
 
 			if v.AutoDiscover == true {
 				ent, _ := mgr.AutoDiscoverObjMap[v.Owner]

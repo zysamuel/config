@@ -168,7 +168,6 @@ func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.W
 		return nil
 	}
 	mgr.dbHdl = dbHdl
-	CreateActionMap()
 	if rc := mgr.InitializeActionObjectHandles(infoFiles); !rc {
 		logger.Err("Error in initializing action object handles")
 		return nil

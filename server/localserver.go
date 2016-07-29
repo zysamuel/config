@@ -94,20 +94,23 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 	return nil
 }
 
-func (mgr *ConfigMgr) ConstructSystemParam() []byte {
+func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
+	if clientName != "sysd" {
+		return nil
+	}
 	paramsDir := mgr.paramsDir
 	sysInfo := &modelObjs.SystemParam{}
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
-		return nil
+		return err
 	}
 	// Get this info from systemProfile
 	var cfg SwitchCfgJson
 	err = json.Unmarshal(cfgFileData, &cfg)
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error Unmarshalling cfg json data, err:", err))
-		return nil
+		return err
 	}
 	sysInfo.SwitchMac = cfg.SwitchMac
 	sysInfo.MgmtIp = cfg.MgmtIp
@@ -115,11 +118,24 @@ func (mgr *ConfigMgr) ConstructSystemParam() []byte {
 	sysInfo.Description = cfg.Description
 	sysInfo.Hostname = cfg.Hostname
 	sysInfo.Vrf = cfg.Vrf
-	rbyte, err := json.Marshal(sysInfo)
+	sysBody, err := json.Marshal(sysInfo)
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error marshalling system info, err:", err))
+		return err
 	}
-	return rbyte
+	if objHdl, ok := modelObjs.ConfigObjectMap["SystemParam"]; ok {
+		sysObj, _ := objHdl.UnmarshalObject(sysBody)
+		client, exist := mgr.clientMgr.Clients[clientName]
+		if exist {
+			err, success := client.CreateObject(sysObj, mgr.dbHdl.DBUtil)
+			if err == nil && success == true {
+				mgr.storeUUID(sysObj.GetKey())
+			} else {
+				mgr.logger.Err(fmt.Sprintln("Failed to create system info: ", err))
+			}
+		}
+	}
+	return err
 }
 
 func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {

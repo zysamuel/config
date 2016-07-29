@@ -24,7 +24,7 @@
 package server
 
 import (
-	"asicd/asicdCommonDefs"
+	//"asicd/asicdCommonDefs"
 	"config/actions"
 	"config/apis"
 	"config/clients"
@@ -102,14 +102,16 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.paramsDir = paramsDir
 
 	paramsFile := paramsDir + "/clients.json"
+	mgr.dbHdl = objects.InstantiateDbIf(logger)
+
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
-	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
-	actionConfigFiles := [...]string{paramsDir + "/genActionConfig.json"}
+	actions.CreateActionMap()
+	actionConfigFiles := [...]string{paramsDir + "/genObjectAction.json"}
 	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
 
 	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
@@ -156,6 +158,7 @@ func (mgr *ConfigMgr) SigHandler() {
 	}
 }
 
+/*
 func (mgr *ConfigMgr) DiscoverPorts() error {
 	mgr.logger.Debug("Discovering ports")
 	// Get ports present on this system and store in DB for user to update port parameters
@@ -200,6 +203,7 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 	mgr.logger.Debug("Ports discovered")
 	return nil
 }
+*/
 
 func (mgr *ConfigMgr) storeUUID(key string) {
 	_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(key)
@@ -209,6 +213,7 @@ func (mgr *ConfigMgr) storeUUID(key string) {
 	}
 }
 
+/*
 func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client clients.ClientIf) {
 	var obj modelObjs.ConfigObj
 	var err error
@@ -263,9 +268,34 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(paramsDir, key string, client client
 		}
 	}
 }
+*/
+
+func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
+	var obj modelObjs.ConfigObj
+	var err error
+	if ent, ok := mgr.objectMgr.AutoCreateObjMap[clientName]; ok {
+		for _, resource := range ent.ObjList {
+			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
+				var body []byte // @dummy body for default objects
+				obj, _ = objHdl.UnmarshalObject(body)
+				_, err = objHdl.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
+				if err != nil {
+					client, exist := mgr.clientMgr.Clients[clientName]
+					if exist {
+						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
+						if err == nil && success == true {
+							mgr.storeUUID(obj.GetKey())
+						} else {
+							mgr.logger.Err(fmt.Sprintln("Failed to create "+resource+" ", obj, err))
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 func (mgr *ConfigMgr) AutoCreateConfigObjects() {
-	paramsDir := mgr.paramsDir
 	for {
 		select {
 		case clientName := <-mgr.cltNameCh:
@@ -273,29 +303,26 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 			case "Client_Init_Done":
 				close(mgr.cltNameCh)
 				return
-			case "asicd":
-				mgr.DiscoverPorts()
+				/*
+					case "asicd":
+						mgr.DiscoverPorts()
+				*/
 			default:
-				mgr.logger.Info("Do Global Init for Client:" + clientName)
-				for key, value := range mgr.objectMgr.ObjHdlMap {
-					client := value.Owner
-					if value.AutoCreate && client.GetServerName() == clientName {
-						mgr.ConfigureGlobalConfig(paramsDir, key, client)
-					}
-				}
+				mgr.logger.Info("Do Global Init and Discover objects for Client: " + clientName)
+				mgr.ConstructSystemParam(clientName)
+				mgr.ConfigureGlobalConfig(clientName)
+				mgr.AutoDiscoverObjects(clientName)
+				mgr.ConfigureComponentLoggingLevel(clientName)
 			}
-			mgr.AutoDiscoverObjects(clientName)
-			mgr.ConfigureComponentLoggingLevel(clientName)
 		}
 	}
 }
 
 func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
+	fmt.Println("AutoDiscover for: ", clientName)
 	if ent, ok := mgr.objectMgr.AutoDiscoverObjMap[clientName]; ok {
 		for _, resource := range ent.ObjList {
-			if resource == "Port" {
-				continue
-			}
+			fmt.Println("AutoDiscover: ", resource)
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var objs []modelObjs.ConfigObj
 				var err error
@@ -304,6 +331,7 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
 				err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
 					currentIndex, objCount)
+				fmt.Println("AutoDiscover response: ", err, objs)
 				if err == nil {
 					for _, obj := range objs {
 						_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
