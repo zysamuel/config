@@ -128,18 +128,20 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr := new(ConfigMgr)
 	mgr.logger = logger
 
+	mgr.dbHdl = objects.InstantiateDbIf(logger)
+
 	paramsFile := paramsDir + "/clients.json"
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion)
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
-	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
 	actionConfigFiles := [...]string{paramsDir + "/genActionConfig.json"}
 	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
 
-	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.objectMgr, mgr.actionMgr)
+	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.clientMgr, mgr.objectMgr, mgr.actionMgr)
+
 	mgr.ApiMgr.InitializeRestRoutes()
 	mgr.ApiMgr.InitializeActionRestRoutes()
 	mgr.ApiMgr.InitializeEventRestRoutes()
@@ -155,7 +157,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.cltNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
-	go mgr.ReadSystemSwVersion(paramsDir)
+	mgr.ReadSystemSwVersion(paramsDir)
 	go mgr.AutoCreateConfigObjects(paramsDir)
 	go mgr.clientMgr.ConnectToAllClients(mgr.cltNameCh)
 	go mgr.clientMgr.ListenToClientStateChanges()
@@ -211,7 +213,9 @@ func GetSystemStatus() modelObjs.SystemStatusState {
 
 	// Read DaemonStates from db
 	var daemonState modelObjs.DaemonState
+	gConfigMgr.dbHdl.DbLock.Lock()
 	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
+	gConfigMgr.dbHdl.DbLock.Unlock()
 	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
 	for idx, daemonState := range daemonStates {
 		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)
@@ -243,8 +247,10 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 		_, obj, _ := objects.GetConfigObj(nil, objHdl)
 		currentIndex := int64(asicdCommonDefs.MIN_SYS_PORTS)
 		objCount := int64(asicdCommonDefs.MAX_SYS_PORTS)
-		err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
-			currentIndex, objCount)
+		resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner
+		defer resourceOwner.UnlockApiHandler()
+		resourceOwner.LockApiHandler()
+		err, _, _, _, objs = resourceOwner.GetBulkObject(obj, mgr.dbHdl.DBUtil, currentIndex, objCount)
 		if err == nil {
 			var LinkedObjects []string
 			for key, value := range mgr.objectMgr.ObjHdlMap {
@@ -255,10 +261,14 @@ func (mgr *ConfigMgr) DiscoverPorts() error {
 			}
 			for i := 0; i < len(objs); i++ {
 				portConfig := (*objs[i].(*modelObjs.Port))
+				gConfigMgr.dbHdl.DbLock.Lock()
 				_, err := portConfig.GetObjectFromDb(portConfig.GetKey(), mgr.dbHdl)
+				gConfigMgr.dbHdl.DbLock.Unlock()
 				// if we can not find the port in DB then go ahead and store
 				if err != nil {
+					gConfigMgr.dbHdl.DbLock.Lock()
 					err = portConfig.StoreObjectInDb(mgr.dbHdl)
+					gConfigMgr.dbHdl.DbLock.Unlock()
 					if err != nil {
 						mgr.logger.Err(fmt.Sprintln("Failed to store Port in DB ",
 							i, portConfig, err))
