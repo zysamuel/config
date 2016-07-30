@@ -125,7 +125,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	// When confd connects to a client, it creates global objects owned by that client and
 	// stores default logging level in DB, if it does not exist.
 	// Global objects and logging objects can only be updated by user.
-	mgr.clientNameCh = make(chan string, 20)
+	mgr.clientNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
 	mgr.ReadSystemSwVersion()
@@ -178,9 +178,9 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 				if err != nil {
 					client, exist := mgr.clientMgr.Clients[clientName]
 					if exist {
-						defer client.UnlockApiHandler()
 						client.LockApiHandler()
 						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
+						client.UnlockApiHandler()
 						if err == nil && success == true {
 							mgr.storeUUID(obj.GetKey())
 						} else {
@@ -225,10 +225,10 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 				currentIndex := int64(0)
 				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
 				resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner
-				defer resourceOwner.UnlockApiHandler()
 				resourceOwner.LockApiHandler()
 				err, _, _, _, objs = resourceOwner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
 					currentIndex, objCount)
+				resourceOwner.UnlockApiHandler()
 				fmt.Println("AutoDiscover response: ", err, objs)
 				if err == nil {
 					for _, obj := range objs {
