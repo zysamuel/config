@@ -101,7 +101,6 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
 	paramsFile := paramsDir + "/clients.json"
-	mgr.dbHdl = objects.InstantiateDbIf(logger)
 
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
 
