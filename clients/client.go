@@ -125,11 +125,13 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 			select {
 			case clientStatus := <-clientStatusListener.DaemonStatusCh:
 				mgr.logger.Info(fmt.Sprintln("Received client status: ", clientStatus.Name, clientStatus.Status))
-				switch clientStatus.Status {
-				case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
-					go mgr.DisconnectFromClient(clientStatus.Name)
-				case sysdCommonDefs.UP:
-					go mgr.ConnectToClient(clientStatus.Name)
+				if mgr.IsReady() {
+					switch clientStatus.Status {
+					case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
+						go mgr.DisconnectFromClient(clientStatus.Name)
+					case sysdCommonDefs.UP:
+						go mgr.ConnectToClient(clientStatus.Name)
+					}
 				}
 			}
 		}
@@ -140,44 +142,33 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 //  This method connects to all the config daemon's clients
 //
 func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
-	unconnectedClients := make([]string, 0)
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
-	idx := 0
 	for clientName, client := range mgr.Clients {
 		client.ConnectToServer()
-		if client.IsConnectedToServer() == false {
-			unconnectedClients = append(unconnectedClients, clientName)
-			idx++
-		} else {
+		if client.IsConnectedToServer() {
 			clientNameCh <- clientName
 		}
 	}
-	waitCount := 0
-	if idx > 0 {
-		for t := range mgr.reconncetTimer.C {
-			_ = t
-			if waitCount == 0 {
-				mgr.logger.Info(fmt.Sprintln("Looking for clients ", unconnectedClients))
-			}
-			for i := 0; i < len(unconnectedClients); i++ {
-				if waitCount%100 == 0 {
-					mgr.logger.Info(fmt.Sprintln("Waiting to connect to these clients", unconnectedClients[i]))
+	for t := range mgr.reconncetTimer.C {
+		_ = t
+		connectedClientsCount := 0
+		for clientName, client := range mgr.Clients {
+			if client.IsConnectedToServer() == false {
+				mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
+				client.ConnectToServer()
+				if client.IsConnectedToServer() {
+					clientNameCh <- clientName
+					connectedClientsCount++
 				}
-				if len(unconnectedClients) > i {
-					if mgr.Clients[unconnectedClients[i]].IsConnectedToServer() {
-						clientNameCh <- unconnectedClients[i]
-						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
-					} else {
-						mgr.Clients[unconnectedClients[i]].ConnectToServer()
-					}
-				}
+			} else {
+				connectedClientsCount++
 			}
-			if len(unconnectedClients) == 0 {
-				mgr.reconncetTimer.Stop()
-				break
-			}
-			waitCount++
+		}
+
+		if len(mgr.Clients) == connectedClientsCount {
+			mgr.reconncetTimer.Stop()
+			break
 		}
 	}
 	mgr.logger.Info("Connected to all clients")
