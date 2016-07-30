@@ -125,7 +125,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	// When confd connects to a client, it creates global objects owned by that client and
 	// stores default logging level in DB, if it does not exist.
 	// Global objects and logging objects can only be updated by user.
-	mgr.clientNameCh = make(chan string, 10)
+	mgr.clientNameCh = make(chan string, 20)
 	logger.Info("Initialization Done!")
 
 	mgr.ReadSystemSwVersion()
@@ -207,6 +207,7 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 				mgr.ConfigureGlobalConfig(clientName)
 				mgr.AutoDiscoverObjects(clientName)
 				mgr.ConfigureComponentLoggingLevel(clientName)
+				mgr.logger.Info("Done Global Init and Discover objects for Client: " + clientName)
 			}
 		}
 	}
