@@ -192,7 +192,6 @@ func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *
 //
 func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 	var objMap map[string]ConfigObjJson
-
 	mgr.ObjHdlMap = make(map[string]ConfigObjInfo)
 	mgr.AutoCreateObjMap = make(map[string]AutoCreateStruct)
 	mgr.AutoDiscoverObjMap = make(map[string]AutoDiscoverStruct)
