@@ -149,22 +149,22 @@ func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.W
 	mgr := new(ActionMgr)
 	mgr.paramsDir = paramsDir
 	if logger == nil {
-		gActionMgr.logger.Err("logger nil")
+		logger.Err("logger nil")
 		return nil
 	}
 	mgr.logger = logger
 	if clientMgr == nil {
-		gActionMgr.logger.Err("clientMgr nil")
+		logger.Err("clientMgr nil")
 		return nil
 	}
 	mgr.clientMgr = clientMgr
 	if objectMgr == nil {
-		gActionMgr.logger.Err("objectMgr nil")
+		logger.Err("objectMgr nil")
 		return nil
 	}
 	mgr.objectMgr = objectMgr
 	if dbHdl == nil {
-		gActionMgr.logger.Err("dbHdl nil")
+		logger.Err("dbHdl nil")
 		return nil
 	}
 	mgr.dbHdl = dbHdl
@@ -183,16 +183,17 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
-			mgr.logger.Debug(fmt.Sprintln("Error in reading Action configuration file", objFile))
+			mgr.logger.Err("Error in reading Action configuration file", objFile)
 			return false
 		}
 		err = json.Unmarshal(bytes, &actionMap)
 		if err != nil {
-			mgr.logger.Debug(fmt.Sprintln("Error in unmarshaling data from ", objFile))
+			mgr.logger.Err("Error in unmarshaling data from ", objFile)
+			return false
 		}
 
 		for k, v := range actionMap {
-			mgr.logger.Debug(fmt.Sprintln("For Action [", k, "] Primary owner is [", v.Owner, "] "))
+			mgr.logger.Debug("For Action [", k, "] Primary owner is [", v.Owner, "] ")
 			entry := new(ActionObjInfo)
 			if mgr.clientMgr != nil {
 				entry.Owner = mgr.clientMgr.Clients[v.Owner]

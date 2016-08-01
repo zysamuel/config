@@ -66,13 +66,17 @@ func writeStaticPart(inputFile string, dstFile *os.File) {
 	}
 }
 
-func writeResourceHdr(strName string, operation string, dstFile *os.File) {
+func writeResourceHdr(strName string, operation string, dstFile *os.File, byId bool) {
 	//dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
 	dstFile.WriteString(twoTabs + "\"" + operation + "\": { " + "\n")
 	dstFile.WriteString(threeTabs + "\"tags\": [ " + "\n")
 	dstFile.WriteString(fourTabs + "\"" + strName + "\"" + "\n")
 	dstFile.WriteString(threeTabs + "]," + "\n")
-	dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + "\"," + "\n")
+	if byId {
+		dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + " By Id\"," + "\n")
+	} else {
+		dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + "\"," + "\n")
+	}
 	dstFile.WriteString(twoTabs + "\"description\":" + "\"" + strName + "\"," + "\n")
 	//dstFile.WriteString(twoTabs + "\"operationId\": \"add" + strName + ",\n")
 	dstFile.WriteString(twoTabs + "\"consumes\": [" + "\n")
@@ -152,8 +156,8 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
-func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem, mode int) {
-	writeResourceHdr(structName, operation, docJsFile)
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem, mode int, byId bool) {
+	writeResourceHdr(structName, operation, docJsFile, byId)
 	switch mode {
 	case ALL_ATTRS, KEY_ATTRS, SELECTED_ATTR:
 		for _, attrInfo := range membersInfo {
@@ -172,19 +176,16 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
 
 	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
-	writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS)
+	writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS, false)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS, false)
+	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS, false)
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS, false)
 	writePathCompletion(docJsFile)
 
 	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/{object-id}\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
-	writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS)
-	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
-	writePathCompletion(docJsFile)
-
-	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS)
-	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS)
-	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS, true)
+	writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS, true)
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS, true)
 	writePathCompletion(docJsFile)
 }
 
@@ -195,12 +196,12 @@ func WriteStateObject(structName string, docJsFile *os.File, membersInfo []Attri
 			docJsFile.WriteString(twoTabs + "\"/state/" + structName + "/{" + attrInfo.AttrName + "}\" : {\n")
 			mbrInfo := make([]AttributeListItem, 1)
 			mbrInfo[0] = membersInfo[idx]
-			writeResourceOperation(structName, "get", docJsFile, mbrInfo, SELECTED_ATTR)
+			writeResourceOperation(structName, "get", docJsFile, mbrInfo, SELECTED_ATTR, false)
 			writePathCompletion(docJsFile)
 		}
 	}
 	docJsFile.WriteString(twoTabs + "\"/state/" + structName + "s\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS, false)
 	writePathCompletion(docJsFile)
 }
 
