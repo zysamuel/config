@@ -99,20 +99,39 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.paramsDir = paramsDir
 
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
+	if mgr.dbHdl == nil {
+		fmt.Println("Error initializing configMgr dbHdl")
+		return nil
+	}
 
 	paramsFile := paramsDir + "/clients.json"
-
 	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
+	if mgr.clientMgr == nil {
+		fmt.Println("Error initializing clientMgr")
+		return nil
+	}
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
+	if mgr.objectMgr == nil {
+		fmt.Println("Error initializing objectMgr")
+		return nil
+	}
 
 	actions.CreateActionMap()
 	actionConfigFiles := [...]string{paramsDir + "/genObjectAction.json"}
 	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
+	if mgr.actionMgr == nil {
+		fmt.Println("Error initializing actionMgr")
+		return nil
+	}
 
 	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.clientMgr, mgr.objectMgr, mgr.actionMgr)
+	if mgr.ApiMgr == nil {
+		fmt.Println("Error initializing ApiMgr")
+		return nil
+	}
 
 	mgr.ApiMgr.InitializeRestRoutes()
 	mgr.ApiMgr.InitializeActionRestRoutes()
