@@ -25,6 +25,7 @@ package apis
 
 import (
 	"config/actions"
+	"config/clients"
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -48,6 +49,7 @@ type ApiRoutes []ApiRoute
 
 type ApiMgr struct {
 	logger        *logging.Writer
+	clientMgr     *clients.ClientMgr
 	objectMgr     *objects.ObjectMgr
 	actionMgr     *actions.ActionMgr
 	dbHdl         *objects.DbHandler
@@ -83,11 +85,12 @@ type LoginResponse struct {
 	SessionId uint64 `json: "SessionId"`
 }
 
-func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
+func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, clientMgr *clients.ClientMgr, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
 	mgr.logger = logger
 	mgr.dbHdl = dbHdl
+	mgr.clientMgr = clientMgr
 	mgr.objectMgr = objectMgr
 	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
@@ -115,7 +118,7 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 			HandleRestRouteAction,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-
+		fmt.Println("Added action restrt: ", action)
 	}
 	return true
 }

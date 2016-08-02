@@ -153,7 +153,6 @@ func ReplaceMultipleSeperatorInUrl(urlStr string) string {
 			retStr = retStr + "/" + strs[i]
 		}
 	}
-	fmt.Println("Normalized url string is ", retStr)
 	return retStr
 }
 
@@ -184,7 +183,10 @@ func GetOneConfigObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	if dbObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil); err != nil {
+	gApiMgr.dbHdl.DbLock.Lock()
+	dbObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+	gApiMgr.dbHdl.DbLock.Unlock()
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	} else {
@@ -222,7 +224,10 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 	}
 	//Get key fields provided in the request.
 	objKey = obj.GetKey()
-	if retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil); err != nil {
+	gApiMgr.dbHdl.DbLock.Lock()
+	retObj.ConfigObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+	gApiMgr.dbHdl.DbLock.Unlock()
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -271,13 +276,17 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	if dbObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil); err != nil {
+	gApiMgr.dbHdl.DbLock.Lock()
+	dbObj, err = obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+	gApiMgr.dbHdl.DbLock.Unlock()
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	defer resourceOwner.UnlockApiHandler()
 	resourceOwner.LockApiHandler()
-	if err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gApiMgr.dbHdl.DBUtil); err != nil {
+	err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gApiMgr.dbHdl.DBUtil)
+	resourceOwner.UnlockApiHandler()
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -320,9 +329,10 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	defer resourceOwner.UnlockApiHandler()
 	resourceOwner.LockApiHandler()
-	if err, retObj.ConfigObj = resourceOwner.GetObject(obj, gApiMgr.dbHdl.DBUtil); err != nil {
+	err, retObj.ConfigObj = resourceOwner.GetObject(obj, gApiMgr.dbHdl.DBUtil)
+	resourceOwner.UnlockApiHandler()
+	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -365,9 +375,11 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Err(fmt.Sprintln("Too many objects requested in bulkget ", objCount))
 		return
 	}
+	gApiMgr.dbHdl.DbLock.Lock()
 	resp.CurrentMarker = currentIndex
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 		configObjects = obj.GetBulkObjFromDb(currentIndex, objCount, gApiMgr.dbHdl.DBUtil)
+	gApiMgr.dbHdl.DbLock.Unlock()
 	if err == nil {
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
 		for idx, configObject := range configObjects {
@@ -426,11 +438,11 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	defer resourceOwner.UnlockApiHandler()
-	resourceOwner.LockApiHandler()
 	resp.CurrentMarker = currentIndex
+	resourceOwner.LockApiHandler()
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 		stateObjects = resourceOwner.GetBulkObject(obj, gApiMgr.dbHdl.DBUtil, currentIndex, objCount)
+	resourceOwner.UnlockApiHandler()
 	if err == nil {
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
 		for idx, stateObject := range stateObjects {
@@ -476,50 +488,31 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var resp ActionResponse
 	var errCode int
 	var err error
-	var obj modelObjs.ConfigObj
+	//      var obj modelObjs.ConfigObj
 	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
-	fmt.Println("ExecuteActionObject")
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
 	fmt.Println("resource:", resource)
-	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if _, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
-			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
-			if resourceOwner.IsConnectedToServer() == false {
-				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
-				return
-			}
-			err = resourceOwner.ExecuteAction(obj)
-			if err == nil {
-				gApiMgr.ApiCallStats.NumActionCallsSuccess++
-				w.WriteHeader(http.StatusOK)
-				errCode = SRSuccess
-			} else {
-				resp.Error = err.Error()
-				errCode = SRServerError
-				gApiMgr.logger.Debug(fmt.Sprintln("Failed to execute action: ", obj, " due to error: ", err))
-			}
-		} else {
-			errCode = SRObjHdlError
-			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
-		}
-	} else if actionobjHdl, ok := modelActions.ActionMap[resource]; ok {
+	if actionobjHdl, ok := modelActions.ActionObjectMap[resource]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
-		if body, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
+		if _, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
-			fmt.Println("resourceOwner:", resourceOwner, " servername:", resourceOwner.GetServerName(), " body:", body, " actionObj:", actionobj)
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			//temporary
-			err = actions.ExecutePerformAction(actionobj)
+			resourceOwner.LockApiHandler()
+			err = resourceOwner.ExecuteAction(actionobj)
+			resourceOwner.UnlockApiHandler()
 			if err == nil {
 				gApiMgr.ApiCallStats.NumActionCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -531,7 +524,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			errCode = SRObjHdlError
-			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
+			gApiMgr.logger.Debug(fmt.Sprintln("Failed to get object handle from http request ", actionobjHdl, resource, err))
 		}
 	} else {
 		errCode = SRObjMapError
@@ -564,13 +557,15 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 
 	gApiMgr.ApiCallStats.NumCreateCalls++
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
-	fmt.Println("resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		fmt.Println("objHdl:", objHdl)
 		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
 			if len(updateKeys) == 0 {
@@ -598,9 +593,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			defer resourceOwner.UnlockApiHandler()
 			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
+			resourceOwner.UnlockApiHandler()
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
@@ -649,6 +644,10 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	gApiMgr.ApiCallStats.NumDeleteCalls++
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
@@ -664,16 +663,18 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if _, obj, err := objects.GetConfigObj(nil, objHdl); err == nil {
+			gApiMgr.dbHdl.DbLock.Lock()
 			dbObj, _ := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+			gApiMgr.dbHdl.DbLock.Unlock()
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			defer resourceOwner.UnlockApiHandler()
 			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
+			resourceOwner.UnlockApiHandler()
 			if err == nil && success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(vars["objId"], objKey)
 				if err != nil {
@@ -722,13 +723,19 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	gApiMgr.ApiCallStats.NumDeleteCalls++
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if _, obj, err := objects.GetConfigObj(r, objHdl); err == nil {
 			objKey = obj.GetKey()
+			gApiMgr.dbHdl.DbLock.Lock()
 			dbObj, err := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+			gApiMgr.dbHdl.DbLock.Unlock()
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				resp.Error = SRErrString(SRNotFound)
@@ -744,9 +751,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			defer resourceOwner.UnlockApiHandler()
 			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
+			resourceOwner.UnlockApiHandler()
 			if err == nil && success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
 				if err != nil {
@@ -794,6 +801,10 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
@@ -810,7 +821,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
 		updateKeys, _ := objects.GetUpdateKeys(body)
+		gApiMgr.dbHdl.DbLock.Lock()
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+		gApiMgr.dbHdl.DbLock.Unlock()
 		if gerr == nil {
 			patchOpInfoSlice := make([]modelObjs.PatchOpInfo, 0)
 			if strings.Contains(string(body), "\"patch\":") {
@@ -851,9 +864,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					fmt.Println("err when merging ", err)
 					return
 				}
-				defer resourceOwner.UnlockApiHandler()
 				resourceOwner.LockApiHandler()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+				resourceOwner.UnlockApiHandler()
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -889,10 +902,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
-				defer resourceOwner.UnlockApiHandler()
 				resourceOwner.LockApiHandler()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-				fmt.Println("Returned after update object call - err: ", err, " success = ", success)
+				resourceOwner.UnlockApiHandler()
 				if err == nil && success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
@@ -939,6 +951,10 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
+	if gApiMgr.clientMgr.IsReady() == false {
+		RespondErrorForApiCall(w, SRSystemNotReady, "")
+		return
+	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
@@ -946,7 +962,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		body, obj, _ := objects.GetConfigObj(r, objHdl)
 		objKey = obj.GetKey()
 		updateKeys, _ := objects.GetUpdateKeys(body)
+		gApiMgr.dbHdl.DbLock.Lock()
 		dbObj, gerr := obj.GetObjectFromDb(objKey, gApiMgr.dbHdl.DBUtil)
+		gApiMgr.dbHdl.DbLock.Unlock()
 		if gerr != nil {
 			w.WriteHeader(http.StatusNotFound)
 			resp.Error = SRErrString(SRNotFound)
@@ -996,9 +1014,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("err when merging ", err)
 				return
 			}
-			defer resourceOwner.UnlockApiHandler()
 			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			resourceOwner.UnlockApiHandler()
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -1035,9 +1053,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			defer resourceOwner.UnlockApiHandler()
 			resourceOwner.LockApiHandler()
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
+			resourceOwner.UnlockApiHandler()
 			if err == nil && success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
@@ -1067,7 +1085,6 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
 	}
 	w.Write(js)
-
 	return
 }
 
@@ -1109,7 +1126,9 @@ func EventObjectGet(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	evtObjList, err := eventUtils.GetEvents(obj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
+	gApiMgr.dbHdl.DbLock.Lock()
+	evtObj, err := eventUtils.GetEvents(evtQueryObj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
+	gApiMgr.dbHdl.DbLock.Unlock()
 	if err != nil {
 		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
