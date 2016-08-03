@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
+	"models/actions"
 	"models/objects"
 	"strconv"
 	"time"
@@ -38,14 +39,16 @@ import (
 
 type SystemStatusCB func() objects.SystemStatusState
 type SystemSwVersionCB func() objects.SystemSwVersionState
+type ExecuteConfigurationActionCB func(actions.ActionObj) error
 
 type ClientMgr struct {
-	logger            *logging.Writer
-	Clients           map[string]ClientIf
-	reconncetTimer    *time.Ticker
-	systemReady       bool
-	systemStatusCB    SystemStatusCB
-	systemSwVersionCB SystemSwVersionCB
+	logger                       *logging.Writer
+	Clients                      map[string]ClientIf
+	reconncetTimer               *time.Ticker
+	systemReady                  bool
+	systemStatusCB               SystemStatusCB
+	systemSwVersionCB            SystemSwVersionCB
+	executeConfigurationActionCB ExecuteConfigurationActionCB
 }
 
 var gClientMgr *ClientMgr
@@ -65,17 +68,18 @@ type ClientIf interface {
 	GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []objects.ConfigObj)
 	UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
-	ExecuteAction(obj objects.ConfigObj) error
+	ExecuteAction(obj actions.ActionObj) error
 	GetServerName() string
 	LockApiHandler()
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB) *ClientMgr {
+func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB
 	mgr.systemSwVersionCB = systemSwVersionCB
+	mgr.executeConfigurationActionCB = executeConfigurationActionCB
 	if rc := mgr.InitializeClientHandles(paramsFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil
@@ -121,11 +125,13 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 			select {
 			case clientStatus := <-clientStatusListener.DaemonStatusCh:
 				mgr.logger.Info(fmt.Sprintln("Received client status: ", clientStatus.Name, clientStatus.Status))
-				switch clientStatus.Status {
-				case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
-					go mgr.DisconnectFromClient(clientStatus.Name)
-				case sysdCommonDefs.UP:
-					go mgr.ConnectToClient(clientStatus.Name)
+				if mgr.IsReady() {
+					switch clientStatus.Status {
+					case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
+						go mgr.DisconnectFromClient(clientStatus.Name)
+					case sysdCommonDefs.UP:
+						go mgr.ConnectToClient(clientStatus.Name)
+					}
 				}
 			}
 		}
@@ -135,50 +141,39 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 //
 //  This method connects to all the config daemon's clients
 //
-func (mgr *ClientMgr) ConnectToAllClients(clntNameCh chan string) bool {
-	unconnectedClients := make([]string, 0)
+func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
-	idx := 0
-	for clntName, client := range mgr.Clients {
+	for clientName, client := range mgr.Clients {
 		client.ConnectToServer()
-		if client.IsConnectedToServer() == false {
-			unconnectedClients = append(unconnectedClients, clntName)
-			idx++
-		} else {
-			clntNameCh <- clntName
+		if client.IsConnectedToServer() {
+			clientNameCh <- clientName
 		}
 	}
-	waitCount := 0
-	if idx > 0 {
-		for t := range mgr.reconncetTimer.C {
-			_ = t
-			if waitCount == 0 {
-				mgr.logger.Info(fmt.Sprintln("Looking for clients ", unconnectedClients))
-			}
-			for i := 0; i < len(unconnectedClients); i++ {
-				if waitCount%100 == 0 {
-					mgr.logger.Info(fmt.Sprintln("Waiting to connect to these clients", unconnectedClients[i]))
+	for t := range mgr.reconncetTimer.C {
+		_ = t
+		connectedClientsCount := 0
+		for clientName, client := range mgr.Clients {
+			if client.IsConnectedToServer() == false {
+				mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
+				client.ConnectToServer()
+				if client.IsConnectedToServer() {
+					clientNameCh <- clientName
+					connectedClientsCount++
 				}
-				if len(unconnectedClients) > i {
-					if mgr.Clients[unconnectedClients[i]].IsConnectedToServer() {
-						clntNameCh <- unconnectedClients[i]
-						unconnectedClients = append(unconnectedClients[:i], unconnectedClients[i+1:]...)
-					} else {
-						mgr.Clients[unconnectedClients[i]].ConnectToServer()
-					}
-				}
+			} else {
+				connectedClientsCount++
 			}
-			if len(unconnectedClients) == 0 {
-				mgr.reconncetTimer.Stop()
-				break
-			}
-			waitCount++
+		}
+
+		if len(mgr.Clients) == connectedClientsCount {
+			mgr.reconncetTimer.Stop()
+			break
 		}
 	}
 	mgr.logger.Info("Connected to all clients")
 	mgr.systemReady = true
-	clntNameCh <- "Client_Init_Done"
+	clientNameCh <- "Client_Init_Done"
 	return true
 }
 

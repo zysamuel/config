@@ -139,26 +139,32 @@ type ActionObjInfo struct {
 	Owner clients.ClientIf
 }
 
+func CreateActionMap() {
+	for actionName, action := range modelActions.GenActionObjectMap {
+		modelActions.ActionObjectMap[actionName] = action
+	}
+}
+
 func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.Writer, dbHdl *objects.DbHandler, objectMgr *objects.ObjectMgr, clientMgr *clients.ClientMgr) *ActionMgr {
 	mgr := new(ActionMgr)
 	mgr.paramsDir = paramsDir
 	if logger == nil {
-		gActionMgr.logger.Err("logger nil")
+		logger.Err("logger nil")
 		return nil
 	}
 	mgr.logger = logger
 	if clientMgr == nil {
-		gActionMgr.logger.Err("clientMgr nil")
+		logger.Err("clientMgr nil")
 		return nil
 	}
 	mgr.clientMgr = clientMgr
 	if objectMgr == nil {
-		gActionMgr.logger.Err("objectMgr nil")
+		logger.Err("objectMgr nil")
 		return nil
 	}
 	mgr.objectMgr = objectMgr
 	if dbHdl == nil {
-		gActionMgr.logger.Err("dbHdl nil")
+		logger.Err("dbHdl nil")
 		return nil
 	}
 	mgr.dbHdl = dbHdl
@@ -177,16 +183,17 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
-			mgr.logger.Debug(fmt.Sprintln("Error in reading Action configuration file", objFile))
+			mgr.logger.Err("Error in reading Action configuration file", objFile)
 			return false
 		}
 		err = json.Unmarshal(bytes, &actionMap)
 		if err != nil {
-			mgr.logger.Debug(fmt.Sprintln("Error in unmarshaling data from ", objFile))
+			mgr.logger.Err("Error in unmarshaling data from ", objFile)
+			return false
 		}
 
 		for k, v := range actionMap {
-			mgr.logger.Debug(fmt.Sprintln("For Action [", k, "] Primary owner is [", v.Owner, "] "))
+			mgr.logger.Debug("For Action [", k, "] Primary owner is [", v.Owner, "] ")
 			entry := new(ActionObjInfo)
 			if mgr.clientMgr != nil {
 				entry.Owner = mgr.clientMgr.Clients[v.Owner]
@@ -199,7 +206,7 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 
 func (mgr *ActionMgr) GetAllActions() []string {
 	retList := make([]string, 0)
-	for key, _ := range modelActions.ActionMap {
+	for key, _ := range modelActions.ActionObjectMap {
 		retList = append(retList, key)
 	}
 	return retList
@@ -207,11 +214,11 @@ func (mgr *ActionMgr) GetAllActions() []string {
 
 func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, retobj modelActions.ActionObj, err error) {
 	//var ret_obj map[string]modelActions.DummyStruct
-	gActionMgr.logger.Debug(fmt.Sprintln("GetActionObj r:", r, " obj:", obj))
 	if obj == nil {
 		err = errors.New("Action Object is nil")
 		return body, retobj, err
 	}
+	//	gActionMgr.logger.Debug(fmt.Sprintln("GetActionObj r:", r, " obj:", obj))
 	if r != nil {
 		body, err = ioutil.ReadAll(io.LimitReader(r.Body, r.ContentLength))
 		gActionMgr.logger.Debug(fmt.Sprintln("err:", err, " body:", body))
@@ -358,6 +365,7 @@ func CreateConfig(resource string, body json.RawMessage) {
 	}
 
 }
+
 func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 	for key, value := range data.ConfigData {
 		gActionMgr.logger.Debug(fmt.Sprintln("key:", key, "value:", value, " resoure:", resource))
@@ -491,7 +499,7 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	return nil
 }
 
-func ExecutePerformAction(obj modelActions.ActionObj) (err error) {
+func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 	gActionMgr.logger.Debug(fmt.Sprintln("local client Execute action obj: ", obj))
 	if gActionMgr == nil {
 		gActionMgr.logger.Err("Action mgr not initialized")
