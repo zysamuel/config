@@ -174,36 +174,6 @@ func (mgr *ConfigMgr) SigHandler() {
 	}
 }
 
-func (mgr *ConfigMgr) DiscoverOpticModuleInfo() error {
-	mgr.logger.Debug("Discovering optic module information")
-	for _, resource := range []string{"DWDMModule", "DWDMModuleNwIntf"} {
-		if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-			var objs []modelObjs.ConfigObj
-			var err error
-			_, obj, _ := objects.GetConfigObj(nil, objHdl)
-			currentIndex := int64(0)
-			objCount := int64(64)
-			err, _, _, _, objs = mgr.objectMgr.ObjHdlMap[resource].Owner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
-				currentIndex, objCount)
-			if err == nil {
-				for _, obj := range objs {
-					_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
-					if err != nil {
-						err = obj.StoreObjectInDb(mgr.dbHdl)
-						if err != nil {
-							mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
-						} else {
-							mgr.storeUUID(obj.GetKey())
-						}
-					}
-				}
-			}
-		}
-	}
-	mgr.logger.Debug("Optic module information discovered")
-	return nil
-}
-
 func (mgr *ConfigMgr) storeUUID(key string) {
 	_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(key)
 	if err != nil {
@@ -249,8 +219,6 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 			case "Client_Init_Done":
 				close(mgr.clientNameCh)
 				return
-			case "opticd":
-				mgr.DiscoverOpticModuleInfo()
 			default:
 				mgr.logger.Info("Do Global Init and Discover objects for Client: " + clientName)
 				mgr.ConstructSystemParam(clientName)
