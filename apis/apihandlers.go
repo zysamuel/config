@@ -1127,7 +1127,7 @@ func EventObjectGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gApiMgr.dbHdl.DbLock.Lock()
-	evtObj, err := eventUtils.GetEvents(evtQueryObj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
+	evtObjList, err := eventUtils.GetEvents(obj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
 	gApiMgr.dbHdl.DbLock.Unlock()
 	if err != nil {
 		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
