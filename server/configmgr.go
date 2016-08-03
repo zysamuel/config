@@ -191,8 +191,7 @@ func (mgr *ConfigMgr) DiscoverOpticModuleInfo() error {
 					if err != nil {
 						err = obj.StoreObjectInDb(mgr.dbHdl)
 						if err != nil {
-							mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ",
-								i, obj, err))
+							mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
 						} else {
 							mgr.storeUUID(obj.GetKey())
 						}
