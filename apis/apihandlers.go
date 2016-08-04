@@ -1132,9 +1132,7 @@ func EventObjectGet(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	gApiMgr.dbHdl.DbLock.Lock()
 	evtObjList, err := eventUtils.GetEvents(obj, gApiMgr.dbHdl.DBUtil, gApiMgr.logger)
-	gApiMgr.dbHdl.DbLock.Unlock()
 	if err != nil {
 		gApiMgr.logger.Err(fmt.Sprintln("Error extracting events", err))
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
