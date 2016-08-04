@@ -47,8 +47,8 @@ const (
 )
 
 type ConfigResponse struct {
-	UUId  string `json:"ObjectId"`
-	Error string `json:"Error"`
+	UUId   string `json:"ObjectId"`
+	Result string `json:"Result"`
 }
 
 type ReturnObject struct {
@@ -69,11 +69,11 @@ type GetEventResponse struct {
 }
 
 type ActionResponse struct {
-	Error string `json:"Error"`
+	Result string `json:"Result"`
 }
 
 type ErrorResponse struct {
-	Error string `json:"Error"`
+	Result string `json:"Result"`
 }
 
 // SR error codes
@@ -99,7 +99,7 @@ const (
 // SR error strings
 var ErrString = map[int]string{
 	SRFail:              "Configuration failed.",
-	SRSuccess:           "None.",
+	SRSuccess:           "Success",
 	SRSystemNotReady:    "System not ready.",
 	SRRespMarshalErr:    "Configuration applied successfully. However, failed to marshal response.",
 	SRNotFound:          "Failed to find entry.",
@@ -118,7 +118,7 @@ var ErrString = map[int]string{
 
 //Given a code reurn error string
 func SRErrString(errCode int) string {
-	return ErrString[errCode]
+	return "Error: " + ErrString[errCode]
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +139,7 @@ func RespondErrorForApiCall(w http.ResponseWriter, errCode int, errString string
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
-	errResp.Error = SRErrString(errCode) + " " + errString
+	errResp.Result = SRErrString(errCode) + " " + errString
 	js, _ := json.Marshal(errResp)
 	w.Write(js)
 	return nil
@@ -488,8 +488,6 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var resp ActionResponse
 	var errCode int
 	var err error
-	//      var obj modelObjs.ConfigObj
-	//	var actionobj modelActions.ActionObj
 
 	gApiMgr.ApiCallStats.NumActionCalls++
 	if gApiMgr.clientMgr.IsReady() == false {
@@ -517,8 +515,9 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 				gApiMgr.ApiCallStats.NumActionCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
+				resp.Result = "Success"
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("Failed to execute action: ", actionobj, " due to error: ", err))
 			}
@@ -534,8 +533,8 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
-		resp.Error = SRErrString(errCode)
+	if errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode)
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
@@ -582,7 +581,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 			if errCode != SRSuccess {
 				w.WriteHeader(http.StatusInternalServerError)
 				resp.UUId = uuid
-				resp.Error = SRErrString(errCode)
+				resp.Result = SRErrString(errCode)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
 				return
@@ -603,12 +602,13 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					resp.UUId = uuid
 					errCode = SRSuccess
+					resp.Result = "Success"
 				} else {
 					errCode = SRIdStoreFail
 					gApiMgr.logger.Debug(fmt.Sprintln("Failed to store UuidToKey map ", obj, dbErr))
 				}
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("Failed to create object: ", obj, " due to error: ", err))
 			}
@@ -624,8 +624,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if err != nil && errCode != SRServerError {
-		resp.Error = SRErrString(errCode) + " " + err.Error()
+	if err != nil && errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode) + " " + err.Error()
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
@@ -656,7 +656,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	objKey, err = gApiMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		resp.Error = SRErrString(SRNotFound)
+		resp.Result = SRErrString(SRNotFound)
 		js, _ := json.Marshal(resp)
 		w.Write(js)
 		return
@@ -684,9 +684,10 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 					gApiMgr.ApiCallStats.NumDeleteCallsSuccess++
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
+					resp.Result = "Success"
 				}
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("DeleteObject returned failure ", obj, err))
 			}
@@ -702,8 +703,8 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
-		resp.Error = SRErrString(errCode)
+	if errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode)
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
@@ -738,7 +739,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			gApiMgr.dbHdl.DbLock.Unlock()
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
-				resp.Error = SRErrString(SRNotFound)
+				resp.Result = SRErrString(SRNotFound)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
 				return
@@ -763,9 +764,10 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 					gApiMgr.ApiCallStats.NumDeleteCallsSuccess++
 					w.WriteHeader(http.StatusGone)
 					errCode = SRSuccess
+					resp.Result = "Success"
 				}
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("DeleteObject returned failure ", obj))
 			}
@@ -781,8 +783,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
-		resp.Error = SRErrString(errCode)
+	if errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode)
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
@@ -813,7 +815,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	objKey, err = gApiMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		resp.Error = SRErrString(SRNotFound)
+		resp.Result = SRErrString(SRNotFound)
 		js, _ := json.Marshal(resp)
 		w.Write(js)
 		return
@@ -871,8 +873,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
+					resp.Result = "Success"
 				} else {
-					resp.Error = err.Error()
+					resp.Result = err.Error()
 					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 				}
@@ -888,7 +891,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			}
 			if anyUpdated == false {
 				w.WriteHeader(http.StatusInternalServerError)
-				resp.Error = SRErrString(SRUpdateNoChange)
+				resp.Result = SRErrString(SRUpdateNoChange)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
 				return
@@ -909,8 +912,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
+					resp.Result = "Success"
 				} else {
-					resp.Error = err.Error()
+					resp.Result = err.Error()
 					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 				}
@@ -930,8 +934,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
-		resp.Error = SRErrString(errCode)
+	if errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode)
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
@@ -967,7 +971,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.dbHdl.DbLock.Unlock()
 		if gerr != nil {
 			w.WriteHeader(http.StatusNotFound)
-			resp.Error = SRErrString(SRNotFound)
+			resp.Result = SRErrString(SRNotFound)
 			js, _ := json.Marshal(resp)
 			w.Write(js)
 			return
@@ -1021,8 +1025,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
+				resp.Result = "Success"
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 			}
@@ -1038,7 +1043,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		if anyUpdated == false {
 			w.WriteHeader(http.StatusInternalServerError)
-			resp.Error = SRErrString(SRUpdateNoChange)
+			resp.Result = SRErrString(SRUpdateNoChange)
 			js, _ := json.Marshal(resp)
 			w.Write(js)
 			return
@@ -1060,8 +1065,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
+				resp.Result = "Success"
 			} else {
-				resp.Error = err.Error()
+				resp.Result = err.Error()
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 			}
@@ -1077,8 +1083,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if errCode != SRSuccess {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	if errCode != SRServerError {
-		resp.Error = SRErrString(errCode)
+	if errCode != SRServerError && errCode != SRSuccess {
+		resp.Result = SRErrString(errCode)
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
