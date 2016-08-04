@@ -50,9 +50,6 @@
     {"Name":"ndpd",
 	 "Port":10017},
 
-    {"Name":"opticd",
-	 "Port":10018},
-
     {"Name":"local",
 	 "Port":0}
 ]
