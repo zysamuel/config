@@ -190,15 +190,12 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var body []byte
 				obj, _ = objHdl.UnmarshalObject(body)
-				gConfigMgr.dbHdl.DbLock.Lock()
-				_, err = obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
-				gConfigMgr.dbHdl.DbLock.Unlock()
+				objKey := mgr.dbHdl.GetKey(obj)
+				_, err = mgr.dbHdl.GetObjectFromDb(obj, objKey)
 				if err != nil {
 					client, exist := mgr.clientMgr.Clients[clientName]
 					if exist {
-						client.LockApiHandler()
 						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
-						client.UnlockApiHandler()
 						if err == nil && success == true {
 							mgr.storeUUID(obj.GetKey())
 						} else {
@@ -243,20 +240,15 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 				currentIndex := int64(0)
 				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
 				resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner
-				resourceOwner.LockApiHandler()
 				err, _, _, _, objs = resourceOwner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
 					currentIndex, objCount)
-				resourceOwner.UnlockApiHandler()
 				fmt.Println("AutoDiscover response: ", err, objs)
 				if err == nil {
 					for _, obj := range objs {
-						gConfigMgr.dbHdl.DbLock.Lock()
-						_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
-						gConfigMgr.dbHdl.DbLock.Unlock()
+						objKey := mgr.dbHdl.GetKey(obj)
+						_, err := mgr.dbHdl.GetObjectFromDb(obj, objKey)
 						if err != nil {
-							gConfigMgr.dbHdl.DbLock.Lock()
-							err = obj.StoreObjectInDb(mgr.dbHdl)
-							gConfigMgr.dbHdl.DbLock.Unlock()
+							err = mgr.dbHdl.StoreObjectInDb(obj)
 							if err != nil {
 								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
 							} else {
