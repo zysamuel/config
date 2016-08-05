@@ -94,6 +94,7 @@ const (
 	SRAlreadyConfigured = 13
 	SRUpdateKeyError    = 14
 	SRUpdateNoChange    = 15
+	SRValidationFailed  = 16
 )
 
 // SR error strings
@@ -114,6 +115,7 @@ var ErrString = map[int]string{
 	SRAlreadyConfigured: "Already configured. Delete and Update operations are allowed.",
 	SRUpdateKeyError:    "Cannot update key in an object.",
 	SRUpdateNoChange:    "Nothing to be updated.",
+	SRValidationFailed:  "Config validation failed.",
 }
 
 //Given a code reurn error string
@@ -576,10 +578,16 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
+			err = gApiMgr.objectMgr.PreConfigValidation(obj)
+			if err != nil {
+				RespondErrorForApiCall(w, SRValidationFailed, err.Error())
+				return
+			}
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
+					gApiMgr.objectMgr.PostConfigProcessing(obj)
 					gApiMgr.ApiCallStats.NumCreateCallsSuccess++
 					w.WriteHeader(http.StatusCreated)
 					resp.UUId = uuid
@@ -686,7 +694,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
-		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
+		gApiMgr.logger.Debug("DeleteObject failed to Marshal config response")
 	}
 	w.Write(js)
 
@@ -762,7 +770,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
-		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
+		gApiMgr.logger.Debug("DeleteObject failed to Marshal config response")
 	}
 	w.Write(js)
 
@@ -838,10 +846,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					fmt.Println("err when merging ", err)
 					return
 				}
-				obj.PreConfigValidation()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
-					obj.PostConfigProcessing()
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
@@ -877,10 +883,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
-				obj.PreConfigValidation()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
-					obj.PostConfigProcessing()
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
@@ -911,7 +915,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
-		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
+		gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
 	}
 	w.Write(js)
 
@@ -1054,7 +1058,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	js, err := json.Marshal(resp)
 	if err != nil {
-		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
+		gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
 	}
 	w.Write(js)
 	return

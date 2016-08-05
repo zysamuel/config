@@ -113,7 +113,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
-	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
+	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.dbHdl, mgr.clientMgr)
 	if mgr.objectMgr == nil {
 		fmt.Println("Error initializing objectMgr")
 		return nil

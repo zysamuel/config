@@ -48,6 +48,7 @@ type AutoDiscoverStruct struct {
 
 type ObjectMgr struct {
 	logger             *logging.Writer
+	dbHdl              *DbHandler
 	ObjHdlMap          map[string]ConfigObjInfo
 	clientMgr          *clients.ClientMgr
 	AutoCreateObjMap   map[string]AutoCreateStruct
@@ -197,9 +198,10 @@ func GetOp(patchOp PatchOp) (opStr string, err error) {
 	}
 	return opStr, err
 }
-func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
+func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, dbHdl *DbHandler, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
 	mgr.logger = logger
+	mgr.dbHdl = dbHdl
 	mgr.clientMgr = clientMgr
 	if rc := mgr.InitializeObjectHandles(infoFiles); !rc {
 		logger.Err("Error in initializing object handles")
@@ -262,4 +264,12 @@ func (mgr *ObjectMgr) GetConfigObjHdlMap() map[string]ConfigObjInfo {
 
 func (mgr *ObjectMgr) GetAutoDiscoverObjMap() map[string]AutoDiscoverStruct {
 	return mgr.AutoDiscoverObjMap
+}
+
+func (mgr *ObjectMgr) PreConfigValidation(obj objects.ConfigObj) error {
+	return nil
+}
+
+func (mgr *ObjectMgr) PostConfigProcessing(obj objects.ConfigObj) error {
+	return nil
 }
