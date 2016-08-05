@@ -212,7 +212,6 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 				HandleRestRouteBulkGetState,
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
-		} else if objInfo.Access == "x" {
 		}
 	}
 	return true

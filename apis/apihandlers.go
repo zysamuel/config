@@ -838,8 +838,10 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					fmt.Println("err when merging ", err)
 					return
 				}
+				obj.PreConfigValidation()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
+					obj.PostConfigProcessing()
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
@@ -875,8 +877,10 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
+				obj.PreConfigValidation()
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
+					obj.PostConfigProcessing()
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
