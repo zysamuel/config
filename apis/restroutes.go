@@ -98,7 +98,7 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.apiBaseConfig = mgr.apiBase + "config/"
 	mgr.apiBaseState = mgr.apiBase + "state/"
 	mgr.apiBaseAction = mgr.apiBase + "action/"
-	mgr.apiBaseEvent = mgr.apiBase + "events/"
+	mgr.apiBaseEvent = mgr.apiBase + "event/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
