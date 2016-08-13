@@ -34,6 +34,7 @@ import (
 	modelObjs "models/objects"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 	"utils/logging"
@@ -58,35 +59,29 @@ const (
 	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 200
 )
 
-type ConfdGlobals struct {
-	Name  string `json: "Name"`
-	Value string `json: "Value"`
+type SysProfile struct {
+	API_Port int `json:"API_Port"`
 }
 
 // Get the http port on which rest api calls will be received
 func GetConfigHandlerPort(paramsDir string) (bool, string) {
-	var globals []ConfdGlobals
+	var sysProfile SysProfile
 	var port string
 
-	globalsFile := paramsDir + "/globals.json"
-	bytes, err := ioutil.ReadFile(globalsFile)
+	sysProfileFile := paramsDir + "../sysprofile/systemProfile.json"
+	bytes, err := ioutil.ReadFile(sysProfileFile)
 	if err != nil {
-		gConfigMgr.logger.Err(fmt.Sprintln("Error in reading globals file", globalsFile))
+		gConfigMgr.logger.Err("Error in reading globals file", sysProfileFile)
 		return false, port
 	}
 
-	err = json.Unmarshal(bytes, &globals)
+	err = json.Unmarshal(bytes, &sysProfile)
 	if err != nil {
 		gConfigMgr.logger.Err("Failed to Unmarshall Json")
 		return false, port
 	}
-	for _, global := range globals {
-		if global.Name == "httpport" {
-			port = global.Value
-			return true, port
-		}
-	}
-	return false, port
+	port = strconv.Itoa(sysProfile.API_Port)
+	return true, port
 }
 
 //
