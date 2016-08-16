@@ -68,7 +68,7 @@ func GetConfigHandlerPort(paramsDir string) (bool, string) {
 	var sysProfile SysProfile
 	var port string
 
-	sysProfileFile := paramsDir + "../sysprofile/systemProfile.json"
+	sysProfileFile := paramsDir + "systemProfile.json"
 	bytes, err := ioutil.ReadFile(sysProfileFile)
 	if err != nil {
 		gConfigMgr.logger.Err("Error in reading globals file", sysProfileFile)

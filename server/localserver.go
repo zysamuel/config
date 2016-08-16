@@ -100,7 +100,7 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 	}
 	paramsDir := mgr.paramsDir
 	sysInfo := &modelObjs.SystemParam{}
-	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
+	cfgFileData, err := ioutil.ReadFile(paramsDir + "systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
 		return err
