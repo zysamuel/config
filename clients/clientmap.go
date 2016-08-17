@@ -42,4 +42,5 @@ var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"fMgrd":      &FMGRDClient{},
 	"ndpd":       &NDPDClient{},
 	"platformd":  &PLATFORMDClient{},
+	"notifierd":  &NOTIFIERDClient{},
 }
