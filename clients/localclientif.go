@@ -55,6 +55,14 @@ func (clnt *LocalClient) IsConnectedToServer() bool {
 	return true
 }
 
+func (clnt *LocalClient) DisableServer() bool {
+	return true
+}
+
+func (clnt *LocalClient) IsServerEnabled() bool {
+	return true
+}
+
 func (clnt *LocalClient) GetServerName() string {
 	return "local"
 }

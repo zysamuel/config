@@ -58,11 +58,22 @@ type ClientJson struct {
 	Port int    `json:Port`
 }
 
+type DaemonJson struct {
+	Name   string `json:"Name"`
+	Enable bool   `json:"Enable"`
+}
+
+type DaemonsList struct {
+	Daemons []DaemonJson `json:"Daemons"`
+}
+
 type ClientIf interface {
 	Initialize(name string, address string)
 	ConnectToServer() bool
 	DisconnectFromServer() bool
 	IsConnectedToServer() bool
+	DisableServer() bool
+	IsServerEnabled() bool
 	CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool)
 	DeleteObject(obj objects.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool)
 	GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error, objcount int64, nextMarker int64, more bool, objs []objects.ConfigObj)
@@ -76,13 +87,13 @@ type ClientIf interface {
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
+func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB
 	mgr.systemSwVersionCB = systemSwVersionCB
 	mgr.executeConfigurationActionCB = executeConfigurationActionCB
-	if rc := mgr.InitializeClientHandles(paramsFile); !rc {
+	if rc := mgr.InitializeClientHandles(paramsFile, sysProfileFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil
 	}
@@ -94,8 +105,10 @@ func InitializeClientMgr(paramsFile string, logger *logging.Writer, systemStatus
 //
 //  This method reads the config file and connects to all the clients in the list
 //
-func (mgr *ClientMgr) InitializeClientHandles(paramsFile string) bool {
+func (mgr *ClientMgr) InitializeClientHandles(paramsFile, sysProfileFile string) bool {
 	var clientsList []ClientJson
+	var daemonsList DaemonsList
+
 	mgr.Clients = make(map[string]ClientIf)
 
 	bytes, err := ioutil.ReadFile(paramsFile)
@@ -113,6 +126,26 @@ func (mgr *ClientMgr) InitializeClientHandles(paramsFile string) bool {
 		if ClientInterfaces[client.Name] != nil {
 			mgr.Clients[client.Name] = ClientInterfaces[client.Name]
 			mgr.Clients[client.Name].Initialize(client.Name, "localhost:"+strconv.Itoa(client.Port))
+		}
+	}
+
+	bytes, err = ioutil.ReadFile(sysProfileFile)
+	if err != nil {
+		mgr.logger.Err("Failed to read systemProfile file")
+		return false
+	}
+	err = json.Unmarshal(bytes, &daemonsList)
+	if err != nil {
+		mgr.logger.Err("Failed to unmarshal daemons enable list json")
+		return false
+	}
+	for _, daemon := range daemonsList.Daemons {
+		client, exist := mgr.Clients[daemon.Name]
+		if exist {
+			if daemon.Enable == false {
+				client.DisableServer()
+				mgr.logger.Info("Client", daemon.Name, "is disabled")
+			}
 		}
 	}
 
@@ -146,29 +179,36 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
 	mgr.systemReady = false
+	disabledClientsCount := 0
 	for clientName, client := range mgr.Clients {
-		client.ConnectToServer()
-		if client.IsConnectedToServer() {
-			clientNameCh <- clientName
+		if client.IsServerEnabled() {
+			client.ConnectToServer()
+			if client.IsConnectedToServer() {
+				clientNameCh <- clientName
+			}
+		} else {
+			disabledClientsCount++
 		}
 	}
 	for t := range mgr.reconncetTimer.C {
 		_ = t
 		connectedClientsCount := 0
 		for clientName, client := range mgr.Clients {
-			if client.IsConnectedToServer() == false {
-				mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
-				client.ConnectToServer()
-				if client.IsConnectedToServer() {
-					clientNameCh <- clientName
+			if client.IsServerEnabled() {
+				if client.IsConnectedToServer() == false {
+					mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
+					client.ConnectToServer()
+					if client.IsConnectedToServer() {
+						clientNameCh <- clientName
+						connectedClientsCount++
+					}
+				} else {
 					connectedClientsCount++
 				}
-			} else {
-				connectedClientsCount++
 			}
 		}
 
-		if len(mgr.Clients) == connectedClientsCount {
+		if len(mgr.Clients) == (disabledClientsCount + connectedClientsCount) {
 			mgr.reconncetTimer.Stop()
 			break
 		}
@@ -196,7 +236,7 @@ func (mgr *ClientMgr) IsReady() bool {
 func (mgr *ClientMgr) GetUnconnectedClients() []string {
 	unconnectedClients := make([]string, 0)
 	for clntName, client := range mgr.Clients {
-		if client.IsConnectedToServer() == false {
+		if client.IsServerEnabled() && client.IsConnectedToServer() == false {
 			unconnectedClients = append(unconnectedClients, clntName)
 		}
 	}
@@ -217,7 +257,7 @@ func (mgr *ClientMgr) ConnectToClient(name string) error {
 	client, exist := mgr.Clients[name]
 	waitCount := 0
 	if exist {
-		if !client.IsConnectedToServer() {
+		if client.IsServerEnabled() && !client.IsConnectedToServer() {
 			reconncetTimer := time.NewTicker(time.Millisecond * 1000)
 			for t := range reconncetTimer.C {
 				_ = t
