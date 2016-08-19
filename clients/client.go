@@ -70,6 +70,8 @@ type ClientIf interface {
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
 	ExecuteAction(obj actions.ActionObj) error
 	GetServerName() string
+	PreConfigValidation(obj objects.ConfigObj) error
+	PostConfigProcessing(obj objects.ConfigObj) error
 	LockApiHandler()
 	UnlockApiHandler()
 }

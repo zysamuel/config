@@ -27,13 +27,19 @@ import (
 	"fmt"
 	"models/actions"
 	"models/objects"
+	"sync"
 	"utils/dbutils"
+	"utils/ipcutils"
 )
 
 type LocalClient struct {
+	ipcutils.IPCClientBase
 }
 
 func (clnt *LocalClient) Initialize(name string, address string) {
+	clnt.Name = name
+	clnt.Address = address
+	clnt.ApiHandlerMutex = sync.RWMutex{}
 	return
 }
 
@@ -54,20 +60,65 @@ func (clnt *LocalClient) GetServerName() string {
 }
 
 func (clnt *LocalClient) LockApiHandler() {
-	return
+	clnt.ApiHandlerMutex.Lock()
 }
 
 func (clnt *LocalClient) UnlockApiHandler() {
-	return
+	clnt.ApiHandlerMutex.Unlock()
+}
+
+func (clnt *LocalClient) PreConfigValidation(obj objects.ConfigObj) error {
+	var err error
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		err = xponderGlobalPreConfigValidate(obj.(objects.XponderGlobal))
+	default:
+		break
+	}
+	return err
+}
+
+func (clnt *LocalClient) PostConfigProcessing(obj objects.ConfigObj) error {
+	var err error
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		err = xponderGlobalPostConfigProcessing(obj.(objects.XponderGlobal))
+	default:
+		break
+	}
+	return err
 }
 
 func (clnt *LocalClient) CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
 	var err error
-	return err, true
+	var ok bool = true
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		data := obj.(objects.XponderGlobal)
+		err, ok = xponderGlobalCreate(data)
+		if ok {
+			err = dbHdl.StoreObjectInDb(data)
+		}
+	default:
+		break
+	}
+	return err, ok
 }
 
 func (clnt *LocalClient) DeleteObject(obj objects.ConfigObj, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
-	return nil, true
+	var err error
+	var ok bool = true
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		err, ok = xponderGlobalDelete(obj.(objects.XponderGlobal))
+	default:
+		break
+	}
+	return err, ok
 }
 
 func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil, currMarker int64, count int64) (err error,
@@ -75,36 +126,66 @@ func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBU
 	nextMarker int64,
 	more bool,
 	objs []objects.ConfigObj) {
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		objCount, nextMarker, more, objs = xponderGlobalGetBulk(obj.(objects.XponderGlobal))
+	default:
+		break
+	}
 	return nil, objCount, nextMarker, more, objs
 }
 
 func (clnt *LocalClient) UpdateObject(dbObj objects.ConfigObj, obj objects.ConfigObj, attrSet []bool, op []objects.PatchOpInfo, objKey string, dbHdl *dbutils.DBUtil) (error, bool) {
-	return nil, true
+	var err error
+	var ok bool
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
+	switch obj.(type) {
+	case objects.XponderGlobal:
+		updatedata := obj.(objects.XponderGlobal)
+		err, ok = xponderGlobalUpdate(obj.(objects.XponderGlobal))
+		if ok == true {
+			err = dbHdl.UpdateObjectInDb(updatedata, dbObj, attrSet)
+			if err != nil {
+				fmt.Println("Update object in DB failed:", err)
+				return err, false
+			}
+		} else {
+			return err, false
+		}
+	default:
+		break
+	}
+	return err, ok
 }
 
 func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj) {
 	var retObj objects.ConfigObj
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
 	switch obj.(type) {
 	case objects.SystemStatusState:
 		retObj = gClientMgr.systemStatusCB()
-		return nil, retObj
 	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
-		return nil, retObj
+	case objects.XponderGlobal:
+		_, retObj = xponderGlobalGet(obj.(objects.XponderGlobal))
 	default:
 		break
 	}
-	return nil, nil
+	return nil, retObj
 }
 
 func (clnt *LocalClient) ExecuteAction(obj actions.ActionObj) error {
 	fmt.Println("local client Execute action obj: ", obj)
+	defer clnt.UnlockApiHandler()
+	clnt.LockApiHandler()
 	switch obj.(type) {
-
 	case actions.SaveConfig, actions.ApplyConfig, actions.ResetConfig:
 		err := gClientMgr.executeConfigurationActionCB(obj)
 		return err
-
 	default:
 		break
 	}

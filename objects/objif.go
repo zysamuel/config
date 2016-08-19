@@ -265,11 +265,3 @@ func (mgr *ObjectMgr) GetConfigObjHdlMap() map[string]ConfigObjInfo {
 func (mgr *ObjectMgr) GetAutoDiscoverObjMap() map[string]AutoDiscoverStruct {
 	return mgr.AutoDiscoverObjMap
 }
-
-func (mgr *ObjectMgr) PreConfigValidation(obj objects.ConfigObj) error {
-	return nil
-}
-
-func (mgr *ObjectMgr) PostConfigProcessing(obj objects.ConfigObj) error {
-	return nil
-}

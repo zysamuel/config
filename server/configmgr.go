@@ -181,6 +181,7 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 	var obj modelObjs.ConfigObj
 	var err error
 	if ent, ok := mgr.objectMgr.AutoCreateObjMap[clientName]; ok {
+		mgr.logger.Err("AutoCreate : ", clientName, ent)
 		for _, resource := range ent.ObjList {
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var body []byte
