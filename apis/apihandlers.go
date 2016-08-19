@@ -578,16 +578,10 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				RespondErrorForApiCall(w, SRSystemNotReady, errString)
 				return
 			}
-			err = gApiMgr.objectMgr.PreConfigValidation(obj)
-			if err != nil {
-				RespondErrorForApiCall(w, SRValidationFailed, err.Error())
-				return
-			}
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
-					gApiMgr.objectMgr.PostConfigProcessing(obj)
 					gApiMgr.ApiCallStats.NumCreateCallsSuccess++
 					w.WriteHeader(http.StatusCreated)
 					resp.UUId = uuid
@@ -883,8 +877,16 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					RespondErrorForApiCall(w, SRSystemNotReady, errString)
 					return
 				}
+				//Perform pre update validation
+				err = resourceOwner.PreConfigValidation(mergedObj)
+				if err != nil {
+					RespondErrorForApiCall(w, SRValidationFailed, err.Error())
+					return
+				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
+					//Perform post update processing
+					_ = resourceOwner.PostConfigProcessing(obj)
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
@@ -992,8 +994,16 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("err when merging ", err)
 				return
 			}
+			//Perform pre update validation
+			err = resourceOwner.PreConfigValidation(mergedObj)
+			if err != nil {
+				RespondErrorForApiCall(w, SRValidationFailed, err.Error())
+				return
+			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
+				//Perform post update processing
+				_ = resourceOwner.PostConfigProcessing(obj)
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
