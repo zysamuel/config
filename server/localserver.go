@@ -195,7 +195,7 @@ func GetSystemStatus() modelObjs.SystemStatusState {
 
 	// Read DaemonStates from db
 	var daemonState modelObjs.DaemonState
-	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
+	daemonStates, _ := gConfigMgr.dbHdl.GetAllObjFromDb(daemonState)
 	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
 	for idx, daemonState := range daemonStates {
 		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)
