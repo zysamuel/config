@@ -100,7 +100,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	}
 
 	paramsFile := paramsDir + "/clients.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
+	sysProfileFile := paramsDir + "/systemProfile.json"
+	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, sysProfileFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
 	if mgr.clientMgr == nil {
 		fmt.Println("Error initializing clientMgr")
 		return nil
