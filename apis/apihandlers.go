@@ -878,7 +878,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				//Perform pre update validation
-				err = resourceOwner.PreConfigValidation(mergedObj)
+				err = resourceOwner.PreUpdateValidation(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 				if err != nil {
 					RespondErrorForApiCall(w, SRValidationFailed, err.Error())
 					return
@@ -886,7 +886,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 				if err == nil && success == true {
 					//Perform post update processing
-					_ = resourceOwner.PostConfigProcessing(obj)
+					_ = resourceOwner.PostUpdateProcessing(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
@@ -995,7 +995,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			//Perform pre update validation
-			err = resourceOwner.PreConfigValidation(mergedObj)
+			err = resourceOwner.PreUpdateValidation(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 			if err != nil {
 				RespondErrorForApiCall(w, SRValidationFailed, err.Error())
 				return
@@ -1003,7 +1003,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				//Perform post update processing
-				_ = resourceOwner.PostConfigProcessing(obj)
+				_ = resourceOwner.PostUpdateProcessing(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
