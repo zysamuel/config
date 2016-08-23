@@ -41,15 +41,18 @@
 	{"Name":"fMgrd",
 	 "Port":10014},
 	
-        {"Name":"vxland",
+    {"Name":"vxland",
 	 "Port":10015},
 
-        {"Name":"platformd",
+    {"Name":"platformd",
 	 "Port":10016},
 	 
-        {"Name":"ndpd",
+    {"Name":"ndpd",
 	 "Port":10017},
 
-         {"Name":"local",
-	  "Port":0}
+    {"Name":"notifierd",
+	 "Port":10019},
+
+    {"Name":"local",
+	 "Port":0}
 ]

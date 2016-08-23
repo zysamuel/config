@@ -100,7 +100,7 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 	}
 	paramsDir := mgr.paramsDir
 	sysInfo := &modelObjs.SystemParam{}
-	cfgFileData, err := ioutil.ReadFile(paramsDir + "../sysprofile/systemProfile.json")
+	cfgFileData, err := ioutil.ReadFile(paramsDir + "systemProfile.json")
 	if err != nil {
 		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
 		return err
@@ -195,9 +195,7 @@ func GetSystemStatus() modelObjs.SystemStatusState {
 
 	// Read DaemonStates from db
 	var daemonState modelObjs.DaemonState
-	gConfigMgr.dbHdl.DbLock.Lock()
 	daemonStates, _ := daemonState.GetAllObjFromDb(gConfigMgr.dbHdl)
-	gConfigMgr.dbHdl.DbLock.Unlock()
 	systemStatus.FlexDaemons = make([]modelObjs.DaemonState, len(daemonStates))
 	for idx, daemonState := range daemonStates {
 		systemStatus.FlexDaemons[idx] = daemonState.(modelObjs.DaemonState)

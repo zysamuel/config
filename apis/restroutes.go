@@ -29,6 +29,7 @@ import (
 	"config/objects"
 	"fmt"
 	"github.com/gorilla/mux"
+	"models/events"
 	modelObjs "models/objects"
 	"net/http"
 	"path/filepath"
@@ -94,10 +95,10 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.actionMgr = actionMgr
 	mgr.apiVer = "v1"
 	mgr.apiBase = "/public/" + mgr.apiVer + "/"
-	mgr.apiBaseConfig = mgr.apiBase + "config" + "/"
-	mgr.apiBaseState = mgr.apiBase + "state" + "/"
-	mgr.apiBaseAction = mgr.apiBase + "action" + "/"
-	mgr.apiBaseEvent = mgr.apiBase + "events"
+	mgr.apiBaseConfig = mgr.apiBase + "config/"
+	mgr.apiBaseState = mgr.apiBase + "state/"
+	mgr.apiBaseAction = mgr.apiBase + "action/"
+	mgr.apiBaseEvent = mgr.apiBase + "event/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
 		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
 		return nil
@@ -124,13 +125,14 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 
 func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
 	var rt ApiRoute
-	rt = ApiRoute{"Events",
-		"GET",
-		mgr.apiBaseEvent,
-		HandleRestRouteEvent,
+	for key, _ := range events.EventObjectMap {
+		rt = ApiRoute{key + "Events",
+			"GET",
+			mgr.apiBaseEvent + key,
+			HandleRestRouteEvent,
+		}
+		mgr.restRoutes = append(mgr.restRoutes, rt)
 	}
-	mgr.restRoutes = append(mgr.restRoutes, rt)
-
 	return true
 }
 
@@ -210,7 +212,6 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 				HandleRestRouteBulkGetState,
 			}
 			mgr.restRoutes = append(mgr.restRoutes, rt)
-		} else if objInfo.Access == "x" {
 		}
 	}
 	return true
@@ -277,7 +278,7 @@ func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
-	ExecuteEventObject(w, r)
+	EventObjectGet(w, r)
 	return
 }
 
@@ -285,7 +286,7 @@ func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		inner.ServeHTTP(w, r)
-		gApiMgr.logger.Info(fmt.Sprintln("%s\t%s\t%s\t%s\n",
+		gApiMgr.logger.Debug(fmt.Sprintln("%s\t%s\t%s\t%s\n",
 			r.Method,
 			r.RequestURI,
 			name,

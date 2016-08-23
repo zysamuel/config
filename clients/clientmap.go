@@ -25,6 +25,7 @@ package clients
 
 var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"asicd":      &ASICDClient{},
+	"opticd":     &OPTICDClient{},
 	"arpd":       &ARPDClient{},
 	"bgpd":       &BGPDClient{},
 	"lacpd":      &LACPDClient{},
@@ -41,4 +42,6 @@ var ClientInterfaces = map[string]ClientIf{"ribd": &RIBDClient{},
 	"fMgrd":      &FMGRDClient{},
 	"ndpd":       &NDPDClient{},
 	"platformd":  &PLATFORMDClient{},
+	"notifierd":  &NOTIFIERDClient{},
+	"isisd":      &ISISDClient{},
 }

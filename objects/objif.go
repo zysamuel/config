@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"models/events"
 	"models/objects"
 	"net/http"
 	"strings"
@@ -47,6 +48,7 @@ type AutoDiscoverStruct struct {
 
 type ObjectMgr struct {
 	logger             *logging.Writer
+	dbHdl              *DbHandler
 	ObjHdlMap          map[string]ConfigObjInfo
 	clientMgr          *clients.ClientMgr
 	AutoCreateObjMap   map[string]AutoCreateStruct
@@ -98,7 +100,28 @@ func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj o
 
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		fmt.Println("UnmarshalObject returnexd error", err, "for ojbect info", retobj)
+		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
+	}
+	return body, retobj, err
+}
+
+func GetEventObj(r *http.Request, obj events.EventObj) (body []byte, retobj events.EventObj, err error) {
+	if obj == nil {
+		err = errors.New("Event Object is nil")
+		return body, retobj, err
+	}
+	if r != nil {
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, commonDefs.MAX_JSON_LENGTH))
+		if err != nil {
+			return body, retobj, err
+		}
+		if err = r.Body.Close(); err != nil {
+			return body, retobj, err
+		}
+	}
+	retobj, err = obj.UnmarshalObject(body)
+	if err != nil {
+		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -175,9 +198,10 @@ func GetOp(patchOp PatchOp) (opStr string, err error) {
 	}
 	return opStr, err
 }
-func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
+func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, dbHdl *DbHandler, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
 	mgr.logger = logger
+	mgr.dbHdl = dbHdl
 	mgr.clientMgr = clientMgr
 	if rc := mgr.InitializeObjectHandles(infoFiles); !rc {
 		logger.Err("Error in initializing object handles")

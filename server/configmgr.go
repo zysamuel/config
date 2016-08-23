@@ -34,6 +34,7 @@ import (
 	modelObjs "models/objects"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 	"utils/logging"
@@ -58,35 +59,29 @@ const (
 	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 200
 )
 
-type ConfdGlobals struct {
-	Name  string `json: "Name"`
-	Value string `json: "Value"`
+type SysProfile struct {
+	API_Port int `json:"API_Port"`
 }
 
 // Get the http port on which rest api calls will be received
 func GetConfigHandlerPort(paramsDir string) (bool, string) {
-	var globals []ConfdGlobals
+	var sysProfile SysProfile
 	var port string
 
-	globalsFile := paramsDir + "/globals.json"
-	bytes, err := ioutil.ReadFile(globalsFile)
+	sysProfileFile := paramsDir + "systemProfile.json"
+	bytes, err := ioutil.ReadFile(sysProfileFile)
 	if err != nil {
-		gConfigMgr.logger.Err(fmt.Sprintln("Error in reading globals file", globalsFile))
+		gConfigMgr.logger.Err("Error in reading globals file", sysProfileFile)
 		return false, port
 	}
 
-	err = json.Unmarshal(bytes, &globals)
+	err = json.Unmarshal(bytes, &sysProfile)
 	if err != nil {
 		gConfigMgr.logger.Err("Failed to Unmarshall Json")
 		return false, port
 	}
-	for _, global := range globals {
-		if global.Name == "httpport" {
-			port = global.Value
-			return true, port
-		}
-	}
-	return false, port
+	port = strconv.Itoa(sysProfile.API_Port)
+	return true, port
 }
 
 //
@@ -113,7 +108,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
-	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.clientMgr)
+	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.dbHdl, mgr.clientMgr)
 	if mgr.objectMgr == nil {
 		fmt.Println("Error initializing objectMgr")
 		return nil
@@ -186,19 +181,17 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 	var obj modelObjs.ConfigObj
 	var err error
 	if ent, ok := mgr.objectMgr.AutoCreateObjMap[clientName]; ok {
+		mgr.logger.Err("AutoCreate : ", clientName, ent)
 		for _, resource := range ent.ObjList {
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var body []byte
 				obj, _ = objHdl.UnmarshalObject(body)
-				gConfigMgr.dbHdl.DbLock.Lock()
-				_, err = obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
-				gConfigMgr.dbHdl.DbLock.Unlock()
+				objKey := mgr.dbHdl.GetKey(obj)
+				_, err = mgr.dbHdl.GetObjectFromDb(obj, objKey)
 				if err != nil {
 					client, exist := mgr.clientMgr.Clients[clientName]
 					if exist {
-						client.LockApiHandler()
 						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
-						client.UnlockApiHandler()
 						if err == nil && success == true {
 							mgr.storeUUID(obj.GetKey())
 						} else {
@@ -243,20 +236,15 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 				currentIndex := int64(0)
 				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
 				resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner
-				resourceOwner.LockApiHandler()
 				err, _, _, _, objs = resourceOwner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
 					currentIndex, objCount)
-				resourceOwner.UnlockApiHandler()
 				fmt.Println("AutoDiscover response: ", err, objs)
 				if err == nil {
 					for _, obj := range objs {
-						gConfigMgr.dbHdl.DbLock.Lock()
-						_, err := obj.GetObjectFromDb(obj.GetKey(), mgr.dbHdl)
-						gConfigMgr.dbHdl.DbLock.Unlock()
+						objKey := mgr.dbHdl.GetKey(obj)
+						_, err := mgr.dbHdl.GetObjectFromDb(obj, objKey)
 						if err != nil {
-							gConfigMgr.dbHdl.DbLock.Lock()
-							err = obj.StoreObjectInDb(mgr.dbHdl)
-							gConfigMgr.dbHdl.DbLock.Unlock()
+							err = mgr.dbHdl.StoreObjectInDb(obj)
 							if err != nil {
 								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
 							} else {
