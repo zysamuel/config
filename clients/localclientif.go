@@ -75,22 +75,24 @@ func (clnt *LocalClient) UnlockApiHandler() {
 	clnt.ApiHandlerMutex.Unlock()
 }
 
-func (clnt *LocalClient) PreConfigValidation(obj objects.ConfigObj) error {
+func (clnt *LocalClient) PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
+	fmt.Println("PreUpdateValidation called for LocalClient")
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
-		err = xponderGlobalPreConfigValidate(obj.(objects.XponderGlobal))
+		err = xponderGlobalPreUpdateValidate(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
 	return err
 }
 
-func (clnt *LocalClient) PostConfigProcessing(obj objects.ConfigObj) error {
+func (clnt *LocalClient) PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
+	fmt.Println("PostUpdateProcessing called for LocalClient")
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
-		err = xponderGlobalPostConfigProcessing(obj.(objects.XponderGlobal))
+		err = xponderGlobalPostUpdateProcessing(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
@@ -163,6 +165,7 @@ func (clnt *LocalClient) UpdateObject(dbObj objects.ConfigObj, obj objects.Confi
 		} else {
 			return err, false
 		}
+		err = xponderGlobalPostUpdateProcessing(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
