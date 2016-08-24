@@ -309,7 +309,9 @@ func main() {
 		return
 	}
 	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/objects/genObjectConfig.json")
+	//jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/actions/genObjectAction.json")
 	membersInfoBase := base + "/reltools/codegentools/._genInfo/"
+
 	outFileName := "allObjs.json"
 	WriteDocPage(jsonFilesList, membersInfoBase, outFileName, ALL_OBJS)
 
@@ -318,6 +320,12 @@ func main() {
 
 	outFileName = "stateObjs.json"
 	WriteDocPage(jsonFilesList, membersInfoBase, outFileName, STATE_OBJS)
+
+	//outFileName = "ActionObjs.json"
+	//WriteDocPage(jsonFilesList, membersInfoBase, outFileName, ACTION_OBJS)
+
+	//outFileName = "EventObjs.json"
+	//WriteDocPage(jsonFilesList, membersInfoBase, outFileName, EVENT_OBJS)
 }
 
 func WriteDocPage(jsonFilesList []string, membersInfoBase string, outFileName string, objsWithMode int) {
@@ -349,12 +357,15 @@ func WriteDocPage(jsonFilesList []string, membersInfoBase string, outFileName st
 		err = json.Unmarshal(bytes, &objMap)
 		cfgObjList := make([]string, 0)
 		stateObjList := make([]string, 0)
+		actionObjList := make([]string, 0)
 		for key, objInfo := range objMap {
 			idx++
 			if objInfo.Access == "w" || objInfo.Access == "rw" {
 				cfgObjList = append(cfgObjList, key)
 			} else if objInfo.Access == "r" {
 				stateObjList = append(stateObjList, key)
+			} else if objInfo.Access == "x" {
+				actionObjList = append(actionObjList, key)
 			}
 		}
 		sort.Strings(cfgObjList)
