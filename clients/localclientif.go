@@ -76,7 +76,6 @@ func (clnt *LocalClient) UnlockApiHandler() {
 }
 
 func (clnt *LocalClient) PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
-	fmt.Println("PreUpdateValidation called for LocalClient")
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
@@ -88,7 +87,6 @@ func (clnt *LocalClient) PreUpdateValidation(dbObj, obj objects.ConfigObj, attrS
 }
 
 func (clnt *LocalClient) PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
-	fmt.Println("PostUpdateProcessing called for LocalClient")
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
@@ -165,7 +163,6 @@ func (clnt *LocalClient) UpdateObject(dbObj objects.ConfigObj, obj objects.Confi
 		} else {
 			return err, false
 		}
-		err = xponderGlobalPostUpdateProcessing(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
