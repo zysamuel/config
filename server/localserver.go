@@ -112,9 +112,21 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 		mgr.logger.Err(fmt.Sprintln("Error Unmarshalling cfg json data, err:", err))
 		return err
 	}
+
+	versionFileData, err := ioutil.ReadFile(strings.TrimSuffix(paramsDir, "params/") + "pkgInfo.json")
+	if err != nil {
+		mgr.logger.Err("Error in reading sw version file", err)
+		return err
+	}
+	var version Version
+	err = json.Unmarshal(versionFileData, &version)
+	if err != nil {
+		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
+		return err
+	}
+	sysInfo.Version = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
 	sysInfo.SwitchMac = cfg.SwitchMac
 	sysInfo.MgmtIp = cfg.MgmtIp
-	sysInfo.Version = cfg.Version
 	sysInfo.Description = cfg.Description
 	sysInfo.Hostname = cfg.Hostname
 	sysInfo.Vrf = cfg.Vrf
