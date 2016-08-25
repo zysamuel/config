@@ -46,7 +46,15 @@ const (
 	MAX_OBJECTS_IN_GETBULK = 1024
 )
 
+type baseResponse struct {
+	AccessControlAllowOrigin  string `json:"Access-Control-Allow-Origin"`
+	AccessControlAllowHeaders string `json:"Access-Control-Allow-Headers"`
+	AccessControlAllowMethods string `json:"Access-Control-Allow-Methods"`
+	AccessControlMaxAge       string `json:"Access-Control-Max_age"`
+}
+
 type ConfigResponse struct {
+	baseResponse
 	UUId   string `json:"ObjectId"`
 	Result string `json:"Result"`
 }
@@ -129,6 +137,13 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	//if err := json.NewEncoder(w).Encode(peers); err != nil {
 	//	return
 	//}
+}
+
+func (resp *ConfigResponse) FillBaseConfigResponse() {
+	resp.AccessControlAllowOrigin = "*"
+	resp.AccessControlAllowHeaders = "Origin, X-Requested-With, Content-Type, Accept"
+	resp.AccessControlAllowMethods = "POST, GET, OPTIONS, PATCH, DELETE"
+	resp.AccessControlMaxAge = "86400"
 }
 
 func RespondErrorForApiCall(w http.ResponseWriter, errCode int, errString string) error {
@@ -532,7 +547,6 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
-	var resp ConfigResponse
 	var errCode int
 	var success bool
 	var uuid string
@@ -548,6 +562,8 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
+	resp := &ConfigResponse{}
+	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
@@ -621,7 +637,6 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
-	var resp ConfigResponse
 	var errCode int
 	var objKey string
 	var success bool
@@ -633,6 +648,8 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resp := &ConfigResponse{}
+	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
@@ -696,7 +713,6 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
-	var resp ConfigResponse
 	var errCode int
 	var objKey string
 	var success bool
@@ -709,6 +725,8 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resp := &ConfigResponse{}
+	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
@@ -772,7 +790,6 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
-	var resp ConfigResponse
 	var errCode int
 	var objKey string
 	var success bool
@@ -784,6 +801,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resp := &ConfigResponse{}
+	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	vars := mux.Vars(r)
@@ -925,7 +944,6 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
-	var resp ConfigResponse
 	var errCode int
 	var objKey string
 	var success bool
@@ -938,6 +956,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resp := &ConfigResponse{}
+	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
