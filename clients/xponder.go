@@ -116,12 +116,12 @@ func xponderGlobalUpdate(obj objects.XponderGlobal) (error, bool) {
 	return nil, true
 }
 
-func xponderGlobalGet(obj objects.XponderGlobal) (error, objects.ConfigObj) {
+func xponderGlobalGet() (error, objects.ConfigObj) {
 	fmt.Println("Get received for XponderGlobal")
 	return nil, xponderGlobal
 }
 
-func xponderGlobalGetBulk(obj objects.XponderGlobal) (int64, int64, bool, []objects.ConfigObj) {
+func xponderGlobalGetBulk() (int64, int64, bool, []objects.ConfigObj) {
 	fmt.Println("GETBULK xponderGbl : ", xponderGlobal)
 	return int64(1), int64(0), false, []objects.ConfigObj{xponderGlobal}
 }
