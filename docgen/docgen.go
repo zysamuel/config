@@ -183,7 +183,6 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 }
 
 func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem, autoCreate bool) {
-
 	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
 	if autoCreate != true {
 		writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS, false)
@@ -228,7 +227,7 @@ func WriteGlobalStateObject(structName string, docJsFile *os.File, membersInfo [
 
 func WriteRestResourceDoc(docJsFile *os.File, structName string, membersInfo []AttributeListItem, objInfo ObjectInfoJson) {
 	if objInfo.Access == "w" || objInfo.Access == "rw" {
-		WriteConfigObject(structName, docJsFile, membersInfo, objInfo.AutoCreate)
+		WriteConfigObject(structName, docJsFile, membersInfo, objInfo.AutoCreate || objInfo.AutoDiscover)
 	} else if objInfo.Access == "r" || objInfo.Access == "rw" {
 		if strings.Contains(structName, "Global") {
 			WriteGlobalStateObject(structName, docJsFile, membersInfo)
@@ -279,6 +278,7 @@ type ObjectInfoJson struct {
 	SrcFile      string `json:"srcfile"`
 	Multiplicity string `json:"multiplicity"`
 	AutoCreate   bool   `json:"autoCreate"`
+	AutoDiscover bool   `json:"autoDiscover"`
 }
 
 type ObjectMembersInfo struct {
@@ -372,7 +372,8 @@ func WriteDocPage(jsonFilesList []string, membersInfoBase string, outFileName st
 		sort.Strings(stateObjList)
 		if objsWithMode == ALL_OBJS || objsWithMode == CONF_OBJS {
 			WriteObjectList(docJsFile, objMap, cfgObjList, membersInfoBase)
-		} else if objsWithMode == ALL_OBJS || objsWithMode == STATE_OBJS {
+		}
+		if objsWithMode == ALL_OBJS || objsWithMode == STATE_OBJS {
 			WriteObjectList(docJsFile, objMap, stateObjList, membersInfoBase)
 		}
 	}
