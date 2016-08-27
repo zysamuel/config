@@ -137,10 +137,10 @@ func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBU
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.XponderGlobal:
-		objCount, nextMarker, more, objs = xponderGlobalGetBulk(obj.(objects.XponderGlobal))
 	case objects.ApiCallState:
 		objCount, nextMarker, more, objs = getApiHistory(dbHdl)
+	case objects.XponderGlobal, objects.XponderGlobalState:
+		objCount, nextMarker, more, objs = xponderGlobalGetBulk()
 	default:
 		break
 	}
@@ -180,8 +180,8 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 		retObj = gClientMgr.systemStatusCB()
 	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
-	case objects.XponderGlobal:
-		_, retObj = xponderGlobalGet(obj.(objects.XponderGlobal))
+	case objects.XponderGlobal, objects.XponderGlobalState:
+		_, retObj = xponderGlobalGet()
 	default:
 		break
 	}
