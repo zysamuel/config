@@ -87,7 +87,10 @@ type ClientIf interface {
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
+func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer,
+	systemStatusCB SystemStatusCB,
+	systemSwVersionCB SystemSwVersionCB,
+	executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB

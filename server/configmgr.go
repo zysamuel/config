@@ -101,7 +101,10 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	paramsFile := paramsDir + "/clients.json"
 	sysProfileFile := paramsDir + "/systemProfile.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, sysProfileFile, logger, GetSystemStatus, GetSystemSwVersion, actions.ExecuteConfigurationAction)
+	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, sysProfileFile, logger,
+		GetSystemStatus,
+		GetSystemSwVersion,
+		actions.ExecuteConfigurationAction)
 	if mgr.clientMgr == nil {
 		fmt.Println("Error initializing clientMgr")
 		return nil
@@ -109,7 +112,8 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	objects.CreateObjectMap()
 	objectConfigFiles := [...]string{paramsDir + "/genObjectConfig.json"}
-	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger, mgr.dbHdl, mgr.clientMgr)
+	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger,
+		mgr.dbHdl, mgr.clientMgr)
 	if mgr.objectMgr == nil {
 		fmt.Println("Error initializing objectMgr")
 		return nil
@@ -117,13 +121,15 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	actions.CreateActionMap()
 	actionConfigFiles := [...]string{paramsDir + "/genObjectAction.json"}
-	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger, mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
+	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger,
+		mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
 	if mgr.actionMgr == nil {
 		fmt.Println("Error initializing actionMgr")
 		return nil
 	}
 
-	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger, mgr.dbHdl, mgr.clientMgr, mgr.objectMgr, mgr.actionMgr)
+	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger,
+		mgr.dbHdl, mgr.clientMgr, mgr.objectMgr, mgr.actionMgr)
 	if mgr.ApiMgr == nil {
 		fmt.Println("Error initializing ApiMgr")
 		return nil
@@ -136,9 +142,10 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	mgr.bringUpTime = time.Now()
 	// Initialize channel to receive connected client name.
-	// When confd connects to a client, it creates global objects owned by that client and
-	// stores default logging level in DB, if it does not exist.
-	// Global objects and logging objects can only be updated by user.
+	// When confd connects to a client, it creates autocreate objects owned by that client and
+	// stores default logging level for that client in DB, if it does not exist.
+	// Autocreate objects and logging objects can only be updated by user.
+	// Also, confd discovers all the discoverable objects from that client and stores in DB.
 	mgr.clientNameCh = make(chan string, 10)
 	logger.Info("Initialization Done!")
 
