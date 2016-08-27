@@ -81,10 +81,6 @@ type ApiCallStats struct {
 	NumActionCallsSuccess int32
 }
 
-type LoginResponse struct {
-	SessionId uint64 `json: "SessionId"`
-}
-
 func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, clientMgr *clients.ClientMgr, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
@@ -280,6 +276,33 @@ func HandleRestRouteAction(w http.ResponseWriter, r *http.Request) {
 func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
 	EventObjectGet(w, r)
 	return
+}
+
+func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int) error {
+	var result string
+	var data string
+	if errCode == SRSuccess {
+		result = "Success"
+	} else {
+		result = "Fail"
+	}
+	data = strings.Replace(string(body), "\\", "", -1)
+	data = strings.Replace(data, "\"", "", -1)
+	ApiInfo := modelObjs.ApiCallState{
+		API:       api,
+		Time:      time.Now().String(),
+		Operation: operation,
+		Data:      data,
+		Result:    result,
+		UserAddr:  r.RemoteAddr,
+		UserName:  "", // confd does not know username information
+	}
+	err := mgr.dbHdl.StoreObjectInDb(ApiInfo)
+	if err != nil {
+		mgr.logger.Info("Failed to store ApiCall information.", err)
+		return err
+	}
+	return nil
 }
 
 func Logger(inner http.Handler, name string) http.Handler {

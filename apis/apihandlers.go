@@ -491,24 +491,30 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	var resp ActionResponse
 	var errCode int
 	var err error
+	var actionobj modelActions.ActionObj
+	var body []byte
 
 	gApiMgr.ApiCallStats.NumActionCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
+		return
+	}
 	fmt.Println("resource:", resource)
 	if actionobjHdl, ok := modelActions.ActionObjectMap[resource]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
-		if _, actionobj, err := actions.GetActionObj(r, actionobjHdl); err == nil {
+		if body, actionobj, err = actions.GetActionObj(r, actionobjHdl); err == nil {
 			resourceOwner := gApiMgr.actionMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				errCode = SRSystemNotReady
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
 				return
 			}
 			err = resourceOwner.ExecuteAction(actionobj)
@@ -542,7 +548,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("ExecuteAction failed to Marshal config response")
 	}
 	w.Write(js)
-
+	gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
 	return
 }
 
@@ -550,22 +556,24 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	var errCode int
 	var success bool
 	var uuid string
+	var objKey string
 	var err error
 	var obj modelObjs.ConfigObj
-	var objKey string
 	var body []byte
 
 	gApiMgr.ApiCallStats.NumCreateCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	errCode = SRSuccess
 	resp := &ConfigResponse{}
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
+		return
+	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
@@ -586,12 +594,15 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				resp.Result = SRErrString(errCode)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
+				gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
 				return
 			}
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
+				errCode = SRSystemNotReady
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
 				return
 			}
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
@@ -632,7 +643,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("CreateObject failed to Marshal config response")
 	}
 	w.Write(js)
-
+	gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode)
 	return
 }
 
@@ -641,34 +652,42 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	var err error
+	var obj modelObjs.ConfigObj
+	var body []byte
 
 	gApiMgr.ApiCallStats.NumDeleteCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resp := &ConfigResponse{}
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
+		return
+	}
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
 	objKey, err = gApiMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
+		errCode = SRNotFound
 		w.WriteHeader(http.StatusNotFound)
-		resp.Result = SRErrString(SRNotFound)
+		resp.Result = SRErrString(errCode)
 		js, _ := json.Marshal(resp)
 		w.Write(js)
+		gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if _, obj, err := objects.GetConfigObj(nil, objHdl); err == nil {
+		if body, obj, err = objects.GetConfigObj(nil, objHdl); err == nil {
 			dbObj, _ := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				errCode = SRSystemNotReady
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 				return
 			}
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
@@ -708,7 +727,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("DeleteObject failed to Marshal config response")
 	}
 	w.Write(js)
-
+	gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 	return
 }
 
@@ -718,26 +737,32 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var uuid string
 	var err error
+	var obj modelObjs.ConfigObj
+	var body []byte
 
 	gApiMgr.ApiCallStats.NumDeleteCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resp := &ConfigResponse{}
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
+		return
+	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if _, obj, err := objects.GetConfigObj(r, objHdl); err == nil {
+		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
 			objKey = gApiMgr.dbHdl.GetKey(obj)
 			dbObj, err := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 			if err != nil {
+				errCode = SRNotFound
 				w.WriteHeader(http.StatusNotFound)
-				resp.Result = SRErrString(SRNotFound)
+				resp.Result = SRErrString(errCode)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
+				gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 				return
 			}
 			uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(objKey)
@@ -745,7 +770,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				errCode = SRSystemNotReady
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 				return
 			}
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
@@ -785,7 +812,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("DeleteObject failed to Marshal config response")
 	}
 	w.Write(js)
-
+	gApiMgr.StoreApiCallInfo(r, resource, "DELETE", body, errCode)
 	return
 }
 
@@ -794,29 +821,35 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	var objKey string
 	var success bool
 	var err error
+	var obj modelObjs.ConfigObj
+	var body []byte
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resp := &ConfigResponse{}
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
+		return
+	}
 	vars := mux.Vars(r)
 	resp.UUId = vars["objId"]
 	objKey, err = gApiMgr.dbHdl.GetObjKeyFromUUID(vars["objId"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		resp.Result = SRErrString(SRNotFound)
+		errCode = SRNotFound
+		resp.Result = SRErrString(errCode)
 		js, _ := json.Marshal(resp)
 		w.Write(js)
+		gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		body, obj, _ := objects.GetConfigObj(r, objHdl)
+		body, obj, _ = objects.GetConfigObj(r, objHdl)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 		if gerr == nil {
@@ -827,22 +860,26 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				patchStr, err := objects.GetPatch([]byte(patches))
 				if err != nil {
 					fmt.Println("error unmarshaling patches:", err)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				for _, ops := range patchStr {
 					opStr, err := objects.GetOp(ops)
 					if err != nil {
 						fmt.Println("error unmarshaling op:", err)
+						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 						return
 					}
 					pathStr, err := objects.GetPath(ops)
 					if err != nil {
 						fmt.Println("error unmarshaling path:", err)
+						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 						return
 					}
 					value, ok := ops["value"]
 					if !ok {
 						fmt.Println("No value")
+						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 						return
 					}
 					patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
@@ -851,12 +888,15 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 				if resourceOwner.IsConnectedToServer() == false {
 					errString := "Confd not connected to " + resourceOwner.GetServerName()
-					RespondErrorForApiCall(w, SRSystemNotReady, errString)
+					errCode = SRSystemNotReady
+					RespondErrorForApiCall(w, errCode, errString)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				mergedObj, diff, err := gApiMgr.dbHdl.MergeDbAndConfigObjForPatchUpdate(obj, dbObj, patchOpInfoSlice)
 				if err != nil {
 					fmt.Println("err when merging ", err)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -870,6 +910,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 				}
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			diff, _ := gApiMgr.dbHdl.CompareObjectsAndDiff(obj, updateKeys, dbObj)
@@ -882,9 +923,11 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 			}
 			if anyUpdated == false {
 				w.WriteHeader(http.StatusInternalServerError)
-				resp.Result = SRErrString(SRUpdateNoChange)
+				errCode = SRUpdateNoChange
+				resp.Result = SRErrString(errCode)
 				js, _ := json.Marshal(resp)
 				w.Write(js)
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			mergedObj, _ := gApiMgr.dbHdl.MergeDbAndConfigObj(obj, dbObj, diff)
@@ -893,13 +936,17 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 				if resourceOwner.IsConnectedToServer() == false {
 					errString := "Confd not connected to " + resourceOwner.GetServerName()
-					RespondErrorForApiCall(w, SRSystemNotReady, errString)
+					errCode = SRSystemNotReady
+					RespondErrorForApiCall(w, errCode, errString)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				//Perform pre update validation
 				err = resourceOwner.PreUpdateValidation(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 				if err != nil {
-					RespondErrorForApiCall(w, SRValidationFailed, err.Error())
+					errCode = SRValidationFailed
+					RespondErrorForApiCall(w, errCode, err.Error())
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -939,7 +986,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
 	}
 	w.Write(js)
-
+	gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 	return
 }
 
@@ -949,27 +996,33 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	var success bool
 	var uuid string
 	var err error
+	var obj modelObjs.ConfigObj
+	var body []byte
 
 	gApiMgr.ApiCallStats.NumUpdateCalls++
-	if gApiMgr.clientMgr.IsReady() == false {
-		RespondErrorForApiCall(w, SRSystemNotReady, "")
-		return
-	}
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resp := &ConfigResponse{}
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	if gApiMgr.clientMgr.IsReady() == false {
+		errCode = SRSystemNotReady
+		RespondErrorForApiCall(w, errCode, "")
+		gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
+		return
+	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		body, obj, _ := objects.GetConfigObj(r, objHdl)
+		body, obj, _ = objects.GetConfigObj(r, objHdl)
 		objKey = gApiMgr.dbHdl.GetKey(obj)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 		if gerr != nil {
 			w.WriteHeader(http.StatusNotFound)
-			resp.Result = SRErrString(SRNotFound)
+			errCode = SRNotFound
+			resp.Result = SRErrString(errCode)
 			js, _ := json.Marshal(resp)
 			w.Write(js)
+			gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 			return
 		}
 		uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(objKey)
@@ -982,22 +1035,26 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			patchStr, err := objects.GetPatch([]byte(patches))
 			if err != nil {
 				fmt.Println("error unmarshaling patches:", err)
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			for _, ops := range patchStr {
 				opStr, err := objects.GetOp(ops)
 				if err != nil {
 					fmt.Println("error unmarshaling op:", err)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				pathStr, err := objects.GetPath(ops)
 				if err != nil {
 					fmt.Println("error unmarshaling path:", err)
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				value, ok := ops["value"]
 				if !ok {
 					fmt.Println("No value")
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 					return
 				}
 				patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
@@ -1006,12 +1063,15 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				errCode = SRSystemNotReady
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			mergedObj, diff, err := gApiMgr.dbHdl.MergeDbAndConfigObjForPatchUpdate(obj, dbObj, patchOpInfoSlice)
 			if err != nil {
 				fmt.Println("err when merging ", err)
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -1025,6 +1085,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 			}
+			gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 			return
 		}
 		diff, _ := gApiMgr.dbHdl.CompareObjectsAndDiff(obj, updateKeys, dbObj)
@@ -1037,9 +1098,11 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		if anyUpdated == false {
 			w.WriteHeader(http.StatusInternalServerError)
-			resp.Result = SRErrString(SRUpdateNoChange)
+			errCode = SRUpdateNoChange
+			resp.Result = SRErrString(errCode)
 			js, _ := json.Marshal(resp)
 			w.Write(js)
+			gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 			return
 		}
 
@@ -1049,13 +1112,17 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				errString := "Confd not connected to " + resourceOwner.GetServerName()
-				RespondErrorForApiCall(w, SRSystemNotReady, errString)
+				errCode = SRSystemNotReady
+				RespondErrorForApiCall(w, errCode, errString)
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			//Perform pre update validation
 			err = resourceOwner.PreUpdateValidation(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 			if err != nil {
-				RespondErrorForApiCall(w, SRValidationFailed, err.Error())
+				errCode = SRValidationFailed
+				RespondErrorForApiCall(w, errCode, err.Error())
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 				return
 			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -1091,6 +1158,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
 	}
 	w.Write(js)
+	gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
 	return
 }
 
