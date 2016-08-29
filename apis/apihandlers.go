@@ -183,6 +183,7 @@ func GetOneConfigObjectForId(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -228,6 +229,7 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -265,7 +267,7 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
-	resource = resource + "State"
+	resource = strings.ToLower(resource) + "state"
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -320,7 +322,7 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
-	resource = resource + "State"
+	resource = strings.ToLower(resource) + "state"
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -343,7 +345,7 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	cfgObjKey := strings.Replace(objKey, "State", "", 1)
+	cfgObjKey := strings.Replace(objKey, "state", "", 1)
 	uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
@@ -365,8 +367,10 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
+	resource = strings.ToLower(resource)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
+	resource = strings.ToLower(resource)
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -421,7 +425,7 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseState)
 	resource = strings.Split(resource, "?")[0]
 	resource = resource[:len(resource)-1]
-	resource = resource + "State"
+	resource = strings.ToLower(resource) + "state"
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
@@ -451,7 +455,7 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 		for idx, stateObject := range stateObjects {
 			resp.Objects[idx].ConfigObj = stateObject
 			objKey = stateObject.GetKey()
-			cfgObjKey := strings.Replace(objKey, "State", "", 1)
+			cfgObjKey := strings.Replace(objKey, "state", "", 1)
 			resp.Objects[idx].ObjectId, err = gApiMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 		}
 		js, err := json.Marshal(resp)
@@ -499,6 +503,7 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 	errCode = SRSuccess
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseAction)
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -568,6 +573,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig)
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -661,6 +667,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -746,6 +753,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -830,6 +838,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -1005,6 +1014,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 	resp.FillBaseConfigResponse()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.ToLower(resource)
 	if gApiMgr.clientMgr.IsReady() == false {
 		errCode = SRSystemNotReady
 		RespondErrorForApiCall(w, errCode, "")
@@ -1191,6 +1201,7 @@ func EventObjectGet(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseEvent), "/")[0]
+	resource = strings.ToLower(resource)
 	objHdl, ok := modelEvents.EventObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
