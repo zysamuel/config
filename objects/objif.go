@@ -233,7 +233,6 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		for k, v := range objMap {
 			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
 				v.Access, " Auto Create ", v.AutoCreate))
-			key := strings.ToLower(k)
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
@@ -242,17 +241,17 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
 			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
-			mgr.ObjHdlMap[key] = *entry
+			mgr.ObjHdlMap[k] = *entry
 
 			if v.AutoCreate == true {
 				ent, _ := mgr.AutoCreateObjMap[v.Owner]
-				ent.ObjList = append(ent.ObjList, key)
+				ent.ObjList = append(ent.ObjList, k)
 				mgr.AutoCreateObjMap[v.Owner] = ent
 			}
 
 			if v.AutoDiscover == true {
 				ent, _ := mgr.AutoDiscoverObjMap[v.Owner]
-				ent.ObjList = append(ent.ObjList, key)
+				ent.ObjList = append(ent.ObjList, k)
 				mgr.AutoDiscoverObjMap[v.Owner] = ent
 			}
 		}
