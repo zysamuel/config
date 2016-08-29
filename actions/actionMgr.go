@@ -35,6 +35,7 @@ import (
 	modelObjs "models/objects"
 	"net/http"
 	"os"
+	"strings"
 	"utils/logging"
 )
 
@@ -194,11 +195,12 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 
 		for k, v := range actionMap {
 			mgr.logger.Debug("For Action [", k, "] Primary owner is [", v.Owner, "] ")
+			key := strings.ToLower(k)
 			entry := new(ActionObjInfo)
 			if mgr.clientMgr != nil {
 				entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			}
-			mgr.ObjHdlMap[k] = *entry
+			mgr.ObjHdlMap[key] = *entry
 		}
 	}
 	return true
