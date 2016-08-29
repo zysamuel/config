@@ -32,14 +32,20 @@ import (
 )
 
 type xponderCfgRecipe struct {
-	vlanId   int32
-	portList []string
+	vlanId        int32
+	portList      []string
+	untagPortList []string
 }
 
 var xponderGlobal objects.XponderGlobal
 
 const (
 	XPONDER_GLOBAL_UPDATE_ATTR_MODE = 1
+
+	XPONDER_CLIENT_PORT_MIN         = 1
+	XPONDER_CLIENT_PORT_MAX         = 20
+	XPONDER_OVERSUB_CLIENT_PORT_MIN = 9
+	XPONDER_OVERSUB_CLIENT_PORT_MAX = 12
 
 	XPONDER_MODE_IN_SVC_WIRE    = "InServiceWire"
 	XPONDER_MODE_IN_SVC_REGEN   = "InServiceRegen"
@@ -128,36 +134,44 @@ func xponderGlobalGetBulk() (int64, int64, bool, []objects.ConfigObj) {
 
 var xponderInSvcWireCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{
 	xponderCfgRecipe{
-		vlanId:   2,
-		portList: []string{"fpPort1", "fpPort13"},
+		vlanId:        2,
+		portList:      []string{"fpPort13"},
+		untagPortList: []string{"fpPort1"},
 	},
 	xponderCfgRecipe{
-		vlanId:   3,
-		portList: []string{"fpPort2", "fpPort14"},
+		vlanId:        3,
+		portList:      []string{"fpPort14"},
+		untagPortList: []string{"fpPort2"},
 	},
 	xponderCfgRecipe{
-		vlanId:   4,
-		portList: []string{"fpPort3", "fpPort15"},
+		vlanId:        4,
+		portList:      []string{"fpPort15"},
+		untagPortList: []string{"fpPort3"},
 	},
 	xponderCfgRecipe{
-		vlanId:   5,
-		portList: []string{"fpPort4", "fpPort16"},
+		vlanId:        5,
+		portList:      []string{"fpPort16"},
+		untagPortList: []string{"fpPort4"},
 	},
 	xponderCfgRecipe{
-		vlanId:   6,
-		portList: []string{"fpPort5", "fpPort17"},
+		vlanId:        6,
+		portList:      []string{"fpPort17"},
+		untagPortList: []string{"fpPort5"},
 	},
 	xponderCfgRecipe{
-		vlanId:   7,
-		portList: []string{"fpPort6", "fpPort18"},
+		vlanId:        7,
+		portList:      []string{"fpPort18"},
+		untagPortList: []string{"fpPort6"},
 	},
 	xponderCfgRecipe{
-		vlanId:   8,
-		portList: []string{"fpPort7", "fpPort19"},
+		vlanId:        8,
+		portList:      []string{"fpPort19"},
+		untagPortList: []string{"fpPort7"},
 	},
 	xponderCfgRecipe{
-		vlanId:   9,
-		portList: []string{"fpPort8", "fpPort20"},
+		vlanId:        9,
+		portList:      []string{"fpPort20"},
+		untagPortList: []string{"fpPort8"},
 	},
 }
 
@@ -183,17 +197,18 @@ func xponderModeInSvcWireCfgSet(dbHdl *dbutils.DBUtil) error {
 	for _, val := range xponderInSvcWireCfgRecipe {
 		obj := new(objects.Vlan)
 		obj.VlanId = val.vlanId
-		obj.UntagIntfList = val.portList
+		obj.IntfList = val.portList
+		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.CreateObject(*obj, dbHdl)
 		if err != nil {
 			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
-	for idx := 1; idx <= 20; idx++ {
+	for idx := XPONDER_CLIENT_PORT_MIN; idx <= XPONDER_CLIENT_PORT_MAX; idx++ {
 		ifName := "fpPort" + strconv.Itoa(idx)
-		//Disable client ports fpPort9-fpPort12, enable all other client ports
-		if idx > 8 && idx < 13 {
+		//Disable oversub client ports,  enable all other client ports
+		if idx >= XPONDER_OVERSUB_CLIENT_PORT_MIN && idx <= XPONDER_OVERSUB_CLIENT_PORT_MAX {
 			adminState = "DOWN"
 		} else {
 			adminState = "UP"
@@ -212,17 +227,18 @@ func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 	for _, val := range xponderInSvcWireCfgRecipe {
 		obj := new(objects.Vlan)
 		obj.VlanId = val.vlanId
-		obj.UntagIntfList = val.portList
+		obj.IntfList = val.portList
+		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.DeleteObject(*obj, "", dbHdl)
 		if err != nil {
 			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
-	//Enable all client ports
-	for idx := 1; idx <= 20; idx++ {
+	//Disable all ports
+	for idx := XPONDER_CLIENT_PORT_MIN; idx <= XPONDER_CLIENT_PORT_MAX; idx++ {
 		ifName := "fpPort" + strconv.Itoa(idx)
-		adminState := "UP"
+		adminState := "DOWN"
 		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
 		if err != nil {
 			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
@@ -235,48 +251,74 @@ func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 var xponderInSvcOverSubCfgRecipe []xponderCfgRecipe = append(xponderInSvcWireCfgRecipe,
 	[]xponderCfgRecipe{
 		xponderCfgRecipe{
-			vlanId:   9,
-			portList: []string{"fpPort9", "fpPort15"},
+			vlanId:        10,
+			portList:      []string{"fpPort15"},
+			untagPortList: []string{"fpPort9"},
 		},
 		xponderCfgRecipe{
-			vlanId:   10,
-			portList: []string{"fpPort10", "fpPort16"},
+			vlanId:        11,
+			portList:      []string{"fpPort16"},
+			untagPortList: []string{"fpPort10"},
 		},
 		xponderCfgRecipe{
-			vlanId:   11,
-			portList: []string{"fpPort11", "fpPort17"},
+			vlanId:        12,
+			portList:      []string{"fpPort17"},
+			untagPortList: []string{"fpPort11"},
 		},
 		xponderCfgRecipe{
-			vlanId:   12,
-			portList: []string{"fpPort12", "fpPort18"},
+			vlanId:        13,
+			portList:      []string{"fpPort18"},
+			untagPortList: []string{"fpPort12"},
 		},
 	}...)
 
 func xponderModeInSvcOverSubCfgSet(dbHdl *dbutils.DBUtil) error {
 	var err error
 	asicdClntHdl := gClientMgr.Clients["asicd"]
-	for _, val := range xponderInSvcWireCfgRecipe {
+	for _, val := range xponderInSvcOverSubCfgRecipe {
 		obj := new(objects.Vlan)
 		obj.VlanId = val.vlanId
-		obj.UntagIntfList = val.portList
+		obj.IntfList = val.portList
+		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.CreateObject(*obj, dbHdl)
 		if err != nil {
 			fmt.Println("Failed applying cfg recipe in xponderModeInSvcOverSubCfgSet")
 			break
 		}
 	}
+	for idx := XPONDER_CLIENT_PORT_MIN; idx <= XPONDER_CLIENT_PORT_MAX; idx++ {
+		ifName := "fpPort" + strconv.Itoa(idx)
+		adminState := "UP"
+		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
+		if err != nil {
+			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			break
+		}
+	}
 	return err
 }
+
 func xponderModeInSvcOverSubCfgRemove(dbHdl *dbutils.DBUtil) error {
 	var err error
 	asicdClntHdl := gClientMgr.Clients["asicd"]
-	for _, val := range xponderInSvcWireCfgRecipe {
+	for _, val := range xponderInSvcOverSubCfgRecipe {
 		obj := new(objects.Vlan)
 		obj.VlanId = val.vlanId
-		obj.UntagIntfList = val.portList
+		obj.IntfList = val.portList
+		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.DeleteObject(*obj, "", dbHdl)
 		if err != nil {
 			fmt.Println("Failed applying cfg recipe in xponderInSvcOverSubCfgRemove")
+			break
+		}
+	}
+	//Disable all ports
+	for idx := XPONDER_CLIENT_PORT_MIN; idx <= XPONDER_CLIENT_PORT_MAX; idx++ {
+		ifName := "fpPort" + strconv.Itoa(idx)
+		adminState := "DOWN"
+		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
+		if err != nil {
+			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -287,7 +329,7 @@ func xponderModeInSvcOverSubCfgRemove(dbHdl *dbutils.DBUtil) error {
 func xponderModeInSvcRegenCfgApply(adminState string, nwLb bool, dbHdl *dbutils.DBUtil) error {
 	var err error
 	asicdClntHdl := gClientMgr.Clients["asicd"]
-	for idx := 1; idx <= 20; idx++ {
+	for idx := XPONDER_CLIENT_PORT_MIN; idx <= XPONDER_CLIENT_PORT_MAX; idx++ {
 		obj := new(objects.Port)
 		obj.IntfRef = "fpPort" + strconv.Itoa(idx)
 		obj.AdminState = adminState
