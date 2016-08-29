@@ -26,6 +26,7 @@ package clients
 import (
 	"errors"
 	"fmt"
+	"models/actions"
 	"models/objects"
 	"strconv"
 	"utils/dbutils"
@@ -87,6 +88,26 @@ func xponderGlobalPostUpdateProcessing(dbObj, obj objects.XponderGlobal, attrSet
 		if err != nil {
 			return err
 		}
+		switch dbObj.XponderMode {
+		case XPONDER_MODE_IN_SVC_WIRE, XPONDER_MODE_IN_SVC_REGEN,
+			XPONDER_MODE_IN_SVC_OVERSUB, XPONDER_MODE_IN_SVC_PKT_OPT:
+			if obj.XponderMode == XPONDER_MODE_OUT_OF_SVC {
+				//When going out of service clear all FCAPS data and disable faults/alarms
+				err = xponderFCAPSEnable(false)
+				if err != nil {
+					fmt.Println("Failed to disable FCAPS when transition into Out of Service mode")
+				}
+			}
+		case XPONDER_MODE_OUT_OF_SVC:
+			if obj.XponderMode != XPONDER_MODE_OUT_OF_SVC { //Check likely not required
+				//When leaving OutOfService mode, enable faults/Alarms
+				err = xponderFCAPSEnable(true)
+				if err != nil {
+					fmt.Println("Failed to enable FCAPS when transition out of Out of Service mode")
+				}
+			}
+		default:
+		}
 		switch obj.XponderMode {
 		case XPONDER_MODE_IN_SVC_WIRE:
 			err = xponderModeInSvcWireCfgSet(dbHdl)
@@ -103,11 +124,35 @@ func xponderGlobalPostUpdateProcessing(dbObj, obj objects.XponderGlobal, attrSet
 	return err
 }
 
+var dmnListForFCAPS []string = []string{"opticd", "asicd"}
+
+func xponderFCAPSEnable(enable bool) error {
+	var err error
+	fMgrClntHdl := gClientMgr.Clients["fMgrd"]
+	for _, val := range dmnListForFCAPS {
+		obj := actions.FaultEnable{
+			OwnerName: val,
+			EventName: "all",
+			Enable:    enable,
+		}
+		err = fMgrClntHdl.ExecuteAction(obj)
+		if err != nil {
+			fmt.Println("Failed to change FCAPS state for - " + val)
+		}
+	}
+	return err
+}
+
 func xponderGlobalCreate(obj objects.XponderGlobal) (error, bool) {
 	fmt.Println("Create received for XponderGlobal")
 	xponderGlobal.XponderId = obj.XponderId
 	xponderGlobal.XponderMode = obj.XponderMode
 	xponderGlobal.XponderDescription = obj.XponderDescription
+	//During autocreate, xpondermode is set to out of service, ensure FCAPS is disabled
+	err := xponderFCAPSEnable(false)
+	if err != nil {
+		fmt.Println("Failed to disable FCAPS when transition into Out of Service mode")
+	}
 	return nil, true
 }
 
@@ -221,6 +266,7 @@ func xponderModeInSvcWireCfgSet(dbHdl *dbutils.DBUtil) error {
 	}
 	return err
 }
+
 func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 	var err error
 	asicdClntHdl := gClientMgr.Clients["asicd"]

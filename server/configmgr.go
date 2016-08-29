@@ -213,17 +213,23 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 }
 
 func (mgr *ConfigMgr) AutoCreateConfigObjects() {
+	var clientNameList []string
 	for {
 		select {
 		case clientName := <-mgr.clientNameCh:
 			switch clientName {
 			case "Client_Init_Done":
+				//Perform auto create (equivalent to cfg action) only after all clients are connected
+				for _, name := range clientNameList {
+					mgr.ConfigureGlobalConfig(name)
+				}
 				close(mgr.clientNameCh)
 				return
 			default:
+				//Cache list of client names to use for autocreate
+				clientNameList = append(clientNameList, clientName)
 				mgr.logger.Info("Do Global Init and Discover objects for Client: " + clientName)
 				mgr.ConstructSystemParam(clientName)
-				mgr.ConfigureGlobalConfig(clientName)
 				mgr.AutoDiscoverObjects(clientName)
 				mgr.ConfigureComponentLoggingLevel(clientName)
 				mgr.logger.Info("Done Global Init and Discover objects for Client: " + clientName)
