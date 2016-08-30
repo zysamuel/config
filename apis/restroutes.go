@@ -231,7 +231,12 @@ func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		GetOneConfigObject(w, r)
 	} else {
-		BulkGetConfigObjects(w, r)
+		_, ok := modelObjs.ConfigObjectMap[resource[:len(resource)-1]]
+		if ok {
+			BulkGetConfigObjects(w, r)
+		} else {
+			RespondErrorForApiCall(w, SRNotFound, "")
+		}
 	}
 	return
 }
@@ -249,7 +254,12 @@ func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		GetOneStateObject(w, r)
 	} else {
-		BulkGetStateObjects(w, r)
+		_, ok := modelObjs.ConfigObjectMap[resource[:len(resource)-1]+"state"]
+		if ok {
+			BulkGetStateObjects(w, r)
+		} else {
+			RespondErrorForApiCall(w, SRNotFound, "")
+		}
 	}
 	return
 }
