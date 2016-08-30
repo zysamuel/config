@@ -226,6 +226,7 @@ func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.Split(resource, "?")[0]
 	resource = strings.ToLower(resource)
 	_, ok := modelObjs.ConfigObjectMap[resource]
 	if ok {
@@ -249,6 +250,7 @@ func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
 func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
+	resource = strings.Split(resource, "?")[0]
 	resource = strings.ToLower(resource)
 	_, ok := modelObjs.ConfigObjectMap[resource+"state"]
 	if ok {
