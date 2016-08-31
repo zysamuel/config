@@ -104,16 +104,17 @@ func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []by
 	return body, retobj, err
 }
 
-func GetConfigObjFromQueryData(queryStr string, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+func GetConfigObjFromQueryData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
 	}
-	if queryStr == "" {
+	queryMap := r.URL.Query()
+	if queryMap == nil {
 		err = errors.New("Empty query data")
 		return body, retobj, err
 	}
-	retobj, err = obj.UnmarshalObjectData(queryStr)
+	retobj, err = obj.UnmarshalObjectData(queryMap)
 	if err != nil || retobj == nil {
 		fmt.Println("UnmarshalObjectData returned error", err, "for object info", retobj)
 		return body, retobj, err

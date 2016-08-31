@@ -244,7 +244,7 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 	if queryData == "" {
 		_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
 	} else {
-		_, obj, err = objects.GetConfigObjFromQueryData(queryData, objHdl)
+		_, obj, err = objects.GetConfigObjFromQueryData(r, objHdl)
 	}
 	if err != nil || obj == nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
@@ -349,7 +349,7 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 	if queryData == "" {
 		_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
 	} else {
-		_, obj, err = objects.GetConfigObjFromQueryData(queryData, objHdl)
+		_, obj, err = objects.GetConfigObjFromQueryData(r, objHdl)
 	}
 	if err != nil || obj == nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
