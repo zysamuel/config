@@ -188,7 +188,7 @@ func GetOneConfigObjectForId(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err = objects.GetConfigObj(r, objHdl)
+	_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -226,16 +226,27 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var uuid string
 
+	resource := ""
+	queryData := ""
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
-	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.Split(resource, "?")[0]
 	resource = strings.ToLower(resource)
+	queryDataList := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "?")
+	if len(queryDataList) > 1 {
+		queryData = queryDataList[1]
+	}
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err = objects.GetConfigObj(r, objHdl)
-	if err != nil {
+	if queryData == "" {
+		_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
+	} else {
+		_, obj, err = objects.GetConfigObjFromQueryData(queryData, objHdl)
+	}
+	if err != nil || obj == nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -267,12 +278,13 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 	gApiMgr.ApiCallStats.NumGetCalls++
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
+	resource = strings.Split(resource, "?")[0]
 	resource = strings.ToLower(resource) + "state"
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err = objects.GetConfigObj(r, objHdl)
+	_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -320,15 +332,26 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 	var uuid string
 
 	gApiMgr.ApiCallStats.NumGetCalls++
+	resource := ""
+	queryData := ""
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
-	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
+	resource = strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
+	resource = strings.Split(resource, "?")[0]
 	resource = strings.ToLower(resource) + "state"
+	queryDataList := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "?")
+	if len(queryDataList) > 1 {
+		queryData = queryDataList[1]
+	}
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err = objects.GetConfigObj(r, objHdl)
-	if err != nil {
+	if queryData == "" {
+		_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
+	} else {
+		_, obj, err = objects.GetConfigObjFromQueryData(queryData, objHdl)
+	}
+	if err != nil || obj == nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
@@ -375,7 +398,7 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err := objects.GetConfigObj(nil, objHdl)
+	_, obj, err := objects.GetConfigObjFromJsonData(nil, objHdl)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -430,7 +453,7 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
 	}
-	_, obj, err := objects.GetConfigObj(nil, objHdl)
+	_, obj, err := objects.GetConfigObjFromJsonData(nil, objHdl)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
@@ -581,7 +604,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
+		if body, obj, err = objects.GetConfigObjFromJsonData(r, objHdl); err == nil {
 			updateKeys, _ := objects.GetUpdateKeys(body)
 			if len(updateKeys) == 0 {
 				errCode = SRNoContent
@@ -687,7 +710,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if body, obj, err = objects.GetConfigObj(nil, objHdl); err == nil {
+		if body, obj, err = objects.GetConfigObjFromJsonData(nil, objHdl); err == nil {
 			dbObj, _ := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 			resourceOwner := gApiMgr.objectMgr.ObjHdlMap[resource].Owner
 			if resourceOwner.IsConnectedToServer() == false {
@@ -761,7 +784,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		if body, obj, err = objects.GetConfigObj(r, objHdl); err == nil {
+		if body, obj, err = objects.GetConfigObjFromJsonData(r, objHdl); err == nil {
 			objKey = gApiMgr.dbHdl.GetKey(obj)
 			dbObj, err := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 			if err != nil {
@@ -858,7 +881,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		body, obj, _ = objects.GetConfigObj(r, objHdl)
+		body, obj, _ = objects.GetConfigObjFromJsonData(r, objHdl)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
 		if gerr == nil {
@@ -1022,7 +1045,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		body, obj, _ = objects.GetConfigObj(r, objHdl)
+		body, obj, _ = objects.GetConfigObjFromJsonData(r, objHdl)
 		objKey = gApiMgr.dbHdl.GetKey(obj)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
