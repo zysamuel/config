@@ -390,7 +390,7 @@ func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
 		gActionMgr.logger.Err("objHdl nil")
 		return errors.New("objHdl Nil")
 	}
-	_, obj, err := objects.GetConfigObj(nil, objHdl)
+	_, obj, err := objects.GetConfigObjFromJsonData(nil, objHdl)
 	if err != nil {
 		gActionMgr.logger.Err(fmt.Sprintln("GetConfigObj return err: ", err))
 		return errors.New("getConfigObj return err")
@@ -470,7 +470,7 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 
 			//get  object handle
 			if objHdl, ok := modelObjs.ConfigObjectMap[key]; ok {
-				_, obj, _ := objects.GetConfigObj(nil, objHdl)
+				_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
 				currentIndex := int64(0)
 				objCount := int64(1024)
 				err, _, _, _, objs := obj.GetBulkObjFromDb(currentIndex, objCount, gActionMgr.dbHdl.DBUtil)

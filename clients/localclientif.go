@@ -137,7 +137,7 @@ func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBU
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.ApiCallState:
+	case objects.ConfigLogState:
 		objCount, nextMarker, more, objs = getApiHistory(dbHdl)
 	case objects.XponderGlobal, objects.XponderGlobalState:
 		objCount, nextMarker, more, objs = xponderGlobalGetBulk()
@@ -208,8 +208,7 @@ func (clnt *LocalClient) ExecuteAction(obj actions.ActionObj) error {
 func getApiHistory(dbHdl *dbutils.DBUtil) (int64, int64, bool, []objects.ConfigObj) {
 	var currMarker int64
 	var count int64
-	fmt.Println("GetBulk ApiCalls")
-	ApiCallObj := objects.ApiCallState{}
+	ApiCallObj := objects.ConfigLogState{}
 	err, count, next, more, apiCalls := dbHdl.GetBulkObjFromDb(ApiCallObj, currMarker, count)
 	if err != nil {
 		fmt.Println("Failed to get ApiCalls")

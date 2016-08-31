@@ -246,7 +246,7 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var objs []modelObjs.ConfigObj
 				var err error
-				_, obj, _ := objects.GetConfigObj(nil, objHdl)
+				_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
 				currentIndex := int64(0)
 				objCount := int64(MAX_COUNT_AUTO_DISCOVER_OBJ)
 				resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner

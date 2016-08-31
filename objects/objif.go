@@ -83,7 +83,7 @@ type ConfigObjInfo struct {
 	Listeners     []clients.ClientIf
 }
 
-func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
@@ -97,10 +97,30 @@ func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj o
 			return body, retobj, err
 		}
 	}
-
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
 		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
+	}
+	return body, retobj, err
+}
+
+func GetConfigObjFromQueryData(queryStr string, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+	if obj == nil {
+		err = errors.New("Config Object is nil")
+		return body, retobj, err
+	}
+	if queryStr == "" {
+		err = errors.New("Empty query data")
+		return body, retobj, err
+	}
+	retobj, err = obj.UnmarshalObjectData(queryStr)
+	if err != nil || retobj == nil {
+		fmt.Println("UnmarshalObjectData returned error", err, "for object info", retobj)
+		return body, retobj, err
+	}
+	body, err = json.Marshal(retobj)
+	if err != nil {
+		fmt.Println("Marshal retobj returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }

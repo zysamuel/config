@@ -296,7 +296,7 @@ func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body
 	}
 	data = strings.Replace(string(body), "\\", "", -1)
 	data = strings.Replace(data, "\"", "", -1)
-	ApiInfo := modelObjs.ApiCallState{
+	ApiInfo := modelObjs.ConfigLogState{
 		API:       api,
 		Time:      time.Now().String(),
 		Operation: operation,
