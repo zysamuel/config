@@ -368,7 +368,7 @@ func GetOneStateObject(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	cfgObjKey := strings.Replace(objKey, "state", "", 1)
+	cfgObjKey := strings.Replace(objKey, "State", "", 1)
 	uuid, err = gApiMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
@@ -478,7 +478,7 @@ func BulkGetStateObjects(w http.ResponseWriter, r *http.Request) {
 		for idx, stateObject := range stateObjects {
 			resp.Objects[idx].ConfigObj = stateObject
 			objKey = stateObject.GetKey()
-			cfgObjKey := strings.Replace(objKey, "state", "", 1)
+			cfgObjKey := strings.Replace(objKey, "State", "", 1)
 			resp.Objects[idx].ObjectId, err = gApiMgr.dbHdl.GetUUIDFromObjKey(cfgObjKey)
 		}
 		js, err := json.Marshal(resp)
