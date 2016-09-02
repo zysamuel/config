@@ -180,43 +180,35 @@ func xponderGlobalGetBulk() (int64, int64, bool, []objects.ConfigObj) {
 var xponderInSvcWireCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{
 	xponderCfgRecipe{
 		vlanId:        2,
-		portList:      []string{"fpPort13"},
-		untagPortList: []string{"fpPort1"},
+		untagPortList: []string{"fpPort1", "fpPort13"},
 	},
 	xponderCfgRecipe{
 		vlanId:        3,
-		portList:      []string{"fpPort14"},
-		untagPortList: []string{"fpPort2"},
+		untagPortList: []string{"fpPort2", "fpPort14"},
 	},
 	xponderCfgRecipe{
 		vlanId:        4,
-		portList:      []string{"fpPort15"},
-		untagPortList: []string{"fpPort3"},
+		untagPortList: []string{"fpPort3", "fpPort15"},
 	},
 	xponderCfgRecipe{
 		vlanId:        5,
-		portList:      []string{"fpPort16"},
-		untagPortList: []string{"fpPort4"},
+		untagPortList: []string{"fpPort4", "fpPort16"},
 	},
 	xponderCfgRecipe{
 		vlanId:        6,
-		portList:      []string{"fpPort17"},
-		untagPortList: []string{"fpPort5"},
+		untagPortList: []string{"fpPort5", "fpPort17"},
 	},
 	xponderCfgRecipe{
 		vlanId:        7,
-		portList:      []string{"fpPort18"},
-		untagPortList: []string{"fpPort6"},
+		untagPortList: []string{"fpPort6", "fpPort18"},
 	},
 	xponderCfgRecipe{
 		vlanId:        8,
-		portList:      []string{"fpPort19"},
-		untagPortList: []string{"fpPort7"},
+		untagPortList: []string{"fpPort7", "fpPort19"},
 	},
 	xponderCfgRecipe{
 		vlanId:        9,
-		portList:      []string{"fpPort20"},
-		untagPortList: []string{"fpPort8"},
+		untagPortList: []string{"fpPort8", "fpPort20"},
 	},
 }
 
@@ -294,29 +286,68 @@ func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 	return err
 }
 
-var xponderInSvcOverSubCfgRecipe []xponderCfgRecipe = append(xponderInSvcWireCfgRecipe,
-	[]xponderCfgRecipe{
-		xponderCfgRecipe{
-			vlanId:        10,
-			portList:      []string{"fpPort15"},
-			untagPortList: []string{"fpPort9"},
-		},
-		xponderCfgRecipe{
-			vlanId:        11,
-			portList:      []string{"fpPort16"},
-			untagPortList: []string{"fpPort10"},
-		},
-		xponderCfgRecipe{
-			vlanId:        12,
-			portList:      []string{"fpPort17"},
-			untagPortList: []string{"fpPort11"},
-		},
-		xponderCfgRecipe{
-			vlanId:        13,
-			portList:      []string{"fpPort18"},
-			untagPortList: []string{"fpPort12"},
-		},
-	}...)
+var xponderInSvcOverSubCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{
+	xponderCfgRecipe{
+		vlanId:        2,
+		portList:      []string{"fpPort13"},
+		untagPortList: []string{"fpPort1"},
+	},
+	xponderCfgRecipe{
+		vlanId:        3,
+		portList:      []string{"fpPort14"},
+		untagPortList: []string{"fpPort2"},
+	},
+	xponderCfgRecipe{
+		vlanId:        4,
+		portList:      []string{"fpPort15"},
+		untagPortList: []string{"fpPort3"},
+	},
+	xponderCfgRecipe{
+		vlanId:        5,
+		portList:      []string{"fpPort16"},
+		untagPortList: []string{"fpPort4"},
+	},
+	xponderCfgRecipe{
+		vlanId:        6,
+		portList:      []string{"fpPort17"},
+		untagPortList: []string{"fpPort5"},
+	},
+	xponderCfgRecipe{
+		vlanId:        7,
+		portList:      []string{"fpPort18"},
+		untagPortList: []string{"fpPort6"},
+	},
+	xponderCfgRecipe{
+		vlanId:        8,
+		portList:      []string{"fpPort19"},
+		untagPortList: []string{"fpPort7"},
+	},
+	xponderCfgRecipe{
+		vlanId:        9,
+		portList:      []string{"fpPort20"},
+		untagPortList: []string{"fpPort8"},
+	},
+	xponderCfgRecipe{
+		vlanId:        10,
+		portList:      []string{"fpPort15"},
+		untagPortList: []string{"fpPort9"},
+	},
+	xponderCfgRecipe{
+		vlanId:        11,
+		portList:      []string{"fpPort16"},
+		untagPortList: []string{"fpPort10"},
+	},
+	xponderCfgRecipe{
+		vlanId:        12,
+		portList:      []string{"fpPort17"},
+		untagPortList: []string{"fpPort11"},
+	},
+	xponderCfgRecipe{
+		vlanId:        13,
+		portList:      []string{"fpPort18"},
+		untagPortList: []string{"fpPort12"},
+	},
+}
 
 func xponderModeInSvcOverSubCfgSet(dbHdl *dbutils.DBUtil) error {
 	var err error

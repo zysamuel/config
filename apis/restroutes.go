@@ -190,6 +190,12 @@ func (mgr *ApiMgr) InitializeRestRoutes() bool {
 		HandleRestRouteGetState,
 	}
 	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"showbykeyorbulk",
+		"POST",
+		mgr.apiBaseState + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteGetState,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
 	return true
 }
 
@@ -337,6 +343,12 @@ func (mgr *ApiMgr) InstantiateRestRtr() *mux.Router {
 		handler = Logger(route.HandlerFunc, route.Name)
 		mgr.pRestRtr.Methods(route.Method).Path(route.Pattern).Handler(handler)
 	}
+	mgr.pRestRtr.PathPrefix("rest:/[a-zA-Z0-9]+").Handler(http.StripPrefix("rest:/[a-zA-Z0-9]+", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/settings/").Handler(http.StripPrefix("/settings/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/performance/").Handler(http.StripPrefix("/performance/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/alarms/").Handler(http.StripPrefix("/alarms/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/logs/").Handler(http.StripPrefix("/logs/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
 	return mgr.pRestRtr
 }
 
