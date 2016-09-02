@@ -18,7 +18,7 @@ install:
 	 @$(MKDIR) $(PARAMSDIR)
 	 #@$(MKDIR) $(SYSPROFILE)
 	 @$(RSYNC) docsui $(PARAMSDIR)
-	 @$(RSYNC) $(SR_CODE_BASE)/snaproute/src/flexui $(PARAMSDIR)
+	 -@$(RSYNC) $(SR_CODE_BASE)/snaproute/src/flexui $(PARAMSDIR)
 	 @echo $(DESTDIR)
 	 install params/* $(PARAMSDIR)/
 	 install $(SR_CODE_BASE)/snaproute/src/models/objects/systemProfile.json $(PARAMSDIR)
