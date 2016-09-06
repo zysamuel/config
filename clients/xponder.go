@@ -144,14 +144,21 @@ func xponderFCAPSEnable(enable bool) error {
 }
 
 func xponderGlobalCreate(obj objects.XponderGlobal) (error, bool) {
+	var en bool
 	fmt.Println("Create received for XponderGlobal")
 	xponderGlobal.XponderId = obj.XponderId
 	xponderGlobal.XponderMode = obj.XponderMode
 	xponderGlobal.XponderDescription = obj.XponderDescription
-	//During autocreate, xpondermode is set to out of service, ensure FCAPS is disabled
-	err := xponderFCAPSEnable(false)
+
+	switch obj.XponderMode {
+	case XPONDER_MODE_OUT_OF_SVC:
+		en = false
+	default:
+		en = true
+	}
+	err := xponderFCAPSEnable(en)
 	if err != nil {
-		fmt.Println("Failed to disable FCAPS when transition into Out of Service mode")
+		fmt.Println("Failed to change FCAPS state during xponder auto create")
 	}
 	return nil, true
 }
@@ -223,7 +230,7 @@ func xponderUpdatePortAdminState(ifName, adminState string, dbHdl *dbutils.DBUti
 	obj.AdminState = adminState
 	patchOpInfoSlice := make([]objects.PatchOpInfo, 0)
 	err, _ := asicdClntHdl.UpdateObject(dbObj, *obj, []bool{false, false, false,
-		false, true, false, false, false, false, false, false, false},
+		false, true, false, false, false, false, false, false, false, false, false},
 		patchOpInfoSlice, objKey, dbHdl)
 	return err
 }
