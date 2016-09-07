@@ -635,7 +635,7 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err, success = resourceOwner.CreateObject(obj, gApiMgr.dbHdl.DBUtil)
-			if err == nil && success == true {
+			if success == true {
 				uuid, dbErr := gApiMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
 				if dbErr == nil {
 					gApiMgr.ApiCallStats.NumCreateCallsSuccess++
@@ -648,7 +648,9 @@ func ConfigObjectCreate(w http.ResponseWriter, r *http.Request) {
 					gApiMgr.logger.Debug(fmt.Sprintln("Failed to store UuidToKey map ", obj, dbErr))
 				}
 			} else {
-				resp.Result = err.Error()
+				if err != nil {
+					resp.Result = err.Error()
+				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("Failed to create object: ", obj, " due to error: ", err))
 			}
@@ -721,7 +723,7 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
-			if err == nil && success == true {
+			if success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(vars["objId"], objKey)
 				if err != nil {
 					errCode = SRIdDeleteFail
@@ -733,7 +735,9 @@ func ConfigObjectDeleteForId(w http.ResponseWriter, r *http.Request) {
 					resp.Result = "Success"
 				}
 			} else {
-				resp.Result = err.Error()
+				if err != nil {
+					resp.Result = err.Error()
+				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("DeleteObject returned failure ", obj, err))
 			}
@@ -807,7 +811,7 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err, success = resourceOwner.DeleteObject(dbObj, objKey, gApiMgr.dbHdl.DBUtil)
-			if err == nil && success == true {
+			if success == true {
 				err = gApiMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
 				if err != nil {
 					errCode = SRIdDeleteFail
@@ -819,7 +823,9 @@ func ConfigObjectDelete(w http.ResponseWriter, r *http.Request) {
 					resp.Result = "Success"
 				}
 			} else {
-				resp.Result = err.Error()
+				if err != nil {
+					resp.Result = err.Error()
+				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("DeleteObject returned failure ", obj))
 			}
@@ -932,13 +938,15 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-				if err == nil && success == true {
+				if success == true {
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 					w.WriteHeader(http.StatusOK)
 					errCode = SRSuccess
 					resp.Result = "Success"
 				} else {
-					resp.Result = err.Error()
+					if err != nil {
+						resp.Result = err.Error()
+					}
 					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 				}
@@ -982,7 +990,7 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-				if err == nil && success == true {
+				if success == true {
 					//Perform post update processing
 					_ = resourceOwner.PostUpdateProcessing(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 					gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
@@ -990,7 +998,9 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					errCode = SRSuccess
 					resp.Result = "Success"
 				} else {
-					resp.Result = err.Error()
+					if err != nil {
+						resp.Result = err.Error()
+					}
 					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 				}
@@ -1108,13 +1118,15 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-			if err == nil && success == true {
+			if success == true {
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
 				w.WriteHeader(http.StatusOK)
 				errCode = SRSuccess
 				resp.Result = "Success"
 			} else {
-				resp.Result = err.Error()
+				if err != nil {
+					resp.Result = err.Error()
+				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 			}
@@ -1159,7 +1171,7 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
-			if err == nil && success == true {
+			if success == true {
 				//Perform post update processing
 				_ = resourceOwner.PostUpdateProcessing(dbObj, mergedObj, diff, gApiMgr.dbHdl.DBUtil)
 				gApiMgr.ApiCallStats.NumUpdateCallsSuccess++
@@ -1167,7 +1179,9 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				errCode = SRSuccess
 				resp.Result = "Success"
 			} else {
-				resp.Result = err.Error()
+				if err != nil {
+					resp.Result = err.Error()
+				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
 			}
