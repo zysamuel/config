@@ -221,63 +221,6 @@ func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, ret
 	return body, retobj, err
 }
 
-func UpdateConfig(resource string, body json.RawMessage) {
-	var success bool
-	var err error
-	var obj modelObjs.ConfigObj
-	var objKey string
-
-	gActionMgr.logger.Debug("Update config resource:", resource)
-	if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(resource)]; ok {
-		if obj, err = objHdl.UnmarshalObject(body); err == nil {
-			objKey = obj.GetKey()
-			updateKeys, _ := objects.GetUpdateKeys(body)
-			dbObj, gerr := obj.GetObjectFromDb(objKey, gActionMgr.dbHdl.DBUtil)
-			if gerr != nil {
-				gActionMgr.logger.Err("entry not found in DB")
-				return
-			}
-			_, err = gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
-			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
-			anyUpdated := false
-			for _, updated := range diff {
-				if updated == true {
-					anyUpdated = true
-					break
-				}
-			}
-			if anyUpdated == false {
-				gActionMgr.logger.Err("No updates to be made")
-				return
-			}
-			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
-			mergedObjKey := mergedObj.GetKey()
-			if objKey == mergedObjKey {
-				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
-				if resourceOwner.IsConnectedToServer() == false {
-					return
-				}
-
-				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, nil, objKey, gActionMgr.dbHdl.DBUtil)
-				if err == nil && success == true {
-					_, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
-					if dbErr == nil {
-					} else {
-						gActionMgr.logger.Err(fmt.Sprintln("Failed to store UuidToKey map ", obj, dbErr))
-					}
-				} else {
-					gActionMgr.logger.Err(fmt.Sprintln("Failed to update object: ", obj, " due to error: ", err))
-				}
-			} else {
-				gActionMgr.logger.Err(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
-			}
-		} else {
-			fmt.Println("Failed to get object map")
-			gActionMgr.logger.Err("Failed to get ObjectMap " + resource)
-		}
-	}
-}
-
 func CreateConfig(resource string, body json.RawMessage) {
 	var errCode int
 	var success bool
@@ -344,16 +287,144 @@ func CreateConfig(resource string, body json.RawMessage) {
 	}
 }
 
-func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
-	for key, value := range data.ConfigData {
-		if resource != key {
-			continue
-		}
-		gActionMgr.logger.Debug("ApplyConfig for:", key, "value:", value, " resoure:", resource)
-		for _, v := range value {
-			if _, err := json.Marshal(v); err == nil {
-				CreateConfig(key, v)
+func UpdateConfig(resource string, body json.RawMessage) {
+	var success bool
+	var err error
+	var obj modelObjs.ConfigObj
+	var objKey string
+
+	gActionMgr.logger.Debug("Update config resource:", resource)
+	if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(resource)]; ok {
+		if obj, err = objHdl.UnmarshalObject(body); err == nil {
+			objKey = obj.GetKey()
+			updateKeys, _ := objects.GetUpdateKeys(body)
+			dbObj, gerr := obj.GetObjectFromDb(objKey, gActionMgr.dbHdl.DBUtil)
+			if gerr != nil {
+				gActionMgr.logger.Err("entry not found in DB")
+				return
 			}
+			_, err = gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
+			diff, _ := obj.CompareObjectsAndDiff(updateKeys, dbObj)
+			anyUpdated := false
+			for _, updated := range diff {
+				if updated == true {
+					anyUpdated = true
+					break
+				}
+			}
+			if anyUpdated == false {
+				gActionMgr.logger.Err("No updates to be made")
+				return
+			}
+			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
+			mergedObjKey := mergedObj.GetKey()
+			if objKey == mergedObjKey {
+				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
+				if resourceOwner.IsConnectedToServer() == false {
+					return
+				}
+
+				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, nil, objKey, gActionMgr.dbHdl.DBUtil)
+				if err == nil && success == true {
+					_, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
+					if dbErr == nil {
+					} else {
+						gActionMgr.logger.Err(fmt.Sprintln("Failed to store UuidToKey map ", obj, dbErr))
+					}
+				} else {
+					gActionMgr.logger.Err(fmt.Sprintln("Failed to update object: ", obj, " due to error: ", err))
+				}
+			} else {
+				gActionMgr.logger.Err(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
+			}
+		} else {
+			fmt.Println("Failed to get object map")
+			gActionMgr.logger.Err("Failed to get ObjectMap " + resource)
+		}
+	}
+}
+
+func DeleteConfig(resource string) {
+	objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)]
+	if !ok {
+		gActionMgr.logger.Debug("Object ", resource, " doesnt exist in ObjHdlMap")
+		return
+	}
+	if objMap.Owner == nil {
+		gActionMgr.logger.Debug("Owner for:", resource, "is nil")
+		return
+	}
+	if objMap.Owner.IsConnectedToServer() == false {
+		gActionMgr.logger.Err("ResetConfig: Not connected to daemon " + resource)
+		return
+	}
+	if strings.Contains(objMap.Access, "w") && !objMap.AutoCreate && !objMap.AutoDiscover {
+		gActionMgr.logger.Debug("Get db objects for  ", resource)
+		if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(resource)]; ok {
+			_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
+			currentIndex := int64(0)
+			objCount := int64(1024)
+			err, _, _, _, objs := gActionMgr.dbHdl.GetBulkObjFromDb(obj, currentIndex, objCount)
+			if err != nil {
+				gActionMgr.logger.Debug("Failed to do getBulk object ", objMap.Owner)
+			}
+			gActionMgr.logger.Debug("No of objects collected ", len(objs))
+			for _, obj := range objs {
+				objKey := obj.GetKey()
+				gActionMgr.logger.Debug("Obj ", obj, " key ", objKey)
+				err, success := objMap.Owner.DeleteObject(obj, objKey, gActionMgr.dbHdl.DBUtil)
+				if err == nil && success == true {
+					gActionMgr.logger.Debug("Delete UUID to objectKeyMap")
+					uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
+					if er == nil {
+						err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
+						if err != nil {
+							gActionMgr.logger.Err("Failed to delete uuid map ", uuid)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func ApplyConfigObject(data modelActions.ApplyConfig) {
+	for _, applyResource := range gActionMgr.applyConfigOrder {
+		for key, value := range data.ConfigData {
+			if applyResource != key {
+				continue
+			}
+			gActionMgr.logger.Debug("ApplyConfig for:", key, "value:", value, " resoure:", applyResource)
+			for _, v := range value {
+				if _, err := json.Marshal(v); err == nil {
+					CreateConfig(key, v)
+				}
+			}
+		}
+	}
+}
+
+func ForceApplyConfigObject(data modelActions.ForceApplyConfig) {
+	appliedConfigs := make(map[string]bool)
+	for _, applyResource := range gActionMgr.applyConfigOrder {
+		for key, value := range data.ConfigData {
+			if applyResource != key {
+				continue
+			}
+			appliedConfigs[applyResource] = true
+			gActionMgr.logger.Debug("ApplyConfig for:", key, "value:", value, " resoure:", applyResource)
+			for _, v := range value {
+				if _, err := json.Marshal(v); err == nil {
+					CreateConfig(key, v)
+				}
+			}
+		}
+	}
+	for index := len(gActionMgr.applyConfigOrder) - 1; index >= 0; index-- {
+		objName := gActionMgr.applyConfigOrder[index]
+		if appliedConfigs[objName] != true {
+			gActionMgr.logger.Debug("Reset configs for:", objName)
+			DeleteConfig(objName)
 		}
 	}
 }
@@ -392,7 +463,17 @@ func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
 
 }
 
-func OpenFile(cfgFileName string) (fo *os.File, err error) {
+func ResetConfigObject(data modelActions.ResetConfig) (err error) {
+	gActionMgr.logger.Debug("Start config reset")
+	for index := len(gActionMgr.applyConfigOrder) - 1; index >= 0; index-- {
+		objName := gActionMgr.applyConfigOrder[index]
+		gActionMgr.logger.Debug("Reset configs for:", objName)
+		DeleteConfig(objName)
+	}
+	return nil
+}
+
+func OpenConfigFile(cfgFileName string) (fo *os.File, err error) {
 	gActionMgr.logger.Debug("Full config file : ", cfgFileName)
 	_, err = os.Stat(cfgFileName)
 	if os.IsNotExist(err) {
@@ -417,56 +498,6 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 	return fo, err
 }
 
-func ResetConfigObject(data modelActions.ResetConfig) (err error) {
-	gActionMgr.logger.Debug("Start config reset")
-	for index := len(gActionMgr.applyConfigOrder) - 1; index >= 0; index-- {
-		objName := gActionMgr.applyConfigOrder[index]
-		gActionMgr.logger.Debug("Reset configs for:", objName)
-		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(objName)]
-		if !ok {
-			gActionMgr.logger.Debug("Object ", objName, " doesnt exist in ObjHdlMap")
-			continue
-		}
-		if objMap.Owner == nil {
-			gActionMgr.logger.Debug("Owner for:", objName, "is nil")
-			continue
-		}
-		if objMap.Owner.IsConnectedToServer() == false {
-			gActionMgr.logger.Err("ResetConfig: Not connected to daemon " + objName)
-			continue
-		}
-		if strings.Contains(objMap.Access, "w") && !objMap.AutoCreate && !objMap.AutoDiscover {
-			gActionMgr.logger.Debug("Get db objects for  ", objName)
-			if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(objName)]; ok {
-				_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
-				currentIndex := int64(0)
-				objCount := int64(1024)
-				err, _, _, _, objs := gActionMgr.dbHdl.GetBulkObjFromDb(obj, currentIndex, objCount)
-				if err != nil {
-					gActionMgr.logger.Debug("Failed to do getBulk object ", objMap.Owner)
-				}
-				gActionMgr.logger.Debug("No of objects collected ", len(objs))
-				for _, obj := range objs {
-					objKey := obj.GetKey()
-					gActionMgr.logger.Debug("Obj ", obj, " key ", objKey)
-					err, success := objMap.Owner.DeleteObject(obj, objKey, gActionMgr.dbHdl.DBUtil)
-					if err == nil && success == true {
-						gActionMgr.logger.Debug("Delete UUID to objectKeyMap")
-						uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
-						if er == nil {
-							err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
-							if err != nil {
-								gActionMgr.logger.Err("Failed to delete uuid map ", uuid)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
 func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 	gActionMgr.logger.Debug("local client Execute action obj: ", obj)
 	if gActionMgr == nil {
@@ -477,10 +508,11 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 	case modelActions.ApplyConfig:
 		gActionMgr.logger.Debug("ApplyConfig")
 		data := obj.(modelActions.ApplyConfig)
-		for _, applyResource := range gActionMgr.applyConfigOrder {
-			ApplyConfigObject(data, applyResource)
-		}
+		ApplyConfigObject(data)
 	case modelActions.ForceApplyConfig:
+		gActionMgr.logger.Debug("ForceApplyConfig")
+		data := obj.(modelActions.ForceApplyConfig)
+		ForceApplyConfigObject(data)
 	case modelActions.SaveConfig:
 		gActionMgr.logger.Debug("SaveConfig")
 		var fo *os.File
@@ -494,9 +526,9 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		}
 		// open config file
 		cfgFileName := gActionMgr.paramsDir + "../" + fileName + ".json"
-		fo, err = OpenFile(cfgFileName)
+		fo, err = OpenConfigFile(cfgFileName)
 		if err != nil {
-			gActionMgr.logger.Err("error with OpenFile, err: " + err.Error())
+			gActionMgr.logger.Err("error with OpenConfigFile, err: " + err.Error())
 			return err
 		}
 		// close fo on exit and check for its returned error
