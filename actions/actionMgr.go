@@ -240,6 +240,7 @@ func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, ret
 	}
 	return body, retobj, err
 }
+
 func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
 	var success bool
 	var err error
@@ -269,11 +270,10 @@ func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
 				gActionMgr.logger.Err("No updates to be made")
 				return
 			}
-
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			mergedObjKey := mergedObj.GetKey()
 			if objKey == mergedObjKey {
-				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[resource].Owner
+				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
 				if resourceOwner.IsConnectedToServer() == false {
 					return
 				}
@@ -297,6 +297,7 @@ func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
 		}
 	}
 }
+
 func CreateConfig(resource string, body json.RawMessage) {
 	var errCode int
 	var success bool
@@ -322,7 +323,6 @@ func CreateConfig(resource string, body json.RawMessage) {
 					return
 				}
 			}
-
 			if errCode != SRSuccess {
 				fmt.Println("errcode not success, return")
 				return
@@ -331,18 +331,17 @@ func CreateConfig(resource string, body json.RawMessage) {
 				fmt.Println("objHdlMap nil")
 				return
 			}
-			_, ok = gActionMgr.objectMgr.ObjHdlMap[resource]
+			_, ok = gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)]
 			if !ok {
 				fmt.Println("objhdlmap for resource:", resource, " nil")
 				return
 			}
-			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[resource].Owner
+			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				fmt.Println("Not connected to resourceOwner:", resourceOwner)
 				return
 			}
 			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
-
 			err, success = resourceOwner.CreateObject(obj, gActionMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				_, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -365,7 +364,6 @@ func CreateConfig(resource string, body json.RawMessage) {
 		errCode = SRObjMapError
 		gActionMgr.logger.Err("Failed to get ObjectMap " + resource)
 	}
-
 }
 
 func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
@@ -416,6 +414,7 @@ func SaveConfigObject(data modelActions.SaveConfigObj, resource string) error {
 	return nil
 
 }
+
 func OpenFile(cfgFileName string) (fo *os.File, err error) {
 	gActionMgr.logger.Debug("Full config file : ", cfgFileName)
 	_, err = os.Stat(cfgFileName)
@@ -452,7 +451,7 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
 	for index := configCount; index > -1; index-- {
 		key := ApplyConfigOrder[index]
-		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[key]
+		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(key)]
 		if !ok {
 			gActionMgr.logger.Debug("Key ", key, " doesnt exist in ObjHdlMap")
 			continue
