@@ -273,7 +273,7 @@ func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
 			mergedObj, _ := obj.MergeDbAndConfigObj(dbObj, diff)
 			mergedObjKey := mergedObj.GetKey()
 			if objKey == mergedObjKey {
-				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[resource].Owner
+				resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
 				if resourceOwner.IsConnectedToServer() == false {
 					return
 				}
@@ -331,12 +331,12 @@ func CreateConfig(resource string, body json.RawMessage) {
 				fmt.Println("objHdlMap nil")
 				return
 			}
-			_, ok = gActionMgr.objectMgr.ObjHdlMap[resource]
+			_, ok = gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)]
 			if !ok {
 				fmt.Println("objhdlmap for resource:", resource, " nil")
 				return
 			}
-			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[resource].Owner
+			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
 			if resourceOwner.IsConnectedToServer() == false {
 				fmt.Println("Not connected to resourceOwner:", resourceOwner)
 				return
@@ -451,7 +451,7 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
 	for index := configCount; index > -1; index-- {
 		key := ApplyConfigOrder[index]
-		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[key]
+		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(key)]
 		if !ok {
 			gActionMgr.logger.Debug("Key ", key, " doesnt exist in ObjHdlMap")
 			continue
