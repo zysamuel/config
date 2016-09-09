@@ -53,62 +53,20 @@ import (
 //
 
 type ActionMgr struct {
-	logger    *logging.Writer
-	paramsDir string
-	dbHdl     *objects.DbHandler
-	//	ExecuteAction(obj actions.ActionObj) error
-	ObjHdlMap map[string]ActionObjInfo
-	clientMgr *clients.ClientMgr
-	objectMgr *objects.ObjectMgr
+	logger           *logging.Writer
+	paramsDir        string
+	dbHdl            *objects.DbHandler
+	ObjHdlMap        map[string]ActionObjInfo
+	clientMgr        *clients.ClientMgr
+	objectMgr        *objects.ObjectMgr
+	applyConfigOrder []string
+}
+
+type ConfigOrder struct {
+	Order []string `json:"Order"`
 }
 
 var gActionMgr *ActionMgr
-var ApplyConfigOrder = []string{
-	"SystemLogging",
-	"ComponentLogging",
-	"PolicyCondition",
-	"PolicyStmt",
-	"PolicyDefinition",
-	"Port",
-	"LaPortChannel",
-	"LLDPIntf",
-	"Vlan",
-	"StpBridgeInstance",
-	"StpPort",
-	"ArpGlobal",
-	//"ArpConfig",
-	"LogicalIntf",
-	"IPv4Intf",
-	"SubIPv4Intf",
-	"IPv4Route",
-	"IpTableAcl",
-	"BfdGlobal",
-	"BfdSessionParam",
-	"BfdSession",
-	"BGPGlobal",
-	"BGPv4Neighbor",
-	"BGPv4PeerGroup",
-	"BGPPolicyCondition",
-	"BGPPolicyStmt",
-	"BGPPolicyDefinition",
-	//"OspfAreaAggregateEntry",
-	"OspfAreaEntry",
-	"OspfGlobal",
-	//"OspfHostEntry",
-	//"OspfIfEntry",
-	//"OspfIfMetricEntry",
-	//"OspfNbrEntry",
-	//"OspfStubAreaEntry",
-	//"OspfVirtIfEntry",
-	"VrrpIntf",
-	"DhcpRelayGlobal",
-	"DhcpRelayIntf",
-	"VxlanInstance",
-	"VxlanVtepInstance",
-}
-
-//temporary static list to indicate which objects are auto created
-var AutoCreateList = "BGPGlobal," + "ArpGlobal," + "BfdGlobal," + "OspfGlobal," + "Port," + "DhcpRelayGlobal," + "SystemLogging," + "ComponentLogging"
 
 // SR error codes
 const (
@@ -173,6 +131,10 @@ func InitializeActionMgr(paramsDir string, infoFiles []string, logger *logging.W
 		logger.Err("Error in initializing action object handles")
 		return nil
 	}
+	mgr.applyConfigOrder = make([]string, 0)
+	if err := mgr.ReadConfigOrder(); err != nil {
+		logger.Err("Error in reading config order file")
+	}
 	gActionMgr = mgr
 	return mgr
 }
@@ -204,6 +166,24 @@ func (mgr *ActionMgr) InitializeActionObjectHandles(infoFiles []string) bool {
 		}
 	}
 	return true
+}
+
+func (mgr *ActionMgr) ReadConfigOrder() error {
+	var configOrder ConfigOrder
+	bytes, err := ioutil.ReadFile(mgr.paramsDir + "/configOrder.json")
+	if err != nil {
+		mgr.logger.Err("Error in reading configuration order file")
+		return err
+	}
+	err = json.Unmarshal(bytes, &configOrder)
+	if err != nil {
+		mgr.logger.Err("Error in unmarshaling data from configOrder.json")
+		return err
+	}
+	for _, objName := range configOrder.Order {
+		mgr.applyConfigOrder = append(mgr.applyConfigOrder, objName)
+	}
+	return nil
 }
 
 func (mgr *ActionMgr) GetAllActions() []string {
@@ -443,14 +423,14 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	gActionMgr.logger.Debug("Start config reset")
 
-	configCount := len(ApplyConfigOrder)
+	configCount := len(gActionMgr.applyConfigOrder)
 	configCount = configCount - 1
 	/* 1) Get all config objects */
 
 	gActionMgr.logger.Debug("Get all object owners : ")
 	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
 	for index := configCount; index > -1; index-- {
-		key := ApplyConfigOrder[index]
+		key := gActionMgr.applyConfigOrder[index]
 		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(key)]
 		if !ok {
 			gActionMgr.logger.Debug("Key ", key, " doesnt exist in ObjHdlMap")
@@ -509,7 +489,7 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		gActionMgr.logger.Debug("ApplyConfig")
 		fmt.Println("ApplyConfig")
 		data := obj.(modelActions.ApplyConfig)
-		for _, applyResource := range ApplyConfigOrder {
+		for _, applyResource := range gActionMgr.applyConfigOrder {
 			ApplyConfigObject(data, applyResource)
 		}
 	case modelActions.ForceApplyConfig:
@@ -539,7 +519,7 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		}()
 		var wdata modelActions.SaveConfigObj
 		wdata.ConfigData = make(map[string][]interface{})
-		for _, applyResource := range ApplyConfigOrder {
+		for _, applyResource := range gActionMgr.applyConfigOrder {
 			SaveConfigObject(wdata, applyResource)
 		}
 		js, err := json.MarshalIndent(wdata, "", "    ")
