@@ -512,6 +512,7 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		for _, applyResource := range ApplyConfigOrder {
 			ApplyConfigObject(data, applyResource)
 		}
+	case modelActions.ForceApplyConfig:
 	case modelActions.SaveConfig:
 		gActionMgr.logger.Debug("SaveConfig")
 		var fo *os.File
