@@ -524,7 +524,7 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 			fileName = "startup-config"
 		}
 		// open config file
-		cfgFileName := gActionMgr.paramsDir + "/" + fileName + ".json"
+		cfgFileName := gActionMgr.paramsDir + "../" + fileName + ".json"
 		fo, err = OpenFile(cfgFileName)
 		if err != nil {
 			gActionMgr.logger.Err("error with OpenFile, err: " + err.Error())
@@ -541,7 +541,7 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		for _, applyResource := range ApplyConfigOrder {
 			SaveConfigObject(wdata, applyResource)
 		}
-		js, err := json.Marshal(wdata)
+		js, err := json.MarshalIndent(wdata, "", "    ")
 		if err != nil {
 			gActionMgr.logger.Err("json marshal returned error: " + err.Error())
 			return err
