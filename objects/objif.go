@@ -79,6 +79,7 @@ type ConfigObjInfo struct {
 	Owner         clients.ClientIf
 	Access        string
 	AutoCreate    bool
+	AutoDiscover  bool
 	LinkedObjects []string
 	Listeners     []clients.ClientIf
 }
@@ -252,13 +253,14 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
-				v.Access, " Auto Create ", v.AutoCreate))
+			mgr.logger.Debug("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+				v.Access, " Auto Create ", v.AutoCreate, " Auto Discover ", v.AutoDiscover)
 			key := strings.ToLower(k)
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
 			entry.AutoCreate = v.AutoCreate
+			entry.AutoDiscover = v.AutoDiscover
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}

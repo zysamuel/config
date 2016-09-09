@@ -221,13 +221,13 @@ func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, ret
 	return body, retobj, err
 }
 
-func UpdateConfig(resource string, body json.RawMessage) { //[]byte) {
+func UpdateConfig(resource string, body json.RawMessage) {
 	var success bool
 	var err error
 	var obj modelObjs.ConfigObj
 	var objKey string
 
-	gActionMgr.logger.Debug("update config resource:", resource)
+	gActionMgr.logger.Debug("Update config resource:", resource)
 	if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(resource)]; ok {
 		if obj, err = objHdl.UnmarshalObject(body); err == nil {
 			objKey = obj.GetKey()
@@ -295,33 +295,32 @@ func CreateConfig(resource string, body json.RawMessage) {
 				gActionMgr.logger.Err("Nothing to configure")
 			} else {
 				objKey = obj.GetKey()
-				fmt.Println("objKey derived")
 				_, err = gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
 				if err == nil {
-					gActionMgr.logger.Err("Config object is present")
+					gActionMgr.logger.Debug("Config object is present, update it")
 					UpdateConfig(resource, body)
 					return
 				}
 			}
 			if errCode != SRSuccess {
-				fmt.Println("errcode not success, return")
+				gActionMgr.logger.Debug("errcode not success, return")
 				return
 			}
 			if gActionMgr.objectMgr.ObjHdlMap == nil {
-				fmt.Println("objHdlMap nil")
+				gActionMgr.logger.Debug("objHdlMap nil")
 				return
 			}
 			_, ok = gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)]
 			if !ok {
-				fmt.Println("objhdlmap for resource:", resource, " nil")
+				gActionMgr.logger.Debug("objhdlmap for resource:", resource, " nil")
 				return
 			}
 			resourceOwner := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(resource)].Owner
 			if resourceOwner.IsConnectedToServer() == false {
-				fmt.Println("Not connected to resourceOwner:", resourceOwner)
+				gActionMgr.logger.Debug("Not connected to resourceOwner:", resourceOwner)
 				return
 			}
-			fmt.Println("resource:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
+			gActionMgr.logger.Debug("Create:", resource, " resourceOwner:", resourceOwner, " obj:", obj)
 			err, success = resourceOwner.CreateObject(obj, gActionMgr.dbHdl.DBUtil)
 			if err == nil && success == true {
 				_, dbErr := gActionMgr.dbHdl.StoreUUIDToObjKeyMap(objKey)
@@ -340,7 +339,6 @@ func CreateConfig(resource string, body json.RawMessage) {
 			gActionMgr.logger.Err(fmt.Sprintln("Failed to get object handle from http request ", objHdl, resource, err))
 		}
 	} else {
-		fmt.Println("Failed to get object map")
 		errCode = SRObjMapError
 		gActionMgr.logger.Err("Failed to get ObjectMap " + resource)
 	}
@@ -348,11 +346,10 @@ func CreateConfig(resource string, body json.RawMessage) {
 
 func ApplyConfigObject(data modelActions.ApplyConfig, resource string) {
 	for key, value := range data.ConfigData {
-		gActionMgr.logger.Debug("key:", key, "value:", value, " resoure:", resource)
 		if resource != key {
 			continue
 		}
-		fmt.Println("key:", key, "value:", value, " resoure:", resource)
+		gActionMgr.logger.Debug("ApplyConfig for:", key, "value:", value, " resoure:", resource)
 		for _, v := range value {
 			if _, err := json.Marshal(v); err == nil {
 				CreateConfig(key, v)
@@ -422,33 +419,25 @@ func OpenFile(cfgFileName string) (fo *os.File, err error) {
 
 func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 	gActionMgr.logger.Debug("Start config reset")
-
-	configCount := len(gActionMgr.applyConfigOrder)
-	configCount = configCount - 1
-	/* 1) Get all config objects */
-
-	gActionMgr.logger.Debug("Get all object owners : ")
-	//for key, objMap := range gActionMgr.objectMgr.ObjHdlMap {
-	for index := configCount; index > -1; index-- {
-		key := gActionMgr.applyConfigOrder[index]
-		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(key)]
+	for index := len(gActionMgr.applyConfigOrder) - 1; index >= 0; index-- {
+		objName := gActionMgr.applyConfigOrder[index]
+		gActionMgr.logger.Debug("Reset configs for:", objName)
+		objMap, ok := gActionMgr.objectMgr.ObjHdlMap[strings.ToLower(objName)]
 		if !ok {
-			gActionMgr.logger.Debug("Key ", key, " doesnt exist in ObjHdlMap")
+			gActionMgr.logger.Debug("Object ", objName, " doesnt exist in ObjHdlMap")
 			continue
 		}
-		gActionMgr.logger.Debug("***************************************")
-		gActionMgr.logger.Debug("name ", key, "Access ", objMap.Access, "autocreate ", objMap.AutoCreate,
-			"Owner ", objMap.Owner)
+		if objMap.Owner == nil {
+			gActionMgr.logger.Debug("Owner for:", objName, "is nil")
+			continue
+		}
 		if objMap.Owner.IsConnectedToServer() == false {
-			gActionMgr.logger.Err("ResetConfig: Not connected to daemon " + key)
+			gActionMgr.logger.Err("ResetConfig: Not connected to daemon " + objName)
 			continue
 		}
-		if objMap.Access == "w" && !objMap.AutoCreate {
-			gActionMgr.logger.Debug("Get db objects for  ", key)
-			//resource := objMap.Owner
-
-			//get  object handle
-			if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(key)]; ok {
+		if strings.Contains(objMap.Access, "w") && !objMap.AutoCreate && !objMap.AutoDiscover {
+			gActionMgr.logger.Debug("Get db objects for  ", objName)
+			if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(objName)]; ok {
 				_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
 				currentIndex := int64(0)
 				objCount := int64(1024)
@@ -457,10 +446,10 @@ func ResetConfigObject(data modelActions.ResetConfig) (err error) {
 					gActionMgr.logger.Debug("Failed to do getBulk object ", objMap.Owner)
 				}
 				gActionMgr.logger.Debug("No of objects collected ", len(objs))
-				for index := range objs {
-					objKey := objs[index].GetKey()
-					gActionMgr.logger.Debug("Obj ", objs[index], " key ", objKey)
-					err, success := objMap.Owner.DeleteObject(objs[index], objKey, gActionMgr.dbHdl.DBUtil)
+				for _, obj := range objs {
+					objKey := obj.GetKey()
+					gActionMgr.logger.Debug("Obj ", obj, " key ", objKey)
+					err, success := objMap.Owner.DeleteObject(obj, objKey, gActionMgr.dbHdl.DBUtil)
 					if err == nil && success == true {
 						gActionMgr.logger.Debug("Delete UUID to objectKeyMap")
 						uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
@@ -487,7 +476,6 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 	switch obj.(type) {
 	case modelActions.ApplyConfig:
 		gActionMgr.logger.Debug("ApplyConfig")
-		fmt.Println("ApplyConfig")
 		data := obj.(modelActions.ApplyConfig)
 		for _, applyResource := range gActionMgr.applyConfigOrder {
 			ApplyConfigObject(data, applyResource)
