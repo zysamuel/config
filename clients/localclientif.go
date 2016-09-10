@@ -189,11 +189,10 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 }
 
 func (clnt *LocalClient) ExecuteAction(obj actions.ActionObj) error {
-	fmt.Println("local client Execute action obj: ", obj)
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case actions.SaveConfig, actions.ApplyConfig, actions.ResetConfig:
+	case actions.SaveConfig, actions.ApplyConfig, actions.ForceApplyConfig, actions.ResetConfig:
 		err := gClientMgr.executeConfigurationActionCB(obj)
 		return err
 	default:
