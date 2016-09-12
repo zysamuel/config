@@ -25,7 +25,6 @@ package clients
 
 import (
 	"encoding/json"
-	"fmt"
 	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
 	"models/actions"
@@ -116,7 +115,7 @@ func (mgr *ClientMgr) InitializeClientHandles(paramsFile, sysProfileFile string)
 
 	bytes, err := ioutil.ReadFile(paramsFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", paramsFile))
+		mgr.logger.Err("Error in reading configuration file", paramsFile)
 		return false
 	}
 
@@ -162,7 +161,7 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 		for {
 			select {
 			case clientStatus := <-clientStatusListener.DaemonStatusCh:
-				mgr.logger.Info(fmt.Sprintln("Received client status: ", clientStatus.Name, clientStatus.Status))
+				mgr.logger.Info("Received client status: ", clientStatus.Name, clientStatus.Status)
 				if mgr.IsReady() {
 					switch clientStatus.Status {
 					case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
@@ -193,13 +192,16 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 			disabledClientsCount++
 		}
 	}
+	logCount := 0
 	for t := range mgr.reconncetTimer.C {
 		_ = t
 		connectedClientsCount := 0
 		for clientName, client := range mgr.Clients {
 			if client.IsServerEnabled() {
 				if client.IsConnectedToServer() == false {
-					mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
+					if logCount%60 == 0 {
+						mgr.logger.Info("Trying to connect to ", clientName)
+					}
 					client.ConnectToServer()
 					if client.IsConnectedToServer() {
 						clientNameCh <- clientName
@@ -210,6 +212,7 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 				}
 			}
 		}
+		logCount++
 
 		if len(mgr.Clients) == (disabledClientsCount + connectedClientsCount) {
 			mgr.reconncetTimer.Stop()
@@ -266,7 +269,7 @@ func (mgr *ClientMgr) ConnectToClient(name string) error {
 				_ = t
 				waitCount++
 				if waitCount%10 == 0 {
-					mgr.logger.Info(fmt.Sprintln("Connecting to client ", name))
+					mgr.logger.Info("Connecting to client ", name)
 				}
 				if !client.IsConnectedToServer() {
 					client.ConnectToServer()
