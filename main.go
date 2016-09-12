@@ -33,6 +33,7 @@ import (
 )
 
 func main() {
+	defer panic("ConfigMgr Exiting!!!")
 	fmt.Println("Starting ConfigMgr daemon")
 	paramsDir := flag.String("params", "./params", "Directory Location for config files")
 	flag.Parse()
@@ -63,5 +64,4 @@ func main() {
 	} else {
 		http.ListenAndServe(":8080", restRtr)
 	}
-	logger.Info("CONF Mgr. Exiting!!!")
 }
