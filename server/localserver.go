@@ -55,7 +55,7 @@ type SwVersion struct {
 type SwitchCfgJson struct {
 	SwitchMac   string `json:"SwitchMac"`
 	Hostname    string `json:"HostName"`
-	Version     string `json:"Version"`
+	SwVersion   string `json:"Version"`
 	MgmtIp      string `json:"MgmtIp"`
 	Description string `json:"Description"`
 	Vrf         string `json:"Vrf"`
@@ -124,7 +124,7 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
 		return err
 	}
-	sysInfo.Version = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
+	sysInfo.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
 	sysInfo.SwitchMac = cfg.SwitchMac
 	sysInfo.MgmtIp = cfg.MgmtIp
 	sysInfo.Description = cfg.Description
