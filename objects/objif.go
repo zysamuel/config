@@ -79,11 +79,12 @@ type ConfigObjInfo struct {
 	Owner         clients.ClientIf
 	Access        string
 	AutoCreate    bool
+	AutoDiscover  bool
 	LinkedObjects []string
 	Listeners     []clients.ClientIf
 }
 
-func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
@@ -97,10 +98,31 @@ func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj o
 			return body, retobj, err
 		}
 	}
-
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
 		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
+	}
+	return body, retobj, err
+}
+
+func GetConfigObjFromQueryData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+	if obj == nil {
+		err = errors.New("Config Object is nil")
+		return body, retobj, err
+	}
+	queryMap := r.URL.Query()
+	if queryMap == nil {
+		err = errors.New("Empty query data")
+		return body, retobj, err
+	}
+	retobj, err = obj.UnmarshalObjectData(queryMap)
+	if err != nil || retobj == nil {
+		fmt.Println("UnmarshalObjectData returned error", err, "for object info", retobj)
+		return body, retobj, err
+	}
+	body, err = json.Marshal(retobj)
+	if err != nil {
+		fmt.Println("Marshal retobj returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -231,27 +253,29 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
-				v.Access, " Auto Create ", v.AutoCreate))
+			mgr.logger.Debug("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+				v.Access, " Auto Create ", v.AutoCreate, " Auto Discover ", v.AutoDiscover)
+			key := strings.ToLower(k)
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
 			entry.AutoCreate = v.AutoCreate
+			entry.AutoDiscover = v.AutoDiscover
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
 			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
-			mgr.ObjHdlMap[k] = *entry
+			mgr.ObjHdlMap[key] = *entry
 
 			if v.AutoCreate == true {
 				ent, _ := mgr.AutoCreateObjMap[v.Owner]
-				ent.ObjList = append(ent.ObjList, k)
+				ent.ObjList = append(ent.ObjList, key)
 				mgr.AutoCreateObjMap[v.Owner] = ent
 			}
 
 			if v.AutoDiscover == true {
 				ent, _ := mgr.AutoDiscoverObjMap[v.Owner]
-				ent.ObjList = append(ent.ObjList, k)
+				ent.ObjList = append(ent.ObjList, key)
 				mgr.AutoDiscoverObjMap[v.Owner] = ent
 			}
 		}

@@ -81,13 +81,16 @@ type ClientIf interface {
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
 	ExecuteAction(obj actions.ActionObj) error
 	GetServerName() string
-	PreConfigValidation(obj objects.ConfigObj) error
-	PostConfigProcessing(obj objects.ConfigObj) error
+	PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error
+	PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error
 	LockApiHandler()
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
+func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer,
+	systemStatusCB SystemStatusCB,
+	systemSwVersionCB SystemSwVersionCB,
+	executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
 	mgr.systemStatusCB = systemStatusCB

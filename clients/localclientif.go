@@ -75,22 +75,22 @@ func (clnt *LocalClient) UnlockApiHandler() {
 	clnt.ApiHandlerMutex.Unlock()
 }
 
-func (clnt *LocalClient) PreConfigValidation(obj objects.ConfigObj) error {
+func (clnt *LocalClient) PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
-		err = xponderGlobalPreConfigValidate(obj.(objects.XponderGlobal))
+		err = xponderGlobalPreUpdateValidate(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
 	return err
 }
 
-func (clnt *LocalClient) PostConfigProcessing(obj objects.ConfigObj) error {
+func (clnt *LocalClient) PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
 	var err error
 	switch obj.(type) {
 	case objects.XponderGlobal:
-		err = xponderGlobalPostConfigProcessing(obj.(objects.XponderGlobal))
+		err = xponderGlobalPostUpdateProcessing(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
 	default:
 		break
 	}
@@ -137,8 +137,10 @@ func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBU
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.XponderGlobal:
-		objCount, nextMarker, more, objs = xponderGlobalGetBulk(obj.(objects.XponderGlobal))
+	case objects.ConfigLogState:
+		objCount, nextMarker, more, objs = getApiHistory(dbHdl)
+	case objects.XponderGlobal, objects.XponderGlobalState:
+		objCount, nextMarker, more, objs = xponderGlobalGetBulk()
 	default:
 		break
 	}
@@ -178,8 +180,8 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 		retObj = gClientMgr.systemStatusCB()
 	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
-	case objects.XponderGlobal:
-		_, retObj = xponderGlobalGet(obj.(objects.XponderGlobal))
+	case objects.XponderGlobal, objects.XponderGlobalState:
+		_, retObj = xponderGlobalGet()
 	default:
 		break
 	}
@@ -187,15 +189,28 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 }
 
 func (clnt *LocalClient) ExecuteAction(obj actions.ActionObj) error {
-	fmt.Println("local client Execute action obj: ", obj)
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case actions.SaveConfig, actions.ApplyConfig, actions.ResetConfig:
+	case actions.SaveConfig, actions.ApplyConfig, actions.ForceApplyConfig, actions.ResetConfig:
 		err := gClientMgr.executeConfigurationActionCB(obj)
 		return err
 	default:
 		break
 	}
 	return nil
+}
+
+/*********************************************************************************************/
+// Below methods are for localclient's own use only
+
+func getApiHistory(dbHdl *dbutils.DBUtil) (int64, int64, bool, []objects.ConfigObj) {
+	var currMarker int64
+	var count int64
+	ApiCallObj := objects.ConfigLogState{}
+	err, count, next, more, apiCalls := dbHdl.GetBulkObjFromDb(ApiCallObj, currMarker, count)
+	if err != nil {
+		fmt.Println("Failed to get ApiCalls")
+	}
+	return count, next, more, apiCalls
 }
