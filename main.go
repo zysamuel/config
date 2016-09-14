@@ -33,7 +33,6 @@ import (
 )
 
 func main() {
-	defer panic("ConfigMgr Exiting!!!")
 	fmt.Println("Starting ConfigMgr daemon")
 	paramsDir := flag.String("params", "./params", "Directory Location for config files")
 	flag.Parse()
@@ -60,8 +59,14 @@ func main() {
 
 	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
 	if foundConfPort {
-		http.ListenAndServe(":"+confPort, restRtr)
+		logger.Info("Starting config listener on port:", confPort)
+		err = http.ListenAndServe(":"+confPort, restRtr)
 	} else {
-		http.ListenAndServe(":8080", restRtr)
+		logger.Info("Starting config listener on port: 8080")
+		err = http.ListenAndServe(":8080", restRtr)
 	}
+	if err != nil {
+		logger.Err("Failed to start config listener:", err)
+	}
+	panic("ConfigMgr Exiting!!!")
 }
