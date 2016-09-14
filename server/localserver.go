@@ -82,7 +82,7 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 	buildInfoFile := infoDir + "buildInfo.json"
 	bytes, err = ioutil.ReadFile(buildInfoFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", buildInfoFile))
+		mgr.logger.Err("Error in reading configuration file", buildInfoFile)
 		return err
 	}
 
@@ -100,16 +100,27 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 	}
 	paramsDir := mgr.paramsDir
 	sysInfo := &modelObjs.SystemParam{}
+	// check if object exists in db or not
+	if objHdl, ok := modelObjs.ConfigObjectMap["systemparam"]; ok {
+		var body []byte // @dummy body for default objects
+		obj, _ := objHdl.UnmarshalObject(body)
+		data := obj.(modelObjs.SystemParam)
+		_, err := mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
+		if err == nil {
+			return nil
+		}
+	}
+
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "systemProfile.json")
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
+		mgr.logger.Err("Error reading file, err:", err)
 		return err
 	}
 	// Get this info from systemProfile
 	var cfg SwitchCfgJson
 	err = json.Unmarshal(cfgFileData, &cfg)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error Unmarshalling cfg json data, err:", err))
+		mgr.logger.Err("Error Unmarshalling cfg json data, err:", err)
 		return err
 	}
 
@@ -132,7 +143,7 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 	sysInfo.Vrf = cfg.Vrf
 	sysBody, err := json.Marshal(sysInfo)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error marshalling system info, err:", err))
+		mgr.logger.Err("Error marshalling system info, err:", err)
 		return err
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap["systemparam"]; ok {
@@ -143,10 +154,11 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 			if err == nil && success == true {
 				mgr.storeUUID(sysObj.GetKey())
 			} else {
-				mgr.logger.Err(fmt.Sprintln("Failed to create system info: ", err))
+				mgr.logger.Err("Failed to create system info: ", err)
 			}
 		}
 	}
+
 	return err
 }
 
@@ -162,7 +174,7 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 		modName = compName
 	}
 
-	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
+	mgr.logger.Info("Check component logging config in DB for ", modName)
 	if objHdl, ok := modelObjs.ConfigObjectMap["componentlogging"]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ := objHdl.UnmarshalObject(body)
@@ -171,7 +183,7 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
 	}
 	if err != nil {
-		// ComponentLogging is not created in DB. Create with dsefault logging level and store in DB
+		// ComponentLogging is not created in DB. Create with default logging level and store in DB
 		err = mgr.dbHdl.StoreObjectInDb(data)
 		if err == nil {
 			mgr.storeUUID(data.GetKey())
