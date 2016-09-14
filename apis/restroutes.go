@@ -63,6 +63,7 @@ type ApiMgr struct {
 	fullPath      string
 	pRestRtr      *mux.Router
 	restRoutes    []ApiRoute
+	apiCallSeqNum uint32
 	ApiCallStats  ApiCallStats
 }
 
@@ -100,6 +101,7 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
+	mgr.apiCallSeqNum = 0
 	gApiMgr = mgr
 	return mgr
 }
@@ -295,6 +297,7 @@ func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
 func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int) error {
 	var result string
 	var data string
+	mgr.apiCallSeqNum++
 	if errCode == SRSuccess {
 		result = "Success"
 	} else {
@@ -303,6 +306,7 @@ func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body
 	data = strings.Replace(string(body), "\\", "", -1)
 	data = strings.Replace(data, "\"", "", -1)
 	ApiInfo := modelObjs.ConfigLogState{
+		SeqNum:    mgr.apiCallSeqNum,
 		API:       api,
 		Time:      time.Now().String(),
 		Operation: operation,
