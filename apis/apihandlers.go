@@ -270,7 +270,7 @@ func GetOneConfigObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
-	var obj, dbObj modelObjs.ConfigObj
+	var obj, configObj, dbObj modelObjs.ConfigObj
 	var objKey string
 	var retObj ReturnObject
 	var err error
@@ -279,10 +279,22 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
 	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
 	resource = strings.Split(resource, "?")[0]
-	resource = strings.ToLower(resource) + "state"
+	resource = strings.ToLower(resource)
+	configObjHdl, ok := modelObjs.ConfigObjectMap[resource]
+	if !ok {
+		RespondErrorForApiCall(w, SRNotFound, "")
+		return
+	}
+	_, configObj, err = objects.GetConfigObjFromJsonData(r, configObjHdl)
+	if err != nil {
+		RespondErrorForApiCall(w, SRNotFound, err.Error())
+		return
+	}
+	resource = resource + "state"
 	objHdl, ok := modelObjs.ConfigObjectMap[resource]
 	if !ok {
 		RespondErrorForApiCall(w, SRNotFound, "")
+		return
 	}
 	_, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
 	if err != nil {
@@ -303,12 +315,13 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	dbObj, err = gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)
+	dbObj, err = gApiMgr.dbHdl.GetObjectFromDb(configObj, objKey)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	err, retObj.ConfigObj = resourceOwner.GetObject(dbObj, gApiMgr.dbHdl.DBUtil)
+	obj, _ = gApiMgr.dbHdl.MergeDbObjKeys(obj, dbObj)
+	err, retObj.ConfigObj = resourceOwner.GetObject(obj, gApiMgr.dbHdl.DBUtil)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
