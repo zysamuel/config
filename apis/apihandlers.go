@@ -315,20 +315,17 @@ func GetOneStateObjectForId(w http.ResponseWriter, r *http.Request) {
 		RespondErrorForApiCall(w, SRSystemNotReady, errString)
 		return
 	}
-	gApiMgr.logger.Info("GetOneStateObjectForId: 1", objKey)
 	dbObj, err = gApiMgr.dbHdl.GetObjectFromDb(configObj, objKey)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	gApiMgr.logger.Info("GetOneStateObjectForId: 2", dbObj)
 	obj, _ = gApiMgr.dbHdl.MergeDbObjKeys(obj, dbObj)
 	err, retObj.ConfigObj = resourceOwner.GetObject(obj, gApiMgr.dbHdl.DBUtil)
 	if err != nil {
 		RespondErrorForApiCall(w, SRNotFound, err.Error())
 		return
 	}
-	gApiMgr.logger.Info("GetOneStateObjectForId: 3", retObj.ConfigObj)
 	retObj.ObjectId = uuid
 	js, err := json.Marshal(retObj)
 	if err == nil {
