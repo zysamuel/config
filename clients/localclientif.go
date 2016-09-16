@@ -75,40 +75,12 @@ func (clnt *LocalClient) UnlockApiHandler() {
 	clnt.ApiHandlerMutex.Unlock()
 }
 
-func (clnt *LocalClient) PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
-	var err error
-	switch obj.(type) {
-	case objects.XponderGlobal:
-		err = xponderGlobalPreUpdateValidate(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
-	default:
-		break
-	}
-	return err
-}
-
-func (clnt *LocalClient) PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error {
-	var err error
-	switch obj.(type) {
-	case objects.XponderGlobal:
-		err = xponderGlobalPostUpdateProcessing(dbObj.(objects.XponderGlobal), obj.(objects.XponderGlobal), attrSet, dbHdl)
-	default:
-		break
-	}
-	return err
-}
-
 func (clnt *LocalClient) CreateObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, bool) {
 	var err error
 	var ok bool = true
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.XponderGlobal:
-		data := obj.(objects.XponderGlobal)
-		err, ok = xponderGlobalCreate(data)
-		if ok {
-			err = dbHdl.StoreObjectInDb(data)
-		}
 	default:
 		break
 	}
@@ -121,8 +93,6 @@ func (clnt *LocalClient) DeleteObject(obj objects.ConfigObj, objKey string, dbHd
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.XponderGlobal:
-		err, ok = xponderGlobalDelete(obj.(objects.XponderGlobal))
 	default:
 		break
 	}
@@ -139,8 +109,6 @@ func (clnt *LocalClient) GetBulkObject(obj objects.ConfigObj, dbHdl *dbutils.DBU
 	switch obj.(type) {
 	case objects.ConfigLogState:
 		objCount, nextMarker, more, objs = getApiHistory(dbHdl)
-	case objects.XponderGlobal, objects.XponderGlobalState:
-		objCount, nextMarker, more, objs = xponderGlobalGetBulk()
 	default:
 		break
 	}
@@ -153,18 +121,6 @@ func (clnt *LocalClient) UpdateObject(dbObj objects.ConfigObj, obj objects.Confi
 	defer clnt.UnlockApiHandler()
 	clnt.LockApiHandler()
 	switch obj.(type) {
-	case objects.XponderGlobal:
-		updatedata := obj.(objects.XponderGlobal)
-		err, ok = xponderGlobalUpdate(obj.(objects.XponderGlobal))
-		if ok == true {
-			err = dbHdl.UpdateObjectInDb(updatedata, dbObj, attrSet)
-			if err != nil {
-				fmt.Println("Update object in DB failed:", err)
-				return err, false
-			}
-		} else {
-			return err, false
-		}
 	default:
 		break
 	}
@@ -180,8 +136,6 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 		retObj = gClientMgr.systemStatusCB()
 	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
-	case objects.XponderGlobal, objects.XponderGlobalState:
-		_, retObj = xponderGlobalGet()
 	default:
 		break
 	}
