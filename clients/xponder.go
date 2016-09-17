@@ -128,16 +128,18 @@ var dmnListForFCAPS []string = []string{"opticd", "asicd"}
 
 func xponderFCAPSEnable(enable bool) error {
 	var err error
-	fMgrClntHdl := gClientMgr.Clients["fMgrd"]
-	for _, val := range dmnListForFCAPS {
-		obj := actions.FaultEnable{
-			OwnerName: val,
-			EventName: "all",
-			Enable:    enable,
-		}
-		err = fMgrClntHdl.ExecuteAction(obj)
-		if err != nil {
-			fmt.Println("Failed to change FCAPS state for - " + val)
+	fMgrClntHdl, exist := gClientMgr.Clients["fMgrd"]
+	if exist && fMgrClntHdl.IsConnectedToServer() {
+		for _, val := range dmnListForFCAPS {
+			obj := actions.FaultEnable{
+				OwnerName: val,
+				EventName: "all",
+				Enable:    enable,
+			}
+			err = fMgrClntHdl.ExecuteAction(obj)
+			if err != nil {
+				fmt.Println("Failed to change FCAPS state for - " + val)
+			}
 		}
 	}
 	return err
@@ -145,43 +147,63 @@ func xponderFCAPSEnable(enable bool) error {
 
 func xponderGlobalCreate(obj objects.XponderGlobal) (error, bool) {
 	var en bool
-	fmt.Println("Create received for XponderGlobal")
-	xponderGlobal.XponderId = obj.XponderId
-	xponderGlobal.XponderMode = obj.XponderMode
-	xponderGlobal.XponderDescription = obj.XponderDescription
+	opticdClient, exist := gClientMgr.Clients["opticd"]
+	if exist && opticdClient.IsConnectedToServer() {
+		fmt.Println("Create received for XponderGlobal")
+		xponderGlobal.XponderId = obj.XponderId
+		xponderGlobal.XponderMode = obj.XponderMode
+		xponderGlobal.XponderDescription = obj.XponderDescription
 
-	switch obj.XponderMode {
-	case XPONDER_MODE_OUT_OF_SVC:
-		en = false
-	default:
-		en = true
+		switch obj.XponderMode {
+		case XPONDER_MODE_OUT_OF_SVC:
+			en = false
+		default:
+			en = true
+		}
+		err := xponderFCAPSEnable(en)
+		if err != nil {
+			fmt.Println("Failed to change FCAPS state during xponder auto create")
+		}
+		return nil, true
 	}
-	err := xponderFCAPSEnable(en)
-	if err != nil {
-		fmt.Println("Failed to change FCAPS state during xponder auto create")
-	}
-	return nil, true
+	return errors.New("Not supported on this platform"), false
 }
 
 func xponderGlobalDelete(obj objects.XponderGlobal) (error, bool) {
-	return errors.New("Delete operation not supported for XponderGlobal"), false
+	opticdClient, exist := gClientMgr.Clients["opticd"]
+	if exist && opticdClient.IsConnectedToServer() {
+		return errors.New("Delete operation not supported for XponderGlobal"), false
+	}
+	return errors.New("Not supported on this platform"), false
 }
 
 func xponderGlobalUpdate(obj objects.XponderGlobal) (error, bool) {
-	fmt.Println("Update received for XponderGlobal")
-	xponderGlobal.XponderMode = obj.XponderMode
-	xponderGlobal.XponderDescription = obj.XponderDescription
-	return nil, true
+	opticdClient, exist := gClientMgr.Clients["opticd"]
+	if exist && opticdClient.IsConnectedToServer() {
+		fmt.Println("Update received for XponderGlobal")
+		xponderGlobal.XponderMode = obj.XponderMode
+		xponderGlobal.XponderDescription = obj.XponderDescription
+		return nil, true
+	}
+	return errors.New("Not supported on this platform"), false
 }
 
 func xponderGlobalGet() (error, objects.ConfigObj) {
-	fmt.Println("Get received for XponderGlobal")
-	return nil, xponderGlobal
+	opticdClient, exist := gClientMgr.Clients["opticd"]
+	if exist && opticdClient.IsConnectedToServer() {
+		fmt.Println("Get received for XponderGlobal")
+		return nil, xponderGlobal
+	}
+	return errors.New("Not supported on this platform"), nil
 }
 
 func xponderGlobalGetBulk() (int64, int64, bool, []objects.ConfigObj) {
-	fmt.Println("GETBULK xponderGbl : ", xponderGlobal)
-	return int64(1), int64(0), false, []objects.ConfigObj{xponderGlobal}
+	opticdClient, exist := gClientMgr.Clients["opticd"]
+	if exist && opticdClient.IsConnectedToServer() {
+		fmt.Println("GETBULK xponderGbl : ", xponderGlobal)
+		return int64(1), int64(0), false, []objects.ConfigObj{xponderGlobal}
+	}
+	return int64(0), int64(0), false, []objects.ConfigObj{}
 }
 
 var xponderInSvcWireCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{

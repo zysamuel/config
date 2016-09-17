@@ -44,7 +44,7 @@ type ClientMgr struct {
 	logger                       *logging.Writer
 	Clients                      map[string]ClientIf
 	reconncetTimer               *time.Ticker
-	systemReady                  bool
+	SystemReady                  bool
 	systemStatusCB               SystemStatusCB
 	systemSwVersionCB            SystemSwVersionCB
 	executeConfigurationActionCB ExecuteConfigurationActionCB
@@ -180,7 +180,7 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 //
 func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
-	mgr.systemReady = false
+	mgr.SystemReady = false
 	disabledClientsCount := 0
 	for clientName, client := range mgr.Clients {
 		if client.IsServerEnabled() {
@@ -220,7 +220,6 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 		}
 	}
 	mgr.logger.Info("Connected to all clients")
-	mgr.systemReady = true
 	clientNameCh <- "Client_Init_Done"
 	return true
 }
@@ -236,7 +235,7 @@ func (mgr *ClientMgr) DisconnectFromAllClients() bool {
 // This method is to check if config manager is ready to accept config requests
 //
 func (mgr *ClientMgr) IsReady() bool {
-	return mgr.systemReady
+	return mgr.SystemReady
 }
 
 func (mgr *ClientMgr) GetUnconnectedClients() []string {
