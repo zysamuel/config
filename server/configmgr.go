@@ -224,6 +224,7 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 					mgr.ConfigureGlobalConfig(name)
 				}
 				close(mgr.clientNameCh)
+				mgr.clientMgr.SystemReady = true
 				return
 			default:
 				//Cache list of client names to use for autocreate
