@@ -52,6 +52,11 @@ func InstantiateDbIf(logger *logging.Writer) *DbHandler {
 	return dbHdl
 }
 
+func (d *DbHandler) DisconnectDbIf() {
+	d.Disconnect()
+	return
+}
+
 func (d *DbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
 	UUId, err := uuid.NewV4()
 	if err != nil {
