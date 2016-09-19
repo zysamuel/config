@@ -41,10 +41,11 @@ type Repo struct {
 }
 
 type Version struct {
-	Major string `json:major`
-	Minor string `json:minor`
-	Patch string `json:patch`
-	Build string `json:build`
+	Major       string `json:"major"`
+	Minor       string `json:"minor"`
+	Patch       string `json:"patch"`
+	Build       string `json:"build"`
+	Changeindex string `json:"changeindex"`
 }
 
 type SwVersion struct {
@@ -77,7 +78,7 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
 		return err
 	}
-	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
+	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build + "." + version.Changeindex
 
 	buildInfoFile := infoDir + "buildInfo.json"
 	bytes, err = ioutil.ReadFile(buildInfoFile)
