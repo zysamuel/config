@@ -522,13 +522,19 @@ func ExecuteConfigurationAction(obj modelActions.ActionObj) (err error) {
 		gActionMgr.logger.Debug("FileName:", fileName)
 		if fileName == "" {
 			gActionMgr.logger.Debug("FileName not set, setting it to default startup-config")
-			fileName = "startup-config"
+			fileName = gActionMgr.paramsDir + "../" + "startup-config.json"
+		} else {
+			if !strings.HasPrefix(fileName, "/") {
+				fileName = gActionMgr.paramsDir + "../" + fileName
+			}
+		}
+		if !strings.HasSuffix(fileName, ".json") {
+			fileName = fileName + ".json"
 		}
 		// open config file
-		cfgFileName := gActionMgr.paramsDir + "../" + fileName + ".json"
-		fo, err = OpenConfigFile(cfgFileName)
+		fo, err = OpenConfigFile(fileName)
 		if err != nil {
-			gActionMgr.logger.Err("error with OpenConfigFile, err: " + err.Error())
+			gActionMgr.logger.Err("error with opening file to save config " + fileName + " err: " + err.Error())
 			return err
 		}
 		// close fo on exit and check for its returned error
