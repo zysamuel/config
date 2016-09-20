@@ -27,7 +27,6 @@ import (
 	"config/actions"
 	"config/clients"
 	"config/objects"
-	"fmt"
 	"github.com/gorilla/mux"
 	"models/events"
 	modelObjs "models/objects"
@@ -97,7 +96,7 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.apiBaseAction = mgr.apiBase + "action/"
 	mgr.apiBaseEvent = mgr.apiBase + "event/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
-		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
+		logger.Err("Unable to get absolute path for " + paramsDir + " Error: " + err.Error())
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
@@ -327,10 +326,7 @@ func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		inner.ServeHTTP(w, r)
-		gApiMgr.logger.Debug(fmt.Sprintln("%s\t%s\t%s\n",
-			r.Method,
-			r.RequestURI,
-			time.Since(start)))
+		gApiMgr.logger.Debug("%s\t%s\t%s\n", r.Method, r.RequestURI, time.Since(start))
 	})
 }
 

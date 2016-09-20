@@ -211,12 +211,11 @@ func GetActionObj(r *http.Request, obj modelActions.ActionObj) (body []byte, ret
 			return body, retobj, err
 		}
 	} else {
-		fmt.Println("r nil")
 		return body, retobj, err
 	}
 	retobj, err = obj.UnmarshalAction(body)
 	if err != nil {
-		fmt.Println("UnmarshalObject returned error", err, " for ojbect info", retobj)
+		gActionMgr.logger.Info("UnmarshalObject returned error", err, " for ojbect info", retobj)
 	}
 	return body, retobj, err
 }
