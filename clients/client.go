@@ -165,7 +165,7 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 				if mgr.IsReady() {
 					switch clientStatus.Status {
 					case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
-						go mgr.DisconnectFromClient(clientStatus.Name)
+						mgr.DisconnectFromClient(clientStatus.Name)
 					case sysdCommonDefs.UP:
 						go mgr.ConnectToClient(clientStatus.Name)
 					}
@@ -228,7 +228,12 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 // This method is to disconnect from all clients
 //
 func (mgr *ClientMgr) DisconnectFromAllClients() bool {
-	return false
+	for _, client := range mgr.Clients {
+		if client.IsConnectedToServer() {
+			client.DisconnectFromServer()
+		}
+	}
+	return true
 }
 
 //

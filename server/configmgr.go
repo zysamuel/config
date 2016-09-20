@@ -170,6 +170,8 @@ func (mgr *ConfigMgr) SigHandler() {
 			switch signal {
 			case syscall.SIGHUP:
 				mgr.logger.Info("Exting!!!")
+				mgr.dbHdl.DisconnectDbIf()
+				mgr.clientMgr.DisconnectFromAllClients()
 				os.Exit(0)
 			default:
 			}
