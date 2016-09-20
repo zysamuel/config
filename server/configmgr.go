@@ -56,7 +56,7 @@ type ConfigMgr struct {
 var gConfigMgr *ConfigMgr
 
 const (
-	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 200
+	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 1000
 )
 
 type SysProfile struct {
