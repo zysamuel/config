@@ -210,7 +210,7 @@ func getApiHistory(dbHdl *dbutils.DBUtil) (int64, int64, bool, []objects.ConfigO
 	ApiCallObj := objects.ConfigLogState{}
 	err, count, next, more, apiCalls := dbHdl.GetBulkObjFromDb(ApiCallObj, currMarker, count)
 	if err != nil {
-		fmt.Println("Failed to get ApiCalls")
+		gClientMgr.logger.Err("Failed to get ConfigLog")
 	}
 	return count, next, more, apiCalls
 }
