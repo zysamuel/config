@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"models/actions"
 	"models/objects"
+	"sort"
 	"sync"
 	"utils/dbutils"
 	"utils/ipcutils"
@@ -204,13 +205,30 @@ func (clnt *LocalClient) ExecuteAction(obj actions.ActionObj) error {
 /*********************************************************************************************/
 // Below methods are for localclient's own use only
 
+type ApiCalls []objects.ConfigLogState
+
+func (a ApiCalls) Len() int           { return len(a) }
+func (a ApiCalls) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ApiCalls) Less(i, j int) bool { return a[i].SeqNum > a[j].SeqNum }
+
 func getApiHistory(dbHdl *dbutils.DBUtil) (int64, int64, bool, []objects.ConfigObj) {
 	var currMarker int64
 	var count int64
+	var retApiCalls []objects.ConfigObj
 	ApiCallObj := objects.ConfigLogState{}
 	err, count, next, more, apiCalls := dbHdl.GetBulkObjFromDb(ApiCallObj, currMarker, count)
 	if err != nil {
 		gClientMgr.logger.Err("Failed to get ConfigLog")
+	} else {
+		sortedApiCalls := make([]objects.ConfigLogState, len(apiCalls))
+		for idx, object := range apiCalls {
+			sortedApiCalls[idx] = object.(objects.ConfigLogState)
+		}
+		sort.Sort(ApiCalls(sortedApiCalls))
+		retApiCalls = make([]objects.ConfigObj, len(sortedApiCalls))
+		for idx, object := range sortedApiCalls {
+			retApiCalls[idx] = object
+		}
 	}
-	return count, next, more, apiCalls
+	return count, next, more, retApiCalls
 }

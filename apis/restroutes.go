@@ -303,6 +303,7 @@ func (mgr *ApiMgr) ReadApiCallInfoFromDb() error {
 	apiInfos, err := mgr.dbHdl.GetAllObjFromDb(apiInfo)
 	if err != nil {
 		for _, apiInfo := range apiInfos {
+			mgr.apiCallSeqNum++
 			mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
 		}
 	}
