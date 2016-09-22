@@ -428,8 +428,9 @@ func BulkGetConfigObjects(w http.ResponseWriter, r *http.Request) {
 	err, resp.ObjCount, resp.NextMarker, resp.MoreExist,
 		configObjects = gApiMgr.dbHdl.GetBulkObjFromDb(obj, currentIndex, objCount)
 	if err == nil {
+		sortedObjects := obj.SortObjList(configObjects)
 		resp.Objects = make([]ReturnObject, resp.ObjCount)
-		for idx, configObject := range configObjects {
+		for idx, configObject := range sortedObjects {
 			resp.Objects[idx].ConfigObj = configObject
 			objKey = configObject.GetKey()
 			resp.Objects[idx].ObjectId, err = gApiMgr.dbHdl.GetUUIDFromObjKey(objKey)
