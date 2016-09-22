@@ -24,7 +24,6 @@
 package objects
 
 import (
-	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"github.com/nu7hatch/gouuid"
 	"strings"
@@ -45,7 +44,7 @@ func InstantiateDbIf(logger *logging.Writer) *DbHandler {
 	dbHdl.DBUtil = dbutils.NewDBUtil(logger)
 	err = dbHdl.DBUtil.Connect()
 	if err != nil {
-		logger.Err(fmt.Sprintln("Failed to dial out to Redis server"))
+		logger.Err("Failed to dial out to Redis server")
 		return nil
 	}
 	dbHdl.logger = logger
@@ -60,20 +59,20 @@ func (d *DbHandler) DisconnectDbIf() {
 func (d *DbHandler) StoreUUIDToObjKeyMap(objKey string) (string, error) {
 	UUId, err := uuid.NewV4()
 	if err != nil {
-		d.logger.Err(fmt.Sprintln("Failed to get UUID ", err))
+		d.logger.Err("Failed to get UUID " + err.Error())
 		return "", err
 	}
 	defer d.DBUtil.DbLock.Unlock()
 	d.DBUtil.DbLock.Lock()
 	_, err = d.Do("SET", UUId.String(), objKey)
 	if err != nil {
-		d.logger.Err(fmt.Sprintln("Failed to insert uuid to objkey entry in db ", err))
+		d.logger.Err("Failed to insert uuid to objkey entry in db " + err.Error())
 		return "", err
 	}
 	objKeyWithUUIDPrefix := "UUID" + objKey
 	_, err = d.Do("SET", objKeyWithUUIDPrefix, UUId.String())
 	if err != nil {
-		d.logger.Err(fmt.Sprintln("Failed to insert objkey to uuid entry in db ", err))
+		d.logger.Err("Failed to insert objkey to uuid entry in db " + err.Error())
 		return "", err
 	}
 	return UUId.String(), nil
@@ -84,13 +83,13 @@ func (d *DbHandler) DeleteUUIDToObjKeyMap(uuid, objKey string) error {
 	d.DBUtil.DbLock.Lock()
 	_, err := d.Do("DEL", uuid)
 	if err != nil {
-		d.logger.Err(fmt.Sprintln("Failed to delete uuid to objkey entry in db ", err))
+		d.logger.Err("Failed to delete uuid to objkey entry in db " + err.Error())
 		return err
 	}
 	objKeyWithUUIDPrefix := "UUID" + objKey
 	_, err = d.Do("DEL", objKeyWithUUIDPrefix)
 	if err != nil {
-		d.logger.Err(fmt.Sprintln("Failed to delete objkey to uuid entry in db ", err))
+		d.logger.Err("Failed to delete objkey to uuid entry in db " + err.Error())
 		return err
 	}
 	return nil

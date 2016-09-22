@@ -103,6 +103,7 @@ const (
 	SRUpdateKeyError    = 14
 	SRUpdateNoChange    = 15
 	SRValidationFailed  = 16
+	SRUnmarshalError    = 17
 )
 
 // SR error strings
@@ -124,6 +125,7 @@ var ErrString = map[int]string{
 	SRUpdateKeyError:    "Cannot update key in an object.",
 	SRUpdateNoChange:    "Nothing to be updated.",
 	SRValidationFailed:  "Config validation failed.",
+	SRUnmarshalError:    "Unmarshal of json data failed.",
 }
 
 //Given a code reurn error string
@@ -1068,7 +1070,16 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
-		body, obj, _ = objects.GetConfigObjFromJsonData(r, objHdl)
+		body, obj, err = objects.GetConfigObjFromJsonData(r, objHdl)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			errCode = SRUnmarshalError
+			resp.Result = err.Error()
+			js, _ := json.Marshal(resp)
+			w.Write(js)
+			gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode)
+			return
+		}
 		objKey = gApiMgr.dbHdl.GetKey(obj)
 		updateKeys, _ := objects.GetUpdateKeys(body)
 		dbObj, gerr := gApiMgr.dbHdl.GetObjectFromDb(obj, objKey)

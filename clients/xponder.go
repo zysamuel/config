@@ -25,7 +25,6 @@ package clients
 
 import (
 	"errors"
-	"fmt"
 	"models/actions"
 	"models/objects"
 	"strconv"
@@ -57,13 +56,13 @@ const (
 
 func xponderGlobalPreUpdateValidate(dbObj, obj objects.XponderGlobal, attrSet []bool, dbHdl *dbutils.DBUtil) error {
 	var err error
-	fmt.Println("Pre config validate called for Xponder Global object")
+	gClientMgr.logger.Debug("Pre config validate called for Xponder Global object")
 	return err
 }
 
 func xponderGlobalPostUpdateProcessing(dbObj, obj objects.XponderGlobal, attrSet []bool, dbHdl *dbutils.DBUtil) error {
 	var err error
-	fmt.Println("Post config processing called for Xponder Global object", dbObj, obj, attrSet)
+	gClientMgr.logger.Info("Post config processing called for Xponder Global object", dbObj, obj, attrSet)
 	/* When XponderMode is updated, setup Vlan configuration for the various modes
 	(a) In service wire configuration: Clnt ports 1-8 are used and mapped 1:1 to AC400 inputs
 	(b) In service oversub configuration: Clnt ports 1-12 are used and mapped as shown below
@@ -95,7 +94,7 @@ func xponderGlobalPostUpdateProcessing(dbObj, obj objects.XponderGlobal, attrSet
 				//When going out of service clear all FCAPS data and disable faults/alarms
 				err = xponderFCAPSEnable(false)
 				if err != nil {
-					fmt.Println("Failed to disable FCAPS when transition into Out of Service mode")
+					gClientMgr.logger.Err("Failed to disable FCAPS when transition into Out of Service mode")
 				}
 			}
 		case XPONDER_MODE_OUT_OF_SVC:
@@ -103,7 +102,7 @@ func xponderGlobalPostUpdateProcessing(dbObj, obj objects.XponderGlobal, attrSet
 				//When leaving OutOfService mode, enable faults/Alarms
 				err = xponderFCAPSEnable(true)
 				if err != nil {
-					fmt.Println("Failed to enable FCAPS when transition out of Out of Service mode")
+					gClientMgr.logger.Err("Failed to enable FCAPS when transition out of Out of Service mode")
 				}
 			}
 		default:
@@ -138,7 +137,7 @@ func xponderFCAPSEnable(enable bool) error {
 			}
 			err = fMgrClntHdl.ExecuteAction(obj)
 			if err != nil {
-				fmt.Println("Failed to change FCAPS state for - " + val)
+				gClientMgr.logger.Err("Failed to change FCAPS state for - " + val)
 			}
 		}
 	}
@@ -149,7 +148,7 @@ func xponderGlobalCreate(obj objects.XponderGlobal) (error, bool) {
 	var en bool
 	opticdClient, exist := gClientMgr.Clients["opticd"]
 	if exist && opticdClient.IsConnectedToServer() {
-		fmt.Println("Create received for XponderGlobal")
+		gClientMgr.logger.Debug("Create received for XponderGlobal")
 		xponderGlobal.XponderId = obj.XponderId
 		xponderGlobal.XponderMode = obj.XponderMode
 		xponderGlobal.XponderDescription = obj.XponderDescription
@@ -162,7 +161,7 @@ func xponderGlobalCreate(obj objects.XponderGlobal) (error, bool) {
 		}
 		err := xponderFCAPSEnable(en)
 		if err != nil {
-			fmt.Println("Failed to change FCAPS state during xponder auto create")
+			gClientMgr.logger.Err("Failed to change FCAPS state during xponder auto create")
 		}
 		return nil, true
 	}
@@ -180,7 +179,7 @@ func xponderGlobalDelete(obj objects.XponderGlobal) (error, bool) {
 func xponderGlobalUpdate(obj objects.XponderGlobal) (error, bool) {
 	opticdClient, exist := gClientMgr.Clients["opticd"]
 	if exist && opticdClient.IsConnectedToServer() {
-		fmt.Println("Update received for XponderGlobal")
+		gClientMgr.logger.Debug("Update received for XponderGlobal")
 		xponderGlobal.XponderMode = obj.XponderMode
 		xponderGlobal.XponderDescription = obj.XponderDescription
 		return nil, true
@@ -191,7 +190,7 @@ func xponderGlobalUpdate(obj objects.XponderGlobal) (error, bool) {
 func xponderGlobalGet() (error, objects.ConfigObj) {
 	opticdClient, exist := gClientMgr.Clients["opticd"]
 	if exist && opticdClient.IsConnectedToServer() {
-		fmt.Println("Get received for XponderGlobal")
+		gClientMgr.logger.Debug("Get received for XponderGlobal")
 		return nil, xponderGlobal
 	}
 	return errors.New("Not supported on this platform"), nil
@@ -200,7 +199,7 @@ func xponderGlobalGet() (error, objects.ConfigObj) {
 func xponderGlobalGetBulk() (int64, int64, bool, []objects.ConfigObj) {
 	opticdClient, exist := gClientMgr.Clients["opticd"]
 	if exist && opticdClient.IsConnectedToServer() {
-		fmt.Println("GETBULK xponderGbl : ", xponderGlobal)
+		gClientMgr.logger.Debug("GETBULK xponderGbl : ", xponderGlobal)
 		return int64(1), int64(0), false, []objects.ConfigObj{xponderGlobal}
 	}
 	return int64(0), int64(0), false, []objects.ConfigObj{}
@@ -267,7 +266,7 @@ func xponderModeInSvcWireCfgSet(dbHdl *dbutils.DBUtil) error {
 		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.CreateObject(*obj, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -281,7 +280,7 @@ func xponderModeInSvcWireCfgSet(dbHdl *dbutils.DBUtil) error {
 		}
 		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -298,7 +297,7 @@ func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.DeleteObject(*obj, "", dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -308,7 +307,7 @@ func xponderModeInSvcWireCfgRemove(dbHdl *dbutils.DBUtil) error {
 		adminState := "DOWN"
 		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -388,7 +387,7 @@ func xponderModeInSvcOverSubCfgSet(dbHdl *dbutils.DBUtil) error {
 		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.CreateObject(*obj, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in xponderModeInSvcOverSubCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in xponderModeInSvcOverSubCfgSet")
 			break
 		}
 	}
@@ -397,7 +396,7 @@ func xponderModeInSvcOverSubCfgSet(dbHdl *dbutils.DBUtil) error {
 		adminState := "UP"
 		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -414,7 +413,7 @@ func xponderModeInSvcOverSubCfgRemove(dbHdl *dbutils.DBUtil) error {
 		obj.UntagIntfList = val.untagPortList
 		err, _ = asicdClntHdl.DeleteObject(*obj, "", dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in xponderInSvcOverSubCfgRemove")
+			gClientMgr.logger.Err("Failed applying cfg recipe in xponderInSvcOverSubCfgRemove")
 			break
 		}
 	}
@@ -424,7 +423,7 @@ func xponderModeInSvcOverSubCfgRemove(dbHdl *dbutils.DBUtil) error {
 		adminState := "DOWN"
 		err = xponderUpdatePortAdminState(ifName, adminState, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying cfg recipe in InSvcWireCfgSet")
+			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
 			break
 		}
 	}
@@ -446,7 +445,7 @@ func xponderModeInSvcRegenCfgApply(adminState string, nwLb bool, dbHdl *dbutils.
 			false, true, false, false, false, false, false, false, false},
 			patchOpInfoSlice, objKey, dbHdl)
 		if err != nil {
-			fmt.Println("Failed applying recipe in xponderModeInSvcRegenCfgApply")
+			gClientMgr.logger.Err("Failed applying recipe in xponderModeInSvcRegenCfgApply")
 			break
 		}
 	}
@@ -465,7 +464,7 @@ func xponderModeInSvcRegenCfgApply(adminState string, nwLb bool, dbHdl *dbutils.
 				false, false, false, false, false, true, false, false},
 				patchOpInfoSlice, objKey, dbHdl)
 			if err != nil {
-				fmt.Println("Failed applying recipe in xponderModeInSvcRegenCfgApply")
+				gClientMgr.logger.Err("Failed applying recipe in xponderModeInSvcRegenCfgApply")
 				break
 			}
 		}

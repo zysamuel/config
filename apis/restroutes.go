@@ -27,7 +27,6 @@ import (
 	"config/actions"
 	"config/clients"
 	"config/objects"
-	"fmt"
 	"github.com/gorilla/mux"
 	"models/events"
 	modelObjs "models/objects"
@@ -36,6 +35,7 @@ import (
 	"strings"
 	"time"
 	"utils/logging"
+	"utils/ringBuffer"
 )
 
 type ApiRoute struct {
@@ -64,6 +64,7 @@ type ApiMgr struct {
 	pRestRtr      *mux.Router
 	restRoutes    []ApiRoute
 	apiCallSeqNum uint32
+	apiLogRB      *ringBuffer.RingBuffer
 	ApiCallStats  ApiCallStats
 }
 
@@ -97,11 +98,14 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.apiBaseAction = mgr.apiBase + "action/"
 	mgr.apiBaseEvent = mgr.apiBase + "event/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
-		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
+		logger.Err("Unable to get absolute path for " + paramsDir + " Error: " + err.Error())
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
 	mgr.apiCallSeqNum = 0
+	mgr.apiLogRB = new(ringBuffer.RingBuffer)
+	mgr.apiLogRB.SetRingBufferCapacity(1024)
+	mgr.ReadApiCallInfoFromDb()
 	gApiMgr = mgr
 	return mgr
 }
@@ -294,6 +298,18 @@ func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (mgr *ApiMgr) ReadApiCallInfoFromDb() error {
+	apiInfo := modelObjs.ConfigLogState{}
+	apiInfos, err := mgr.dbHdl.GetAllObjFromDb(apiInfo)
+	if err != nil {
+		for _, apiInfo := range apiInfos {
+			mgr.apiCallSeqNum++
+			mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
+		}
+	}
+	return nil
+}
+
 func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int) error {
 	var result string
 	var data string
@@ -305,7 +321,7 @@ func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body
 	}
 	data = strings.Replace(string(body), "\\", "", -1)
 	data = strings.Replace(data, "\"", "", -1)
-	ApiInfo := modelObjs.ConfigLogState{
+	apiInfo := modelObjs.ConfigLogState{
 		SeqNum:    mgr.apiCallSeqNum,
 		API:       api,
 		Time:      time.Now().String(),
@@ -315,10 +331,18 @@ func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body
 		UserAddr:  r.RemoteAddr,
 		UserName:  "", // confd does not know username information
 	}
-	err := mgr.dbHdl.StoreObjectInDb(ApiInfo)
+	err := mgr.dbHdl.StoreObjectInDb(apiInfo)
 	if err != nil {
 		mgr.logger.Info("Failed to store ApiCall information.", err)
 		return err
+	} else {
+		_, oldApiInfo := mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
+		if oldApiInfo != nil {
+			err = mgr.dbHdl.DeleteObjectFromDb(apiInfo)
+			if err != nil {
+				mgr.logger.Info("Failed to delete old ApiCall information.", err)
+			}
+		}
 	}
 	return nil
 }
@@ -327,10 +351,7 @@ func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		inner.ServeHTTP(w, r)
-		gApiMgr.logger.Debug(fmt.Sprintln("%s\t%s\t%s\n",
-			r.Method,
-			r.RequestURI,
-			time.Since(start)))
+		gApiMgr.logger.Debug("%s\t%s\t%s\n", r.Method, r.RequestURI, time.Since(start))
 	})
 }
 

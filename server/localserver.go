@@ -69,7 +69,7 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 	pkgInfoFile := infoDir + "pkgInfo.json"
 	bytes, err := ioutil.ReadFile(pkgInfoFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", pkgInfoFile))
+		mgr.logger.Err("Error in reading configuration file " + pkgInfoFile)
 		return err
 	}
 
@@ -232,7 +232,7 @@ func GetSystemSwVersion() modelObjs.SystemSwVersionState {
 	systemSwVersion := modelObjs.SystemSwVersionState{}
 	err := gConfigMgr.ReadSystemSwVersion()
 	if err != nil {
-		gConfigMgr.logger.Info(fmt.Sprintln("Failed to read sw version"))
+		gConfigMgr.logger.Info("Failed to read sw version")
 	}
 	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
 	numRepos := len(gConfigMgr.swVersion.Repos)
