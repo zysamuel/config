@@ -203,6 +203,10 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
 						if err == nil && success == true {
 							mgr.storeUUID(obj.GetKey())
+							err = mgr.dbHdl.StoreObjectDefaultInDb(obj)
+							if err != nil {
+								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" default config in DB ", obj, err))
+							}
 						} else {
 							mgr.logger.Err(fmt.Sprintln("Failed to create "+resource+" ", obj, err))
 						}
@@ -265,6 +269,10 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
 							} else {
 								mgr.storeUUID(obj.GetKey())
+								err = mgr.dbHdl.StoreObjectDefaultInDb(obj)
+								if err != nil {
+									mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" default config in DB ", obj, err))
+								}
 							}
 						}
 					}
