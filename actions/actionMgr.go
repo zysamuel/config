@@ -357,7 +357,7 @@ func DeleteConfig(resource string) {
 		gActionMgr.logger.Err("ResetConfig: Not connected to daemon " + resource)
 		return
 	}
-	if strings.Contains(objMap.Access, "w") && !objMap.AutoCreate && !objMap.AutoDiscover {
+	if strings.Contains(objMap.Access, "w") {
 		gActionMgr.logger.Debug("Get db objects for  ", resource)
 		if objHdl, ok := modelObjs.ConfigObjectMap[strings.ToLower(resource)]; ok {
 			_, obj, _ := objects.GetConfigObjFromJsonData(nil, objHdl)
@@ -371,14 +371,36 @@ func DeleteConfig(resource string) {
 			for _, obj := range objs {
 				objKey := obj.GetKey()
 				gActionMgr.logger.Debug("Obj ", obj, " key ", objKey)
-				err, success := objMap.Owner.DeleteObject(obj, objKey, gActionMgr.dbHdl.DBUtil)
-				if err == nil && success == true {
-					gActionMgr.logger.Debug("Delete UUID to objectKeyMap")
-					uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
-					if er == nil {
-						err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
-						if err != nil {
-							gActionMgr.logger.Err("Failed to delete uuid map ", uuid)
+				if !objMap.AutoCreate && !objMap.AutoDiscover {
+					err, success := objMap.Owner.DeleteObject(obj, objKey, gActionMgr.dbHdl.DBUtil)
+					if err == nil && success == true {
+						gActionMgr.logger.Debug("Delete UUID to objectKeyMap")
+						uuid, er := gActionMgr.dbHdl.GetUUIDFromObjKey(objKey)
+						if er == nil {
+							err = gActionMgr.dbHdl.DeleteUUIDToObjKeyMap(uuid, objKey)
+							if err != nil {
+								gActionMgr.logger.Err("Failed to delete uuid map ", uuid)
+							}
+						}
+					}
+				} else {
+					defaultObjKey := objKey + "Default"
+					defaultObj, err := gActionMgr.dbHdl.GetObjectFromDb(obj, defaultObjKey)
+					if err == nil {
+						gActionMgr.logger.Debug("DeleteConfig: update to default - ", resource)
+						diff, _ := gActionMgr.dbHdl.CompareObjectDefaultAndDiff(obj, defaultObj)
+						anyUpdated := false
+						for _, updated := range diff {
+							if updated == true {
+								anyUpdated = true
+								break
+							}
+						}
+						if anyUpdated == true {
+							err, success := objMap.Owner.UpdateObject(obj, defaultObj, diff, nil, objKey, gActionMgr.dbHdl.DBUtil)
+							if success == false {
+								gActionMgr.logger.Err("DeleteConfig: failed to update to default " + objKey + " Error: " + err.Error())
+							}
 						}
 					}
 				}
