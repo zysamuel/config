@@ -183,6 +183,8 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 		retObj = gClientMgr.systemSwVersionCB()
 	case objects.XponderGlobal, objects.XponderGlobalState:
 		_, retObj = xponderGlobalGet()
+	case objects.ApiInfoState:
+		retObj = getApiInfo(obj)
 	default:
 		break
 	}
@@ -231,4 +233,10 @@ func getApiHistory(dbHdl *dbutils.DBUtil) (int64, int64, bool, []objects.ConfigO
 		}
 	}
 	return count, next, more, retApiCalls
+}
+
+func getApiInfo(obj objects.ConfigObj) objects.ConfigObj {
+	apiInfo := obj.(objects.ApiInfoState)
+	gClientMgr.logger.Info(fmt.Println("Received ApiInfo call for", apiInfo))
+	return nil
 }
