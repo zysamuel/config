@@ -42,6 +42,7 @@ type ExecuteConfigurationActionCB func(actions.ActionObj) error
 
 type ClientMgr struct {
 	logger                       *logging.Writer
+	paramsDir                    string
 	Clients                      map[string]ClientIf
 	reconncetTimer               *time.Ticker
 	SystemReady                  bool
@@ -86,16 +87,19 @@ type ClientIf interface {
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer,
+func InitializeClientMgr(paramsDir string, logger *logging.Writer,
 	systemStatusCB SystemStatusCB,
 	systemSwVersionCB SystemSwVersionCB,
 	executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
+	mgr.paramsDir = paramsDir
 	mgr.systemStatusCB = systemStatusCB
 	mgr.systemSwVersionCB = systemSwVersionCB
 	mgr.executeConfigurationActionCB = executeConfigurationActionCB
-	if rc := mgr.InitializeClientHandles(paramsFile, sysProfileFile); !rc {
+	clientsFile := paramsDir + "/clients.json"
+	sysProfileFile := paramsDir + "/systemProfile.json"
+	if rc := mgr.InitializeClientHandles(clientsFile, sysProfileFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil
 	}
@@ -107,15 +111,15 @@ func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writ
 //
 //  This method reads the config file and connects to all the clients in the list
 //
-func (mgr *ClientMgr) InitializeClientHandles(paramsFile, sysProfileFile string) bool {
+func (mgr *ClientMgr) InitializeClientHandles(clientsFile, sysProfileFile string) bool {
 	var clientsList []ClientJson
 	var daemonsList DaemonsList
 
 	mgr.Clients = make(map[string]ClientIf)
 
-	bytes, err := ioutil.ReadFile(paramsFile)
+	bytes, err := ioutil.ReadFile(clientsFile)
 	if err != nil {
-		mgr.logger.Err("Error in reading configuration file", paramsFile)
+		mgr.logger.Err("Error in reading configuration file", clientsFile)
 		return false
 	}
 

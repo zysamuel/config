@@ -99,9 +99,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 		return nil
 	}
 
-	paramsFile := paramsDir + "/clients.json"
-	sysProfileFile := paramsDir + "/systemProfile.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, sysProfileFile, logger,
+	mgr.clientMgr = clients.InitializeClientMgr(paramsDir, logger,
 		GetSystemStatus,
 		GetSystemSwVersion,
 		actions.ExecuteConfigurationAction)
