@@ -301,7 +301,7 @@ func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
 func (mgr *ApiMgr) ReadApiCallInfoFromDb() error {
 	apiInfo := modelObjs.ConfigLogState{}
 	apiInfos, err := mgr.dbHdl.GetAllObjFromDb(apiInfo)
-	if err != nil {
+	if err == nil {
 		for _, apiInfo := range apiInfos {
 			mgr.apiCallSeqNum++
 			mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
@@ -310,14 +310,14 @@ func (mgr *ApiMgr) ReadApiCallInfoFromDb() error {
 	return nil
 }
 
-func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int) error {
+func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int, errStr string) error {
 	var result string
 	var data string
 	mgr.apiCallSeqNum++
 	if errCode == SRSuccess {
 		result = "Success"
 	} else {
-		result = "Fail"
+		result = errStr
 	}
 	data = strings.Replace(string(body), "\\", "", -1)
 	data = strings.Replace(data, "\"", "", -1)
