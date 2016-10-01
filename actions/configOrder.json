@@ -1,7 +1,6 @@
 {
     "Order": [
         "SystemParam",
-        "SystemLogging",
         "ComponentLogging",
 	"NotifierEnable",
 	"FMgrGlobal",
