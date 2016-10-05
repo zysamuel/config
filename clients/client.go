@@ -25,7 +25,6 @@ package clients
 
 import (
 	"encoding/json"
-	"fmt"
 	"infra/sysd/sysdCommonDefs"
 	"io/ioutil"
 	"models/actions"
@@ -43,9 +42,10 @@ type ExecuteConfigurationActionCB func(actions.ActionObj) error
 
 type ClientMgr struct {
 	logger                       *logging.Writer
+	paramsDir                    string
 	Clients                      map[string]ClientIf
 	reconncetTimer               *time.Ticker
-	systemReady                  bool
+	SystemReady                  bool
 	systemStatusCB               SystemStatusCB
 	systemSwVersionCB            SystemSwVersionCB
 	executeConfigurationActionCB ExecuteConfigurationActionCB
@@ -81,19 +81,25 @@ type ClientIf interface {
 	GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil) (error, objects.ConfigObj)
 	ExecuteAction(obj actions.ActionObj) error
 	GetServerName() string
-	PreConfigValidation(obj objects.ConfigObj) error
-	PostConfigProcessing(obj objects.ConfigObj) error
+	PreUpdateValidation(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error
+	PostUpdateProcessing(dbObj, obj objects.ConfigObj, attrSet []bool, dbHdl *dbutils.DBUtil) error
 	LockApiHandler()
 	UnlockApiHandler()
 }
 
-func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writer, systemStatusCB SystemStatusCB, systemSwVersionCB SystemSwVersionCB, executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
+func InitializeClientMgr(paramsDir string, logger *logging.Writer,
+	systemStatusCB SystemStatusCB,
+	systemSwVersionCB SystemSwVersionCB,
+	executeConfigurationActionCB ExecuteConfigurationActionCB) *ClientMgr {
 	mgr := new(ClientMgr)
 	mgr.logger = logger
+	mgr.paramsDir = paramsDir
 	mgr.systemStatusCB = systemStatusCB
 	mgr.systemSwVersionCB = systemSwVersionCB
 	mgr.executeConfigurationActionCB = executeConfigurationActionCB
-	if rc := mgr.InitializeClientHandles(paramsFile, sysProfileFile); !rc {
+	clientsFile := paramsDir + "/clients.json"
+	sysProfileFile := paramsDir + "/systemProfile.json"
+	if rc := mgr.InitializeClientHandles(clientsFile, sysProfileFile); !rc {
 		logger.Err("Error in initializing client handles")
 		return nil
 	}
@@ -105,15 +111,15 @@ func InitializeClientMgr(paramsFile, sysProfileFile string, logger *logging.Writ
 //
 //  This method reads the config file and connects to all the clients in the list
 //
-func (mgr *ClientMgr) InitializeClientHandles(paramsFile, sysProfileFile string) bool {
+func (mgr *ClientMgr) InitializeClientHandles(clientsFile, sysProfileFile string) bool {
 	var clientsList []ClientJson
 	var daemonsList DaemonsList
 
 	mgr.Clients = make(map[string]ClientIf)
 
-	bytes, err := ioutil.ReadFile(paramsFile)
+	bytes, err := ioutil.ReadFile(clientsFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", paramsFile))
+		mgr.logger.Err("Error in reading configuration file", clientsFile)
 		return false
 	}
 
@@ -159,11 +165,11 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 		for {
 			select {
 			case clientStatus := <-clientStatusListener.DaemonStatusCh:
-				mgr.logger.Info(fmt.Sprintln("Received client status: ", clientStatus.Name, clientStatus.Status))
+				mgr.logger.Info("Received client status: ", clientStatus.Name, clientStatus.Status)
 				if mgr.IsReady() {
 					switch clientStatus.Status {
 					case sysdCommonDefs.STOPPED, sysdCommonDefs.RESTARTING:
-						go mgr.DisconnectFromClient(clientStatus.Name)
+						mgr.DisconnectFromClient(clientStatus.Name)
 					case sysdCommonDefs.UP:
 						go mgr.ConnectToClient(clientStatus.Name)
 					}
@@ -178,7 +184,7 @@ func (mgr *ClientMgr) ListenToClientStateChanges() {
 //
 func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 	mgr.reconncetTimer = time.NewTicker(time.Millisecond * 1000)
-	mgr.systemReady = false
+	mgr.SystemReady = false
 	disabledClientsCount := 0
 	for clientName, client := range mgr.Clients {
 		if client.IsServerEnabled() {
@@ -190,13 +196,16 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 			disabledClientsCount++
 		}
 	}
+	logCount := 0
 	for t := range mgr.reconncetTimer.C {
 		_ = t
 		connectedClientsCount := 0
 		for clientName, client := range mgr.Clients {
 			if client.IsServerEnabled() {
 				if client.IsConnectedToServer() == false {
-					mgr.logger.Info(fmt.Sprintln("Trying to connect to ", clientName))
+					if logCount%60 == 0 {
+						mgr.logger.Info("Trying to connect to ", clientName)
+					}
 					client.ConnectToServer()
 					if client.IsConnectedToServer() {
 						clientNameCh <- clientName
@@ -207,6 +216,7 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 				}
 			}
 		}
+		logCount++
 
 		if len(mgr.Clients) == (disabledClientsCount + connectedClientsCount) {
 			mgr.reconncetTimer.Stop()
@@ -214,7 +224,6 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 		}
 	}
 	mgr.logger.Info("Connected to all clients")
-	mgr.systemReady = true
 	clientNameCh <- "Client_Init_Done"
 	return true
 }
@@ -223,14 +232,19 @@ func (mgr *ClientMgr) ConnectToAllClients(clientNameCh chan string) bool {
 // This method is to disconnect from all clients
 //
 func (mgr *ClientMgr) DisconnectFromAllClients() bool {
-	return false
+	for _, client := range mgr.Clients {
+		if client.IsConnectedToServer() {
+			client.DisconnectFromServer()
+		}
+	}
+	return true
 }
 
 //
 // This method is to check if config manager is ready to accept config requests
 //
 func (mgr *ClientMgr) IsReady() bool {
-	return mgr.systemReady
+	return mgr.SystemReady
 }
 
 func (mgr *ClientMgr) GetUnconnectedClients() []string {
@@ -263,7 +277,7 @@ func (mgr *ClientMgr) ConnectToClient(name string) error {
 				_ = t
 				waitCount++
 				if waitCount%10 == 0 {
-					mgr.logger.Info(fmt.Sprintln("Connecting to client ", name))
+					mgr.logger.Info("Connecting to client ", name)
 				}
 				if !client.IsConnectedToServer() {
 					client.ConnectToServer()

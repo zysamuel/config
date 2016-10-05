@@ -433,7 +433,7 @@ this["Handlebars"]["templates"]["operation"] = Handlebars.template({"1":function
   },"23":function(depth0,helpers,partials,data) {
   return "";
 },"25":function(depth0,helpers,partials,data) {
-  return "          <div class='sandbox_header'>\n            <input class='submit' type='button' value='Show me curl!' data-sw-translate/>\n            <a href='#' class='response_hider' style='display:none' data-sw-translate>Hide Response</a>\n            <span class='response_throbber' style='display:none'></span>\n          </div>\n";
+  return "          <div class='sandbox_header'>\n            <input class='submit' type='button' value='Execute' data-sw-translate/>\n            <a href='#' class='response_hider' style='display:none' data-sw-translate>Hide Response</a>\n            <span class='response_throbber' style='display:none'></span>\n          </div>\n";
   },"27":function(depth0,helpers,partials,data) {
   return "          <h4 data-sw-translate>Request Headers</h4>\n          <div class='block request_headers'></div>\n";
   },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
@@ -500,7 +500,7 @@ this["Handlebars"]["templates"]["operation"] = Handlebars.template({"1":function
   buffer += "        </form>\n        <div class='response' style='display:none'>\n          <h4 class='curl'>Curl</h4>\n          <div class='block curl'></div>\n          <h4 data-sw-translate>Request URL</h4>\n          <div class='block request_url'></div>\n";
   stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.showRequestHeaders : depth0), {"name":"if","hash":{},"fn":this.program(27, data),"inverse":this.noop,"data":data});
   if (stack1 != null) { buffer += stack1; }
-  return buffer ;
+  return buffer + "          <h4 data-sw-translate>Response Body</h4>\n          <div class='block response_body'></div>\n          <h4 data-sw-translate>Response Code</h4>\n          <div class='block response_code'></div>\n          <h4 data-sw-translate>Response Headers</h4>\n          <div class='block response_headers'></div>\n        </div>\n      </div>\n    </li>\n  </ul>\n";
 },"useData":true});
 this["Handlebars"]["templates"]["param_list"] = Handlebars.template({"1":function(depth0,helpers,partials,data) {
   return " required";
@@ -1334,7 +1334,7 @@ SwaggerClient.prototype.buildFromSpec = function (response) {
   this.basePath = response.basePath || '';
   this.consumes = response.consumes;
   //this.host = response.host || '';
-  this.host = 'your-switchip:8080';
+  this.host = window.location.host
   this.info = response.info || {};
   this.produces = response.produces;
   this.schemes = response.schemes || [];
@@ -1921,7 +1921,6 @@ SuperagentHttpClient.prototype.execute = function (obj) {
   if (obj.enableCookies) {
     r.withCredentials();
   }
-
   if (obj.body) {
     r.send(obj.body);
   }
@@ -4432,7 +4431,7 @@ Operation.prototype.getBody = function (headers, args, opts) {
 
   for (var i = 0; i < this.parameters.length; i++) {
     var param = this.parameters[i];
-
+    
     if (typeof args[param.name] !== 'undefined') {
       if (param.in === 'body') {
         body = args[param.name];
@@ -4481,6 +4480,10 @@ Operation.prototype.getBody = function (headers, args, opts) {
             }
             valueStr +=  "]" ;
             encoded += valueStr
+        }
+        else if (parseInt(value, 10) == value) {
+            var valueStr = value
+            encoded += "\"" + encodeURIComponent(key) +"\"" + ':' + valueStr ;
         }
         else {
             var valueStr = value
@@ -4639,7 +4642,6 @@ Operation.prototype.execute = function (arg1, arg2, arg3, arg4, parent) {
   var body = this.getBody(contentTypeHeaders, args, opts);
   var url = this.urlify(args);
 
-
   if(url.indexOf('.{format}') > 0) {
     if(headers) {
       var format = headers.Accept || headers.accept;
@@ -4751,7 +4753,7 @@ Operation.prototype.setContentTypes = function (args, opts) {
       } else if (definedFileParams.length > 0) { // if a file, must be multipart/form-data
         consumes = 'multipart/form-data';
       } else {                                   // default to x-www-from-urlencoded
-        consumes = 'application/json';
+        consumes = 'application/x-www-form-urlencoded';
       }
     }
   }
@@ -4820,18 +4822,19 @@ Operation.prototype.asCurl = function (args1, args2) {
       results.push('--header \'' + key + ': ' + value + '\'');
     }
   }
+
   if (obj.body) {
     var body;
 
     if (_.isObject(obj.body)) {
-      //body = JSON.stringify(obj.body);
-      body = obj.body;
+      body = JSON.stringify(obj.body);
     } else {
       body = obj.body;
     }
 
     results.push('-d \'' + body.replace(/\'/g, '\\u0027') + '\'');
   }
+
   return 'curl ' + (results.join(' ')) + ' \'' + obj.url + '\'';
 };
 
@@ -4907,8 +4910,6 @@ Operation.prototype.encodeQueryCollection = function (type, name, value) {
 };
 
 Operation.prototype.encodeQueryParam = function (arg) {
-  alert(arg);
-  alert(encodeURIComponent(arg));
   return encodeURIComponent(arg);
 };
 
@@ -25017,7 +25018,7 @@ SwaggerUi.Views.HeaderView = Backbone.View.extend({
 
   showPetStore: function(){
     this.trigger('update-swagger-ui', {
-      url:'http://petstore.swagger.io/v2/swagger.json'
+      url:'file://localhost/opt/flexswitch/params/docsui/swagger.json'
     });
   },
 

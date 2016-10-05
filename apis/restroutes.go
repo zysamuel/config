@@ -27,7 +27,6 @@ import (
 	"config/actions"
 	"config/clients"
 	"config/objects"
-	"fmt"
 	"github.com/gorilla/mux"
 	"models/events"
 	modelObjs "models/objects"
@@ -36,6 +35,7 @@ import (
 	"strings"
 	"time"
 	"utils/logging"
+	"utils/ringBuffer"
 )
 
 type ApiRoute struct {
@@ -63,6 +63,8 @@ type ApiMgr struct {
 	fullPath      string
 	pRestRtr      *mux.Router
 	restRoutes    []ApiRoute
+	apiCallSeqNum uint32
+	apiLogRB      *ringBuffer.RingBuffer
 	ApiCallStats  ApiCallStats
 }
 
@@ -81,10 +83,6 @@ type ApiCallStats struct {
 	NumActionCallsSuccess int32
 }
 
-type LoginResponse struct {
-	SessionId uint64 `json: "SessionId"`
-}
-
 func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.DbHandler, clientMgr *clients.ClientMgr, objectMgr *objects.ObjectMgr, actionMgr *actions.ActionMgr) *ApiMgr {
 	var err error
 	mgr := new(ApiMgr)
@@ -100,10 +98,14 @@ func InitializeApiMgr(paramsDir string, logger *logging.Writer, dbHdl *objects.D
 	mgr.apiBaseAction = mgr.apiBase + "action/"
 	mgr.apiBaseEvent = mgr.apiBase + "event/"
 	if mgr.fullPath, err = filepath.Abs(paramsDir); err != nil {
-		logger.Err(fmt.Sprintln("Unable to get absolute path for %s, error [%s]\n", paramsDir, err))
+		logger.Err("Unable to get absolute path for " + paramsDir + " Error: " + err.Error())
 		return nil
 	}
 	mgr.basePath, _ = filepath.Split(mgr.fullPath)
+	mgr.apiCallSeqNum = 0
+	mgr.apiLogRB = new(ringBuffer.RingBuffer)
+	mgr.apiLogRB.SetRingBufferCapacity(1024)
+	mgr.ReadApiCallInfoFromDb()
 	gApiMgr = mgr
 	return mgr
 }
@@ -112,13 +114,12 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 	var rt ApiRoute
 	actionList := mgr.actionMgr.GetAllActions()
 	for _, action := range actionList {
-		rt = ApiRoute{action + "Action",
+		rt = ApiRoute{action + "action",
 			"POST",
-			mgr.apiBaseAction + action,
+			mgr.apiBaseAction + "{rest:[a-zA-Z0-9]+}",
 			HandleRestRouteAction,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
-		fmt.Println("Added action restrt: ", action)
 	}
 	return true
 }
@@ -126,9 +127,9 @@ func (mgr *ApiMgr) InitializeActionRestRoutes() bool {
 func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
 	var rt ApiRoute
 	for key, _ := range events.EventObjectMap {
-		rt = ApiRoute{key + "Events",
+		rt = ApiRoute{key + "events",
 			"GET",
-			mgr.apiBaseEvent + key,
+			mgr.apiBaseEvent + "{rest:[a-zA-Z0-9]+}",
 			HandleRestRouteEvent,
 		}
 		mgr.restRoutes = append(mgr.restRoutes, rt)
@@ -141,79 +142,66 @@ func (mgr *ApiMgr) InitializeEventRestRoutes() bool {
 //
 func (mgr *ApiMgr) InitializeRestRoutes() bool {
 	var rt ApiRoute
-	for key, _ := range modelObjs.ConfigObjectMap {
-		objInfo := mgr.objectMgr.ObjHdlMap[key]
-		if objInfo.Access == "w" || objInfo.Access == "rw" {
-			rt = ApiRoute{key + "Create",
-				"POST",
-				mgr.apiBaseConfig + key,
-				HandleRestRouteCreate,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Delete",
-				"DELETE",
-				mgr.apiBaseConfig + key + "/" + "{objId}",
-				HandleRestRouteDeleteForId,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Delete",
-				"DELETE",
-				mgr.apiBaseConfig + key,
-				HandleRestRouteDelete,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Update",
-				"PATCH",
-				mgr.apiBaseConfig + key + "/" + "{objId}",
-				HandleRestRouteUpdateForId,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Update",
-				"PATCH",
-				mgr.apiBaseConfig + key,
-				HandleRestRouteUpdate,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Get",
-				"GET",
-				mgr.apiBaseConfig + key + "/" + "{objId}",
-				HandleRestRouteGetConfigForId,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Get",
-				"GET",
-				mgr.apiBaseConfig + key,
-				HandleRestRouteGetConfig,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "s",
-				"GET",
-				mgr.apiBaseConfig + key + "s",
-				HandleRestRouteBulkGetConfig,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-		} else if objInfo.Access == "r" {
-			key = strings.TrimSuffix(key, "State")
-			rt = ApiRoute{key + "Show",
-				"GET",
-				mgr.apiBaseState + key + "/" + "{objId}",
-				HandleRestRouteGetStateForId,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "Show",
-				"GET",
-				mgr.apiBaseState + key,
-				HandleRestRouteGetState,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-			rt = ApiRoute{key + "s",
-				"GET",
-				mgr.apiBaseState + key + "s",
-				HandleRestRouteBulkGetState,
-			}
-			mgr.restRoutes = append(mgr.restRoutes, rt)
-		}
+	rt = ApiRoute{"create",
+		"POST",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteCreate,
 	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"deletebyid",
+		"DELETE",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}" + "/" + "{objId}",
+		HandleRestRouteDeleteForId,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"deletebykey",
+		"DELETE",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteDelete,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"updatebyid",
+		"PATCH",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}" + "/" + "{objId}",
+		HandleRestRouteUpdateForId,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"updatebykey",
+		"PATCH",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteUpdate,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"getbyid",
+		"GET",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}" + "/" + "{objId}",
+		HandleRestRouteGetConfigForId,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"getbykeyorbulk",
+		"GET",
+		mgr.apiBaseConfig + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteGetConfig,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"showbyid",
+		"GET",
+		mgr.apiBaseState + "{rest:[a-zA-Z0-9]+}" + "/" + "{objId}",
+		HandleRestRouteGetStateForId,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"showbykeyorbulk",
+		"GET",
+		mgr.apiBaseState + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteGetState,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
+	rt = ApiRoute{"showbykeyorbulk",
+		"POST",
+		mgr.apiBaseState + "{rest:[a-zA-Z0-9]+}",
+		HandleRestRouteGetState,
+	}
+	mgr.restRoutes = append(mgr.restRoutes, rt)
 	return true
 }
 
@@ -248,7 +236,21 @@ func HandleRestRouteGetConfigForId(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteGetConfig(w http.ResponseWriter, r *http.Request) {
-	GetOneConfigObject(w, r)
+	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseConfig), "/")[0]
+	resource = strings.Split(resource, "?")[0]
+	resource = strings.ToLower(resource)
+	_, ok := modelObjs.ConfigObjectMap[resource]
+	if ok {
+		GetOneConfigObject(w, r)
+	} else {
+		_, ok := modelObjs.ConfigObjectMap[resource[:len(resource)-1]]
+		if ok {
+			BulkGetConfigObjects(w, r)
+		} else {
+			RespondErrorForApiCall(w, SRNotFound, "")
+		}
+	}
 	return
 }
 
@@ -258,7 +260,21 @@ func HandleRestRouteGetStateForId(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleRestRouteGetState(w http.ResponseWriter, r *http.Request) {
-	GetOneStateObject(w, r)
+	urlStr := ReplaceMultipleSeperatorInUrl(r.URL.String())
+	resource := strings.Split(strings.TrimPrefix(urlStr, gApiMgr.apiBaseState), "/")[0]
+	resource = strings.Split(resource, "?")[0]
+	resource = strings.ToLower(resource)
+	_, ok := modelObjs.ConfigObjectMap[resource+"state"]
+	if ok {
+		GetOneStateObject(w, r)
+	} else {
+		_, ok := modelObjs.ConfigObjectMap[resource[:len(resource)-1]+"state"]
+		if ok {
+			BulkGetStateObjects(w, r)
+		} else {
+			RespondErrorForApiCall(w, SRNotFound, "")
+		}
+	}
 	return
 }
 
@@ -282,15 +298,60 @@ func HandleRestRouteEvent(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (mgr *ApiMgr) ReadApiCallInfoFromDb() error {
+	apiInfo := modelObjs.ConfigLogState{}
+	apiInfos, err := mgr.dbHdl.GetAllObjFromDb(apiInfo)
+	if err == nil {
+		for _, apiInfo := range apiInfos {
+			mgr.apiCallSeqNum++
+			mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
+		}
+	}
+	return nil
+}
+
+func (mgr *ApiMgr) StoreApiCallInfo(r *http.Request, api, operation string, body []byte, errCode int, errStr string) error {
+	var result string
+	var data string
+	mgr.apiCallSeqNum++
+	if errCode == SRSuccess {
+		result = "Success"
+	} else {
+		result = errStr
+	}
+	data = strings.Replace(string(body), "\\", "", -1)
+	data = strings.Replace(data, "\"", "", -1)
+	apiInfo := modelObjs.ConfigLogState{
+		SeqNum:    mgr.apiCallSeqNum,
+		API:       api,
+		Time:      time.Now().String(),
+		Operation: operation,
+		Data:      data,
+		Result:    result,
+		UserAddr:  r.RemoteAddr,
+		UserName:  "", // confd does not know username information
+	}
+	err := mgr.dbHdl.StoreObjectInDb(apiInfo)
+	if err != nil {
+		mgr.logger.Info("Failed to store ApiCall information.", err)
+		return err
+	} else {
+		_, oldApiInfo := mgr.apiLogRB.InsertIntoRingBuffer(apiInfo)
+		if oldApiInfo != nil {
+			err = mgr.dbHdl.DeleteObjectFromDb(apiInfo)
+			if err != nil {
+				mgr.logger.Info("Failed to delete old ApiCall information.", err)
+			}
+		}
+	}
+	return nil
+}
+
 func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		inner.ServeHTTP(w, r)
-		gApiMgr.logger.Debug(fmt.Sprintln("%s\t%s\t%s\t%s\n",
-			r.Method,
-			r.RequestURI,
-			name,
-			time.Since(start)))
+		gApiMgr.logger.Debug("%s\t%s\t%s\n", r.Method, r.RequestURI, time.Since(start))
 	})
 }
 
@@ -305,8 +366,14 @@ func (mgr *ApiMgr) InstantiateRestRtr() *mux.Router {
 	for _, route := range mgr.restRoutes {
 		var handler http.Handler
 		handler = Logger(route.HandlerFunc, route.Name)
-		mgr.pRestRtr.Methods(route.Method).Path(route.Pattern).Name(route.Name).Handler(handler)
+		mgr.pRestRtr.Methods(route.Method).Path(route.Pattern).Handler(handler)
 	}
+	mgr.pRestRtr.PathPrefix("rest:/[a-zA-Z0-9]+").Handler(http.StripPrefix("rest:/[a-zA-Z0-9]+", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/settings/").Handler(http.StripPrefix("/settings/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/performance/").Handler(http.StripPrefix("/performance/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/alarms/").Handler(http.StripPrefix("/alarms/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/logs/").Handler(http.StripPrefix("/logs/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
+	mgr.pRestRtr.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(mgr.fullPath+"/flexui"))))
 	return mgr.pRestRtr
 }
 

@@ -41,10 +41,11 @@ type Repo struct {
 }
 
 type Version struct {
-	Major string `json:major`
-	Minor string `json:minor`
-	Patch string `json:patch`
-	Build string `json:build`
+	Major       string `json:"major"`
+	Minor       string `json:"minor"`
+	Patch       string `json:"patch"`
+	Build       string `json:"build"`
+	Changeindex string `json:"changeindex"`
 }
 
 type SwVersion struct {
@@ -55,7 +56,7 @@ type SwVersion struct {
 type SwitchCfgJson struct {
 	SwitchMac   string `json:"SwitchMac"`
 	Hostname    string `json:"HostName"`
-	Version     string `json:"Version"`
+	SwVersion   string `json:"Version"`
 	MgmtIp      string `json:"MgmtIp"`
 	Description string `json:"Description"`
 	Vrf         string `json:"Vrf"`
@@ -68,7 +69,7 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 	pkgInfoFile := infoDir + "pkgInfo.json"
 	bytes, err := ioutil.ReadFile(pkgInfoFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", pkgInfoFile))
+		mgr.logger.Err("Error in reading configuration file " + pkgInfoFile)
 		return err
 	}
 
@@ -77,12 +78,12 @@ func (mgr *ConfigMgr) ReadSystemSwVersion() error {
 		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
 		return err
 	}
-	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
+	mgr.swVersion.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build + "." + version.Changeindex
 
 	buildInfoFile := infoDir + "buildInfo.json"
 	bytes, err = ioutil.ReadFile(buildInfoFile)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error in reading configuration file", buildInfoFile))
+		mgr.logger.Err("Error in reading configuration file", buildInfoFile)
 		return err
 	}
 
@@ -100,30 +101,53 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 	}
 	paramsDir := mgr.paramsDir
 	sysInfo := &modelObjs.SystemParam{}
+	// check if object exists in db or not
+	if objHdl, ok := modelObjs.ConfigObjectMap["systemparam"]; ok {
+		var body []byte // @dummy body for default objects
+		obj, _ := objHdl.UnmarshalObject(body)
+		data := obj.(modelObjs.SystemParam)
+		_, err := mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
+		if err == nil {
+			return nil
+		}
+	}
+
 	cfgFileData, err := ioutil.ReadFile(paramsDir + "systemProfile.json")
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error reading file, err:", err))
+		mgr.logger.Err("Error reading file, err:", err)
 		return err
 	}
 	// Get this info from systemProfile
 	var cfg SwitchCfgJson
 	err = json.Unmarshal(cfgFileData, &cfg)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error Unmarshalling cfg json data, err:", err))
+		mgr.logger.Err("Error Unmarshalling cfg json data, err:", err)
 		return err
 	}
+
+	versionFileData, err := ioutil.ReadFile(strings.TrimSuffix(paramsDir, "params/") + "pkgInfo.json")
+	if err != nil {
+		mgr.logger.Err("Error in reading sw version file", err)
+		return err
+	}
+	var version Version
+	err = json.Unmarshal(versionFileData, &version)
+	if err != nil {
+		mgr.logger.Err("Error in Unmarshalling pkgInfo Json")
+		return err
+	}
+	sysInfo.SwVersion = version.Major + "." + version.Minor + "." + version.Patch + "." + version.Build
 	sysInfo.SwitchMac = cfg.SwitchMac
 	sysInfo.MgmtIp = cfg.MgmtIp
-	sysInfo.Version = cfg.Version
 	sysInfo.Description = cfg.Description
 	sysInfo.Hostname = cfg.Hostname
 	sysInfo.Vrf = cfg.Vrf
 	sysBody, err := json.Marshal(sysInfo)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln("Error marshalling system info, err:", err))
+		mgr.logger.Err("Error marshalling system info, err:", err)
 		return err
 	}
-	if objHdl, ok := modelObjs.ConfigObjectMap["SystemParam"]; ok {
+	if objHdl, ok := modelObjs.ConfigObjectMap["systemparam"]; ok {
 		sysObj, _ := objHdl.UnmarshalObject(sysBody)
 		client, exist := mgr.clientMgr.Clients[clientName]
 		if exist {
@@ -131,10 +155,11 @@ func (mgr *ConfigMgr) ConstructSystemParam(clientName string) error {
 			if err == nil && success == true {
 				mgr.storeUUID(sysObj.GetKey())
 			} else {
-				mgr.logger.Err(fmt.Sprintln("Failed to create system info: ", err))
+				mgr.logger.Err("Failed to create system info: ", err)
 			}
 		}
 	}
+
 	return err
 }
 
@@ -150,8 +175,8 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 		modName = compName
 	}
 
-	mgr.logger.Info(fmt.Sprintln("Check component logging config in DB for ", modName))
-	if objHdl, ok := modelObjs.ConfigObjectMap["ComponentLogging"]; ok {
+	mgr.logger.Info("Check component logging config in DB for ", modName)
+	if objHdl, ok := modelObjs.ConfigObjectMap["componentlogging"]; ok {
 		var body []byte // @dummy body for default objects
 		obj, _ := objHdl.UnmarshalObject(body)
 		data = obj.(modelObjs.ComponentLogging)
@@ -159,7 +184,7 @@ func (mgr *ConfigMgr) ConfigureComponentLoggingLevel(compName string) {
 		_, err = mgr.dbHdl.GetObjectFromDb(data, data.GetKey())
 	}
 	if err != nil {
-		// ComponentLogging is not created in DB. Create with dsefault logging level and store in DB
+		// ComponentLogging is not created in DB. Create with default logging level and store in DB
 		err = mgr.dbHdl.StoreObjectInDb(data)
 		if err == nil {
 			mgr.storeUUID(data.GetKey())
@@ -207,7 +232,7 @@ func GetSystemSwVersion() modelObjs.SystemSwVersionState {
 	systemSwVersion := modelObjs.SystemSwVersionState{}
 	err := gConfigMgr.ReadSystemSwVersion()
 	if err != nil {
-		gConfigMgr.logger.Info(fmt.Sprintln("Failed to read sw version"))
+		gConfigMgr.logger.Info("Failed to read sw version")
 	}
 	systemSwVersion.FlexswitchVersion = gConfigMgr.swVersion.SwVersion
 	numRepos := len(gConfigMgr.swVersion.Repos)
