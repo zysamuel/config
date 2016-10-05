@@ -56,7 +56,7 @@ type ConfigMgr struct {
 var gConfigMgr *ConfigMgr
 
 const (
-	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 200
+	MAX_COUNT_AUTO_DISCOVER_OBJ int64 = 1000
 )
 
 type SysProfile struct {
@@ -95,18 +95,16 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 
 	mgr.dbHdl = objects.InstantiateDbIf(logger)
 	if mgr.dbHdl == nil {
-		fmt.Println("Error initializing configMgr dbHdl")
+		logger.Err("Error initializing configMgr dbHdl")
 		return nil
 	}
 
-	paramsFile := paramsDir + "/clients.json"
-	sysProfileFile := paramsDir + "/systemProfile.json"
-	mgr.clientMgr = clients.InitializeClientMgr(paramsFile, sysProfileFile, logger,
+	mgr.clientMgr = clients.InitializeClientMgr(paramsDir, logger,
 		GetSystemStatus,
 		GetSystemSwVersion,
 		actions.ExecuteConfigurationAction)
 	if mgr.clientMgr == nil {
-		fmt.Println("Error initializing clientMgr")
+		logger.Err("Error initializing clientMgr")
 		return nil
 	}
 
@@ -115,7 +113,7 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.objectMgr = objects.InitializeObjectMgr(objectConfigFiles[:], logger,
 		mgr.dbHdl, mgr.clientMgr)
 	if mgr.objectMgr == nil {
-		fmt.Println("Error initializing objectMgr")
+		logger.Err("Error initializing objectMgr")
 		return nil
 	}
 
@@ -124,14 +122,14 @@ func NewConfigMgr(paramsDir string, logger *logging.Writer) *ConfigMgr {
 	mgr.actionMgr = actions.InitializeActionMgr(paramsDir, actionConfigFiles[:], logger,
 		mgr.dbHdl, mgr.objectMgr, mgr.clientMgr)
 	if mgr.actionMgr == nil {
-		fmt.Println("Error initializing actionMgr")
+		logger.Err("Error initializing actionMgr")
 		return nil
 	}
 
 	mgr.ApiMgr = apis.InitializeApiMgr(paramsDir, logger,
 		mgr.dbHdl, mgr.clientMgr, mgr.objectMgr, mgr.actionMgr)
 	if mgr.ApiMgr == nil {
-		fmt.Println("Error initializing ApiMgr")
+		logger.Err("Error initializing ApiMgr")
 		return nil
 	}
 
@@ -170,6 +168,8 @@ func (mgr *ConfigMgr) SigHandler() {
 			switch signal {
 			case syscall.SIGHUP:
 				mgr.logger.Info("Exting!!!")
+				mgr.dbHdl.DisconnectDbIf()
+				mgr.clientMgr.DisconnectFromAllClients()
 				os.Exit(0)
 			default:
 			}
@@ -180,8 +180,7 @@ func (mgr *ConfigMgr) SigHandler() {
 func (mgr *ConfigMgr) storeUUID(key string) {
 	_, err := mgr.dbHdl.StoreUUIDToObjKeyMap(key)
 	if err != nil {
-		mgr.logger.Err(fmt.Sprintln(
-			"Failed to store uuid map for key ", key, err))
+		mgr.logger.Err("Failed to store uuid map for key " + key + "Error: " + err.Error())
 	}
 }
 
@@ -202,6 +201,10 @@ func (mgr *ConfigMgr) ConfigureGlobalConfig(clientName string) {
 						err, success := client.CreateObject(obj, mgr.dbHdl.DBUtil)
 						if err == nil && success == true {
 							mgr.storeUUID(obj.GetKey())
+							err = mgr.dbHdl.StoreObjectDefaultInDb(obj)
+							if err != nil {
+								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" default config in DB ", obj, err))
+							}
 						} else {
 							mgr.logger.Err(fmt.Sprintln("Failed to create "+resource+" ", obj, err))
 						}
@@ -224,6 +227,7 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 					mgr.ConfigureGlobalConfig(name)
 				}
 				close(mgr.clientNameCh)
+				mgr.clientMgr.SystemReady = true
 				return
 			default:
 				//Cache list of client names to use for autocreate
@@ -239,10 +243,10 @@ func (mgr *ConfigMgr) AutoCreateConfigObjects() {
 }
 
 func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
-	fmt.Println("AutoDiscover for: ", clientName)
+	mgr.logger.Debug("AutoDiscover for: ", clientName)
 	if ent, ok := mgr.objectMgr.AutoDiscoverObjMap[clientName]; ok {
 		for _, resource := range ent.ObjList {
-			fmt.Println("AutoDiscover: ", resource)
+			mgr.logger.Debug("AutoDiscover: ", resource)
 			if objHdl, ok := modelObjs.ConfigObjectMap[resource]; ok {
 				var objs []modelObjs.ConfigObj
 				var err error
@@ -252,7 +256,7 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 				resourceOwner := mgr.objectMgr.ObjHdlMap[resource].Owner
 				err, _, _, _, objs = resourceOwner.GetBulkObject(obj, mgr.dbHdl.DBUtil,
 					currentIndex, objCount)
-				fmt.Println("AutoDiscover response: ", err, objs)
+				mgr.logger.Debug("AutoDiscover response: ", err, objs)
 				if err == nil {
 					for _, obj := range objs {
 						objKey := mgr.dbHdl.GetKey(obj)
@@ -263,6 +267,10 @@ func (mgr *ConfigMgr) AutoDiscoverObjects(clientName string) {
 								mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" config in DB ", obj, err))
 							} else {
 								mgr.storeUUID(obj.GetKey())
+								err = mgr.dbHdl.StoreObjectDefaultInDb(obj)
+								if err != nil {
+									mgr.logger.Err(fmt.Sprintln("Failed to store"+resource+" default config in DB ", obj, err))
+								}
 							}
 						}
 					}

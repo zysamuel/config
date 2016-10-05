@@ -27,7 +27,6 @@ import (
 	"config/clients"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"models/events"
@@ -84,6 +83,23 @@ type ConfigObjInfo struct {
 	Listeners     []clients.ClientIf
 }
 
+func resolveUnmarshalErr(data []byte, err error) string {
+	if e, ok := err.(*json.UnmarshalTypeError); ok {
+		var i int
+		for i = int(e.Offset) - 1; i != -1 && data[i] != '\n' && data[i] != ','; i-- {
+		}
+		info := strings.TrimSpace(string(data[i+1 : int(e.Offset)]))
+		return e.Error() + info
+	}
+	if e, ok := err.(*json.UnmarshalFieldError); ok {
+		return e.Error()
+	}
+	if e, ok := err.(*json.InvalidUnmarshalError); ok {
+		return e.Error()
+	}
+	return err.Error()
+}
+
 func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
@@ -100,7 +116,9 @@ func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []by
 	}
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
+		errStr := resolveUnmarshalErr(body, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("UnmarshalObject returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -117,12 +135,12 @@ func GetConfigObjFromQueryData(r *http.Request, obj objects.ConfigObj) (body []b
 	}
 	retobj, err = obj.UnmarshalObjectData(queryMap)
 	if err != nil || retobj == nil {
-		fmt.Println("UnmarshalObjectData returned error", err, "for object info", retobj)
+		gObjectMgr.logger.Err("UnmarshalObjectData returned error", err, "for object info", retobj)
 		return body, retobj, err
 	}
 	body, err = json.Marshal(retobj)
 	if err != nil {
-		fmt.Println("Marshal retobj returned error", err, "for object info", retobj)
+		gObjectMgr.logger.Err("Marshal retobj returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -143,7 +161,9 @@ func GetEventObj(r *http.Request, obj events.EventObj) (body []byte, retobj even
 	}
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		fmt.Println("UnmarshalObject returned error", err, "for object info", retobj)
+		errStr := resolveUnmarshalErr(body, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("UnmarshalObject returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -173,14 +193,16 @@ func CreateObjectMap() {
 func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err error) {
 	value, ok := op["value"]
 	if !ok {
-		fmt.Println("No value")
+		gObjectMgr.logger.Info("No value")
 		return nil, errors.New("Unknown")
 	}
 	//valueStr,err = obj.UnmarshalObject(*value)
-	fmt.Println("value: ", string(*value))
+	gObjectMgr.logger.Debug("value: ", string(*value))
 	err = json.Unmarshal([]byte(*value), &valueObj)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling value:", err)
+		errStr := resolveUnmarshalErr([]byte(*value), err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling value:", err)
 		return nil, err
 	}
 	return valueObj, err
@@ -188,7 +210,9 @@ func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err erro
 func GetPatch(patches []byte) (patch Patch, err error) {
 	err = json.Unmarshal(patches, &patch)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:", err)
+		errStr := resolveUnmarshalErr(patches, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling patches:", err)
 		return patch, err
 	}
 	return patch, err
@@ -196,12 +220,14 @@ func GetPatch(patches []byte) (patch Patch, err error) {
 func GetPath(op PatchOp) (pathStr string, err error) {
 	path, ok := op["path"]
 	if !ok {
-		fmt.Println("No path")
+		gObjectMgr.logger.Info("No path")
 		return pathStr, errors.New("Unknown")
 	}
 	err = json.Unmarshal(*path, &pathStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling path:", err)
+		errStr := resolveUnmarshalErr(*path, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling path:", err)
 		return pathStr, err
 	}
 	pathStr = strings.Split(pathStr, "/")[1]
@@ -210,12 +236,14 @@ func GetPath(op PatchOp) (pathStr string, err error) {
 func GetOp(patchOp PatchOp) (opStr string, err error) {
 	op, ok := patchOp["op"]
 	if !ok {
-		fmt.Println("No op")
+		gObjectMgr.logger.Info("No op")
 		return opStr, errors.New("Unknown")
 	}
 	err = json.Unmarshal(*op, &opStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:", err)
+		errStr := resolveUnmarshalErr(*op, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling patches:", err)
 		return opStr, err
 	}
 	return opStr, err
@@ -244,12 +272,12 @@ func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in reading Object configuration file", objFile))
+			mgr.logger.Info("Error in reading Object configuration file", objFile)
 			return false
 		}
 		err = json.Unmarshal(bytes, &objMap)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in unmarshaling data from ", objFile))
+			mgr.logger.Info("Error in unmarshaling data from ", objFile)
 		}
 
 		for k, v := range objMap {

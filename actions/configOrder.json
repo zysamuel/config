@@ -1,7 +1,6 @@
 {
     "Order": [
         "SystemParam",
-        "SystemLogging",
         "ComponentLogging",
 	"NotifierEnable",
 	"FMgrGlobal",
@@ -14,6 +13,7 @@
 	"DWDMModuleNwIntf",
 	"XponderGlobal",
         "Port",
+        "LacpGlobal",
         "LaPortChannel",
 	"DistributedRelay",
 	"LLDPGlobal",
