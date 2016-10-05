@@ -25,7 +25,6 @@ package clients
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"models/actions"
 	"models/objects"
@@ -140,8 +139,6 @@ func (clnt *LocalClient) GetObject(obj objects.ConfigObj, dbHdl *dbutils.DBUtil)
 		retObj = gClientMgr.systemStatusCB()
 	case objects.SystemSwVersionState:
 		retObj = gClientMgr.systemSwVersionCB()
-	case objects.XponderGlobal, objects.XponderGlobalState:
-		_, retObj = xponderGlobalGet()
 	case objects.ApiInfoState:
 		retObj = getApiInfo(obj)
 	default:
