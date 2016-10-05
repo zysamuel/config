@@ -59,9 +59,14 @@ func main() {
 
 	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
 	if foundConfPort {
-		http.ListenAndServe(":"+confPort, restRtr)
+		logger.Info("Starting config listener on port:", confPort)
+		err = http.ListenAndServe(":"+confPort, restRtr)
 	} else {
-		http.ListenAndServe(":8080", restRtr)
+		logger.Info("Starting config listener on port: 8080")
+		err = http.ListenAndServe(":8080", restRtr)
 	}
-	logger.Info("CONF Mgr. Exiting!!!")
+	if err != nil {
+		logger.Err("Failed to start config listener:", err)
+	}
+	panic("ConfigMgr Exiting!!!")
 }

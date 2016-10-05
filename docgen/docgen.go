@@ -46,6 +46,15 @@ const (
 	ALL_ATTRS
 )
 
+const (
+	NO_OBJS = iota
+	CONF_OBJS
+	STATE_OBJS
+	ACTION_OBJS
+	EVENT_OBJS
+	ALL_OBJS
+)
+
 var opDescMap map[string]string = make(map[string]string, 1)
 
 func writeStaticPart(inputFile string, dstFile *os.File) {
@@ -66,13 +75,17 @@ func writeStaticPart(inputFile string, dstFile *os.File) {
 	}
 }
 
-func writeResourceHdr(strName string, operation string, dstFile *os.File) {
+func writeResourceHdr(strName string, operation string, dstFile *os.File, byId bool) {
 	//dstFile.WriteString(twoTabs + "\"/" + strName + "\": { \n")
 	dstFile.WriteString(twoTabs + "\"" + operation + "\": { " + "\n")
 	dstFile.WriteString(threeTabs + "\"tags\": [ " + "\n")
 	dstFile.WriteString(fourTabs + "\"" + strName + "\"" + "\n")
 	dstFile.WriteString(threeTabs + "]," + "\n")
-	dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + "\"," + "\n")
+	if byId {
+		dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + " By Id\"," + "\n")
+	} else {
+		dstFile.WriteString(twoTabs + "\"summary\": \"" + opDescMap[operation] + strName + "\"," + "\n")
+	}
 	dstFile.WriteString(twoTabs + "\"description\":" + "\"" + strName + "\"," + "\n")
 	//dstFile.WriteString(twoTabs + "\"operationId\": \"add" + strName + ",\n")
 	dstFile.WriteString(twoTabs + "\"consumes\": [" + "\n")
@@ -152,8 +165,8 @@ func writePathCompletion(dstFile *os.File) {
 	dstFile.WriteString(twoTabs + " }, " + "\n")
 }
 
-func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem, mode int) {
-	writeResourceHdr(structName, operation, docJsFile)
+func writeResourceOperation(structName string, operation string, docJsFile *os.File, membersInfo []AttributeListItem, mode int, byId bool) {
+	writeResourceHdr(structName, operation, docJsFile, byId)
 	switch mode {
 	case ALL_ATTRS, KEY_ATTRS, SELECTED_ATTR:
 		for _, attrInfo := range membersInfo {
@@ -169,22 +182,24 @@ func writeResourceOperation(structName string, operation string, docJsFile *os.F
 	writeEpilogueForStruct(structName, docJsFile)
 }
 
-func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem) {
-
+func WriteConfigObject(structName string, docJsFile *os.File, membersInfo []AttributeListItem, autoCreate bool) {
 	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "\": { \n")
-	writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS)
+	if autoCreate != true {
+		writeResourceOperation(structName, "post", docJsFile, membersInfo, ALL_ATTRS, false)
+	}
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS, false)
+	if autoCreate != true {
+		writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS, false)
+	}
+	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS, false)
 	writePathCompletion(docJsFile)
 
 	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/{object-id}\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
-	writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS)
-	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
-	writePathCompletion(docJsFile)
-
-	docJsFile.WriteString(twoTabs + "\"/config/" + structName + "/\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, KEY_ATTRS)
-	writeResourceOperation(structName, "delete", docJsFile, membersInfo, KEY_ATTRS)
-	writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS)
+	if autoCreate != true {
+		writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS, true)
+		writeResourceOperation(structName, "delete", docJsFile, membersInfo, NO_ATTTRS, true)
+		writeResourceOperation(structName, "patch", docJsFile, membersInfo, ALL_ATTRS, true)
+	}
 	writePathCompletion(docJsFile)
 }
 
@@ -195,12 +210,12 @@ func WriteStateObject(structName string, docJsFile *os.File, membersInfo []Attri
 			docJsFile.WriteString(twoTabs + "\"/state/" + structName + "/{" + attrInfo.AttrName + "}\" : {\n")
 			mbrInfo := make([]AttributeListItem, 1)
 			mbrInfo[0] = membersInfo[idx]
-			writeResourceOperation(structName, "get", docJsFile, mbrInfo, SELECTED_ATTR)
+			writeResourceOperation(structName, "get", docJsFile, mbrInfo, SELECTED_ATTR, false)
 			writePathCompletion(docJsFile)
 		}
 	}
 	docJsFile.WriteString(twoTabs + "\"/state/" + structName + "s\": { \n")
-	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS)
+	writeResourceOperation(structName, "get", docJsFile, membersInfo, NO_ATTTRS, false)
 	writePathCompletion(docJsFile)
 }
 
@@ -212,7 +227,7 @@ func WriteGlobalStateObject(structName string, docJsFile *os.File, membersInfo [
 
 func WriteRestResourceDoc(docJsFile *os.File, structName string, membersInfo []AttributeListItem, objInfo ObjectInfoJson) {
 	if objInfo.Access == "w" || objInfo.Access == "rw" {
-		WriteConfigObject(structName, docJsFile, membersInfo)
+		WriteConfigObject(structName, docJsFile, membersInfo, objInfo.AutoCreate || objInfo.AutoDiscover)
 	} else if objInfo.Access == "r" || objInfo.Access == "rw" {
 		if strings.Contains(structName, "Global") {
 			WriteGlobalStateObject(structName, docJsFile, membersInfo)
@@ -262,6 +277,8 @@ type ObjectInfoJson struct {
 	Owner        string `json:"owner"`
 	SrcFile      string `json:"srcfile"`
 	Multiplicity string `json:"multiplicity"`
+	AutoCreate   bool   `json:"autoCreate"`
+	AutoDiscover bool   `json:"autoDiscover"`
 }
 
 type ObjectMembersInfo struct {
@@ -285,7 +302,33 @@ type AttributeListItem struct {
 }
 
 func main() {
-	outFileName := "flexApis.json"
+	var jsonFilesList []string
+	base := os.Getenv("SR_CODE_BASE")
+	if len(base) <= 0 {
+		fmt.Println(" Environment Variable SR_CODE_BASE has not been set")
+		return
+	}
+	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/objects/genObjectConfig.json")
+	//jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/actions/genObjectAction.json")
+	membersInfoBase := base + "/reltools/codegentools/._genInfo/"
+
+	outFileName := "allObjs.json"
+	WriteDocPage(jsonFilesList, membersInfoBase, outFileName, ALL_OBJS)
+
+	outFileName = "cfgObjs.json"
+	WriteDocPage(jsonFilesList, membersInfoBase, outFileName, CONF_OBJS)
+
+	outFileName = "stateObjs.json"
+	WriteDocPage(jsonFilesList, membersInfoBase, outFileName, STATE_OBJS)
+
+	//outFileName = "ActionObjs.json"
+	//WriteDocPage(jsonFilesList, membersInfoBase, outFileName, ACTION_OBJS)
+
+	//outFileName = "EventObjs.json"
+	//WriteDocPage(jsonFilesList, membersInfoBase, outFileName, EVENT_OBJS)
+}
+
+func WriteDocPage(jsonFilesList []string, membersInfoBase string, outFileName string, objsWithMode int) {
 	opDescMap["post"] = "Create New "
 	opDescMap["delete"] = "Delete "
 	opDescMap["get"] = "Query "
@@ -301,15 +344,7 @@ func main() {
 	writeStaticPart("part1.txt", docJsFile)
 	docJsFile.Sync()
 
-	var jsonFilesList []string
-	base := os.Getenv("SR_CODE_BASE")
-	if len(base) <= 0 {
-		fmt.Println(" Environment Variable SR_CODE_BASE has not been set")
-		return
-	}
 	idx := 0
-	jsonFilesList = append(jsonFilesList, base+"/snaproute/src/models/objects/genObjectConfig.json")
-	membersInfoBase := base + "/reltools/codegentools/._genInfo/"
 	for _, infoFile := range jsonFilesList {
 		fmt.Println("Info File", infoFile)
 		var objMap map[string]ObjectInfoJson
@@ -322,18 +357,25 @@ func main() {
 		err = json.Unmarshal(bytes, &objMap)
 		cfgObjList := make([]string, 0)
 		stateObjList := make([]string, 0)
+		actionObjList := make([]string, 0)
 		for key, objInfo := range objMap {
 			idx++
 			if objInfo.Access == "w" || objInfo.Access == "rw" {
 				cfgObjList = append(cfgObjList, key)
 			} else if objInfo.Access == "r" {
 				stateObjList = append(stateObjList, key)
+			} else if objInfo.Access == "x" {
+				actionObjList = append(actionObjList, key)
 			}
 		}
 		sort.Strings(cfgObjList)
 		sort.Strings(stateObjList)
-		WriteObjectList(docJsFile, objMap, cfgObjList, membersInfoBase)
-		WriteObjectList(docJsFile, objMap, stateObjList, membersInfoBase)
+		if objsWithMode == ALL_OBJS || objsWithMode == CONF_OBJS {
+			WriteObjectList(docJsFile, objMap, cfgObjList, membersInfoBase)
+		}
+		if objsWithMode == ALL_OBJS || objsWithMode == STATE_OBJS {
+			WriteObjectList(docJsFile, objMap, stateObjList, membersInfoBase)
+		}
 	}
 	fmt.Println("Total Objects ", idx)
 	docJsFile.WriteString(twoTabs + " } " + "\n")

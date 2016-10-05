@@ -27,9 +27,9 @@ import (
 	"config/clients"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"models/events"
 	"models/objects"
 	"net/http"
 	"strings"
@@ -37,10 +37,21 @@ import (
 	"utils/logging"
 )
 
+type AutoCreateStruct struct {
+	ObjList []string
+}
+
+type AutoDiscoverStruct struct {
+	ObjList []string
+}
+
 type ObjectMgr struct {
-	logger    *logging.Writer
-	ObjHdlMap map[string]ConfigObjInfo
-	clientMgr *clients.ClientMgr
+	logger             *logging.Writer
+	dbHdl              *DbHandler
+	ObjHdlMap          map[string]ConfigObjInfo
+	clientMgr          *clients.ClientMgr
+	AutoCreateObjMap   map[string]AutoCreateStruct
+	AutoDiscoverObjMap map[string]AutoDiscoverStruct
 }
 
 type PatchOp map[string]*json.RawMessage
@@ -57,6 +68,7 @@ type ConfigObjJson struct {
 	Access        string   `json:"Access"`
 	Listeners     []string `json:"Listeners"`
 	AutoCreate    bool     `json:"autoCreate"`
+	AutoDiscover  bool     `json:"autoDiscover"`
 	LinkedObjects []string `json:"linkedObjects"`
 }
 
@@ -66,11 +78,29 @@ type ConfigObjInfo struct {
 	Owner         clients.ClientIf
 	Access        string
 	AutoCreate    bool
+	AutoDiscover  bool
 	LinkedObjects []string
 	Listeners     []clients.ClientIf
 }
 
-func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+func resolveUnmarshalErr(data []byte, err error) string {
+	if e, ok := err.(*json.UnmarshalTypeError); ok {
+		var i int
+		for i = int(e.Offset) - 1; i != -1 && data[i] != '\n' && data[i] != ','; i-- {
+		}
+		info := strings.TrimSpace(string(data[i+1 : int(e.Offset)]))
+		return e.Error() + info
+	}
+	if e, ok := err.(*json.UnmarshalFieldError); ok {
+		return e.Error()
+	}
+	if e, ok := err.(*json.InvalidUnmarshalError); ok {
+		return e.Error()
+	}
+	return err.Error()
+}
+
+func GetConfigObjFromJsonData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
 	if obj == nil {
 		err = errors.New("Config Object is nil")
 		return body, retobj, err
@@ -84,10 +114,56 @@ func GetConfigObj(r *http.Request, obj objects.ConfigObj) (body []byte, retobj o
 			return body, retobj, err
 		}
 	}
-
 	retobj, err = obj.UnmarshalObject(body)
 	if err != nil {
-		fmt.Println("UnmarshalObject returnexd error", err, "for ojbect info", retobj)
+		errStr := resolveUnmarshalErr(body, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("UnmarshalObject returned error", err, "for object info", retobj)
+	}
+	return body, retobj, err
+}
+
+func GetConfigObjFromQueryData(r *http.Request, obj objects.ConfigObj) (body []byte, retobj objects.ConfigObj, err error) {
+	if obj == nil {
+		err = errors.New("Config Object is nil")
+		return body, retobj, err
+	}
+	queryMap := r.URL.Query()
+	if queryMap == nil {
+		err = errors.New("Empty query data")
+		return body, retobj, err
+	}
+	retobj, err = obj.UnmarshalObjectData(queryMap)
+	if err != nil || retobj == nil {
+		gObjectMgr.logger.Err("UnmarshalObjectData returned error", err, "for object info", retobj)
+		return body, retobj, err
+	}
+	body, err = json.Marshal(retobj)
+	if err != nil {
+		gObjectMgr.logger.Err("Marshal retobj returned error", err, "for object info", retobj)
+	}
+	return body, retobj, err
+}
+
+func GetEventObj(r *http.Request, obj events.EventObj) (body []byte, retobj events.EventObj, err error) {
+	if obj == nil {
+		err = errors.New("Event Object is nil")
+		return body, retobj, err
+	}
+	if r != nil {
+		body, err = ioutil.ReadAll(io.LimitReader(r.Body, commonDefs.MAX_JSON_LENGTH))
+		if err != nil {
+			return body, retobj, err
+		}
+		if err = r.Body.Close(); err != nil {
+			return body, retobj, err
+		}
+	}
+	retobj, err = obj.UnmarshalObject(body)
+	if err != nil {
+		errStr := resolveUnmarshalErr(body, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("UnmarshalObject returned error", err, "for object info", retobj)
 	}
 	return body, retobj, err
 }
@@ -113,17 +189,20 @@ func CreateObjectMap() {
 		objects.ConfigObjectMap[objName] = obj
 	}
 }
+
 func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err error) {
 	value, ok := op["value"]
 	if !ok {
-		fmt.Println("No value")
+		gObjectMgr.logger.Info("No value")
 		return nil, errors.New("Unknown")
 	}
 	//valueStr,err = obj.UnmarshalObject(*value)
-	fmt.Println("value: ", string(*value))
+	gObjectMgr.logger.Debug("value: ", string(*value))
 	err = json.Unmarshal([]byte(*value), &valueObj)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling value:", err)
+		errStr := resolveUnmarshalErr([]byte(*value), err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling value:", err)
 		return nil, err
 	}
 	return valueObj, err
@@ -131,7 +210,9 @@ func GetValue(op PatchOp, obj objects.ConfigObj) (valueObj interface{}, err erro
 func GetPatch(patches []byte) (patch Patch, err error) {
 	err = json.Unmarshal(patches, &patch)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:", err)
+		errStr := resolveUnmarshalErr(patches, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling patches:", err)
 		return patch, err
 	}
 	return patch, err
@@ -139,12 +220,14 @@ func GetPatch(patches []byte) (patch Patch, err error) {
 func GetPath(op PatchOp) (pathStr string, err error) {
 	path, ok := op["path"]
 	if !ok {
-		fmt.Println("No path")
+		gObjectMgr.logger.Info("No path")
 		return pathStr, errors.New("Unknown")
 	}
 	err = json.Unmarshal(*path, &pathStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling path:", err)
+		errStr := resolveUnmarshalErr(*path, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling path:", err)
 		return pathStr, err
 	}
 	pathStr = strings.Split(pathStr, "/")[1]
@@ -153,19 +236,22 @@ func GetPath(op PatchOp) (pathStr string, err error) {
 func GetOp(patchOp PatchOp) (opStr string, err error) {
 	op, ok := patchOp["op"]
 	if !ok {
-		fmt.Println("No op")
+		gObjectMgr.logger.Info("No op")
 		return opStr, errors.New("Unknown")
 	}
 	err = json.Unmarshal(*op, &opStr)
 	if err != nil {
-		fmt.Sprintln("error unmarshaling patches:", err)
+		errStr := resolveUnmarshalErr(*op, err)
+		err = errors.New(errStr)
+		gObjectMgr.logger.Err("error unmarshaling patches:", err)
 		return opStr, err
 	}
 	return opStr, err
 }
-func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *clients.ClientMgr) *ObjectMgr {
+func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, dbHdl *DbHandler, clientMgr *clients.ClientMgr) *ObjectMgr {
 	mgr := new(ObjectMgr)
 	mgr.logger = logger
+	mgr.dbHdl = dbHdl
 	mgr.clientMgr = clientMgr
 	if rc := mgr.InitializeObjectHandles(infoFiles); !rc {
 		logger.Err("Error in initializing object handles")
@@ -180,35 +266,54 @@ func InitializeObjectMgr(infoFiles []string, logger *logging.Writer, clientMgr *
 //
 func (mgr *ObjectMgr) InitializeObjectHandles(infoFiles []string) bool {
 	var objMap map[string]ConfigObjJson
-
 	mgr.ObjHdlMap = make(map[string]ConfigObjInfo)
+	mgr.AutoCreateObjMap = make(map[string]AutoCreateStruct)
+	mgr.AutoDiscoverObjMap = make(map[string]AutoDiscoverStruct)
 	for _, objFile := range infoFiles {
 		bytes, err := ioutil.ReadFile(objFile)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in reading Object configuration file", objFile))
+			mgr.logger.Info("Error in reading Object configuration file", objFile)
 			return false
 		}
 		err = json.Unmarshal(bytes, &objMap)
 		if err != nil {
-			mgr.logger.Info(fmt.Sprintln("Error in unmarshaling data from ", objFile))
+			mgr.logger.Info("Error in unmarshaling data from ", objFile)
 		}
 
 		for k, v := range objMap {
-			mgr.logger.Debug(fmt.Sprintln("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
-				v.Access, " Auto Create ", v.AutoCreate))
+			mgr.logger.Debug("For Object [", k, "] Primary owner is [", v.Owner, "] access is",
+				v.Access, " Auto Create ", v.AutoCreate, " Auto Discover ", v.AutoDiscover)
+			key := strings.ToLower(k)
 			entry := new(ConfigObjInfo)
 			entry.Owner = mgr.clientMgr.Clients[v.Owner]
 			entry.Access = v.Access
 			entry.AutoCreate = v.AutoCreate
+			entry.AutoDiscover = v.AutoDiscover
 			for _, lsnr := range v.Listeners {
 				entry.Listeners = append(entry.Listeners, mgr.clientMgr.Clients[lsnr])
 			}
 			entry.LinkedObjects = append(entry.LinkedObjects, v.LinkedObjects...)
-			mgr.ObjHdlMap[k] = *entry
+			mgr.ObjHdlMap[key] = *entry
+
+			if v.AutoCreate == true {
+				ent, _ := mgr.AutoCreateObjMap[v.Owner]
+				ent.ObjList = append(ent.ObjList, key)
+				mgr.AutoCreateObjMap[v.Owner] = ent
+			}
+
+			if v.AutoDiscover == true {
+				ent, _ := mgr.AutoDiscoverObjMap[v.Owner]
+				ent.ObjList = append(ent.ObjList, key)
+				mgr.AutoDiscoverObjMap[v.Owner] = ent
+			}
 		}
 	}
 	return true
 }
 func (mgr *ObjectMgr) GetConfigObjHdlMap() map[string]ConfigObjInfo {
 	return mgr.ObjHdlMap
+}
+
+func (mgr *ObjectMgr) GetAutoDiscoverObjMap() map[string]AutoDiscoverStruct {
+	return mgr.AutoDiscoverObjMap
 }
