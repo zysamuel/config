@@ -35,6 +35,7 @@ type xponderCfgRecipe struct {
 	vlanId        int32
 	portList      []string
 	untagPortList []string
+	adminState    string
 }
 
 var xponderGlobal objects.XponderGlobal
@@ -209,34 +210,42 @@ var xponderInSvcWireCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{
 	xponderCfgRecipe{
 		vlanId:        2,
 		untagPortList: []string{"fpPort1", "fpPort13"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        3,
 		untagPortList: []string{"fpPort2", "fpPort14"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        4,
 		untagPortList: []string{"fpPort3", "fpPort15"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        5,
 		untagPortList: []string{"fpPort4", "fpPort16"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        6,
 		untagPortList: []string{"fpPort5", "fpPort17"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        7,
 		untagPortList: []string{"fpPort6", "fpPort18"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        8,
 		untagPortList: []string{"fpPort7", "fpPort19"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        9,
 		untagPortList: []string{"fpPort8", "fpPort20"},
+		adminState:    "UP",
 	},
 }
 
@@ -251,7 +260,8 @@ func xponderUpdatePortAdminState(ifName, adminState string, dbHdl *dbutils.DBUti
 	obj.AdminState = adminState
 	patchOpInfoSlice := make([]objects.PatchOpInfo, 0)
 	err, _ := asicdClntHdl.UpdateObject(dbObj, *obj, []bool{false, false, false,
-		false, true, false, false, false, false, false, false, false, false, false},
+		false, true, false, false, false, false, false, false, false, false, false,
+		false, false, false},
 		patchOpInfoSlice, objKey, dbHdl)
 	return err
 }
@@ -264,6 +274,7 @@ func xponderModeInSvcWireCfgSet(dbHdl *dbutils.DBUtil) error {
 		obj.VlanId = val.vlanId
 		obj.IntfList = val.portList
 		obj.UntagIntfList = val.untagPortList
+		obj.AdminState = val.adminState
 		err, _ = asicdClntHdl.CreateObject(*obj, dbHdl)
 		if err != nil {
 			gClientMgr.logger.Err("Failed applying cfg recipe in InSvcWireCfgSet")
@@ -319,61 +330,73 @@ var xponderInSvcOverSubCfgRecipe []xponderCfgRecipe = []xponderCfgRecipe{
 		vlanId:        2,
 		portList:      []string{"fpPort13"},
 		untagPortList: []string{"fpPort1"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        3,
 		portList:      []string{"fpPort14"},
 		untagPortList: []string{"fpPort2"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        4,
 		portList:      []string{"fpPort15"},
 		untagPortList: []string{"fpPort3"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        5,
 		portList:      []string{"fpPort16"},
 		untagPortList: []string{"fpPort4"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        6,
 		portList:      []string{"fpPort17"},
 		untagPortList: []string{"fpPort5"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        7,
 		portList:      []string{"fpPort18"},
 		untagPortList: []string{"fpPort6"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        8,
 		portList:      []string{"fpPort19"},
 		untagPortList: []string{"fpPort7"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        9,
 		portList:      []string{"fpPort20"},
 		untagPortList: []string{"fpPort8"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        10,
 		portList:      []string{"fpPort15"},
 		untagPortList: []string{"fpPort9"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        11,
 		portList:      []string{"fpPort16"},
 		untagPortList: []string{"fpPort10"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        12,
 		portList:      []string{"fpPort17"},
 		untagPortList: []string{"fpPort11"},
+		adminState:    "UP",
 	},
 	xponderCfgRecipe{
 		vlanId:        13,
 		portList:      []string{"fpPort18"},
 		untagPortList: []string{"fpPort12"},
+		adminState:    "UP",
 	},
 }
 
@@ -411,6 +434,7 @@ func xponderModeInSvcOverSubCfgRemove(dbHdl *dbutils.DBUtil) error {
 		obj.VlanId = val.vlanId
 		obj.IntfList = val.portList
 		obj.UntagIntfList = val.untagPortList
+		obj.AdminState = val.adminState
 		err, _ = asicdClntHdl.DeleteObject(*obj, "", dbHdl)
 		if err != nil {
 			gClientMgr.logger.Err("Failed applying cfg recipe in xponderInSvcOverSubCfgRemove")
@@ -442,7 +466,8 @@ func xponderModeInSvcRegenCfgApply(adminState string, nwLb bool, dbHdl *dbutils.
 		dbObj, _ := dbHdl.GetObjectFromDb(obj, objKey)
 		patchOpInfoSlice := make([]objects.PatchOpInfo, 0)
 		err, _ = asicdClntHdl.UpdateObject(dbObj, *obj, []bool{false, false, false,
-			false, true, false, false, false, false, false, false, false},
+			false, true, false, false, false, false, false, false, false, false, false,
+			false, false, false},
 			patchOpInfoSlice, objKey, dbHdl)
 		if err != nil {
 			gClientMgr.logger.Err("Failed applying recipe in xponderModeInSvcRegenCfgApply")
