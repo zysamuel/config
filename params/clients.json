@@ -56,6 +56,9 @@
     {"Name":"ldpd",
 	 "Port":10020},
 
+    {"Name":"lmd",
+	 "Port":10021},
+
     {"Name":"local",
 	 "Port":0}
 ]
