@@ -104,6 +104,7 @@ const (
 	SRUpdateNoChange    = 15
 	SRValidationFailed  = 16
 	SRUnmarshalError    = 17
+	SRPatchDecodeError  = 18
 )
 
 // SR error strings
@@ -126,6 +127,7 @@ var ErrString = map[int]string{
 	SRUpdateNoChange:    "Nothing to be updated.",
 	SRValidationFailed:  "Config validation failed.",
 	SRUnmarshalError:    "Unmarshal of json data failed.",
+	SRPatchDecodeError:  "Failed to decode patch data.",
 }
 
 //Given a code reurn error string
@@ -549,7 +551,6 @@ func ExecuteActionObject(w http.ResponseWriter, r *http.Request) {
 		gApiMgr.StoreApiCallInfo(r, resource, "POST", body, errCode, SRErrString(errCode))
 		return
 	}
-	fmt.Println("resource:", resource)
 	if actionobjHdl, ok := modelActions.ActionObjectMap[resource]; ok {
 		fmt.Println("actionObjhdl:", actionobjHdl)
 		if body, actionobj, err = actions.GetActionObj(r, actionobjHdl); err == nil {
@@ -913,27 +914,31 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				patches = strings.TrimSuffix(patches, "}")
 				patchStr, err := objects.GetPatch([]byte(patches))
 				if err != nil {
-					fmt.Println("error unmarshaling patches:", err)
+					errCode = SRPatchDecodeError
 					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 					return
 				}
 				for _, ops := range patchStr {
 					opStr, err := objects.GetOp(ops)
 					if err != nil {
-						fmt.Println("error unmarshaling op:", err)
+						errCode = SRPatchDecodeError
 						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+						RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 						return
 					}
 					pathStr, err := objects.GetPath(ops)
 					if err != nil {
-						fmt.Println("error unmarshaling path:", err)
+						errCode = SRPatchDecodeError
 						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+						RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 						return
 					}
 					value, ok := ops["value"]
 					if !ok {
-						fmt.Println("No value")
+						errCode = SRPatchDecodeError
 						gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+						RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 						return
 					}
 					patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
@@ -949,8 +954,8 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 				}
 				mergedObj, diff, err := gApiMgr.dbHdl.MergeDbAndConfigObjForPatchUpdate(obj, dbObj, patchOpInfoSlice)
 				if err != nil {
-					fmt.Println("err when merging ", err)
-					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode)+err.Error())
+					RespondErrorForApiCall(w, errCode, err.Error())
 					return
 				}
 				err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -963,9 +968,17 @@ func ConfigObjectUpdateForId(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						resp.Result = err.Error()
 					}
-					errCode = SRServerError
 					gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
+					errCode = SRServerError
+					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					RespondErrorForApiCall(w, errCode, SRErrString(errCode))
+					return
 				}
+				js, err := json.Marshal(resp)
+				if err != nil {
+					gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
+				}
+				w.Write(js)
 				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, "None")
 				return
 			}
@@ -1102,27 +1115,29 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			patches = strings.TrimSuffix(patches, "}")
 			patchStr, err := objects.GetPatch([]byte(patches))
 			if err != nil {
-				fmt.Println("error unmarshaling patches:", err)
 				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
 				return
 			}
 			for _, ops := range patchStr {
 				opStr, err := objects.GetOp(ops)
 				if err != nil {
-					fmt.Println("error unmarshaling op:", err)
+					errCode = SRPatchDecodeError
 					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 					return
 				}
 				pathStr, err := objects.GetPath(ops)
 				if err != nil {
-					fmt.Println("error unmarshaling path:", err)
+					errCode = SRPatchDecodeError
 					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 					return
 				}
 				value, ok := ops["value"]
 				if !ok {
-					fmt.Println("No value")
+					errCode = SRPatchDecodeError
 					gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+					RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 					return
 				}
 				patchOpInfo := modelObjs.PatchOpInfo{opStr, pathStr, string(*value)}
@@ -1138,8 +1153,8 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 			mergedObj, diff, err := gApiMgr.dbHdl.MergeDbAndConfigObjForPatchUpdate(obj, dbObj, patchOpInfoSlice)
 			if err != nil {
-				fmt.Println("err when merging ", err)
 				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+				RespondErrorForApiCall(w, errCode, SRErrString(errCode))
 				return
 			}
 			err, success = resourceOwner.UpdateObject(dbObj, mergedObj, diff, patchOpInfoSlice, objKey, gApiMgr.dbHdl.DBUtil)
@@ -1154,7 +1169,15 @@ func ConfigObjectUpdate(w http.ResponseWriter, r *http.Request) {
 				}
 				errCode = SRServerError
 				gApiMgr.logger.Debug(fmt.Sprintln("UpdateObject failed for resource ", updateKeys, resource))
+				gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, SRErrString(errCode))
+				RespondErrorForApiCall(w, errCode, SRErrString(errCode))
+				return
 			}
+			js, err := json.Marshal(resp)
+			if err != nil {
+				gApiMgr.logger.Debug("UpdateObject failed to Marshal config response")
+			}
+			w.Write(js)
 			gApiMgr.StoreApiCallInfo(r, resource, "UPDATE", body, errCode, "None")
 			return
 		}
