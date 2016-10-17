@@ -53,12 +53,6 @@
     {"Name":"notifierd",
 	 "Port":10019},
 
-    {"Name":"ldpd",
-	 "Port":10020},
-
-    {"Name":"lmd",
-	 "Port":10021},
-
     {"Name":"local",
 	 "Port":0}
 ]
