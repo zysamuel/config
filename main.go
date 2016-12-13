@@ -58,12 +58,14 @@ func main() {
 	go keepalive.InitKeepAlive("confd", paramsDirName)
 
 	foundConfPort, confPort := server.GetConfigHandlerPort(paramsDirName)
+        confAddress := server.GetConfigHandlerAddress(paramsDirName)
+
 	if foundConfPort {
-		logger.Info("Starting config listener on port:", confPort)
-		err = http.ListenAndServe(":"+confPort, restRtr)
+		logger.Info("Starting config listener on " + confAddress + ":" + confPort)
+		err = http.ListenAndServe(confAddress + ":" + confPort, restRtr)
 	} else {
-		logger.Info("Starting config listener on port: 8080")
-		err = http.ListenAndServe(":8080", restRtr)
+		logger.Info("Starting config listener on " + confAddress + ":8080")
+		err = http.ListenAndServe(confAddress + ":8080", restRtr)
 	}
 	if err != nil {
 		logger.Err("Failed to start config listener:", err)
