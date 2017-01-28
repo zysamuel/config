@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	modelObjs "models/objects"
-        "net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -62,7 +61,6 @@ const (
 
 type SysProfile struct {
 	API_Port int `json:"API_Port"`
-        API_Address string `json:"API_Address"`
 }
 
 // Get the http port on which rest api calls will be received
@@ -84,43 +82,6 @@ func GetConfigHandlerPort(paramsDir string) (bool, string) {
 	}
 	port = strconv.Itoa(sysProfile.API_Port)
 	return true, port
-}
-
-// Get the ip address on which rest api server will bind
-func GetConfigHandlerAddress(paramsDir string) (string) {
-	var sysProfile SysProfile
-
-        // Default bind API to *:<port>
-        ipAddress := "0.0.0.0"
-
-	sysProfileFile := paramsDir + "systemProfile.json"
-	bytes, err := ioutil.ReadFile(sysProfileFile)
-
-	if err != nil {
-		gConfigMgr.logger.Err("Error in reading globals file", sysProfileFile)
-		return ipAddress
-	}
-
-	err = json.Unmarshal(bytes, &sysProfile)
-	if err != nil {
-		gConfigMgr.logger.Err("Failed to Unmarshall Json")
-		return ipAddress
-	}
-
-	tmpIpAddress, err := net.ResolveIPAddr("", sysProfile.API_Address)
-        if err != nil {
-            // If we could not resolve the provided IP.  net.ResolveIPAddr() 
-            // will allow us to set a name or IP for the API_Address config
-            // entry
-	    return ipAddress
-        } else if tmpIpAddress.String() == ""{
-            // if sysProfile.API_Address is undefined, then tmpIpAddress will 
-            // be ""
-            return ipAddress
-        } else {
-            // Valid address in config
-            return tmpIpAddress.String()
-        }
 }
 
 //
